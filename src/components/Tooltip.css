@@ -1,0 +1,76 @@
+/* client/src/components/Tooltip.css */
+.tooltip-container {
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+  margin-left: 4px;
+}
+
+.tooltip-icon {
+  color: var(--accent-text);
+  font-size: 14px;
+  transition: var(--transition);
+}
+
+.tooltip-icon:hover {
+  color: var(--accent-hover);
+  transform: scale(1.05);
+}
+
+.tooltip-inline { display: inline-flex; align-items: center; }
+
+/* выделенные имена внутри подсказки (команда, алиас, оверлей, ник) */
+.tooltip-text-portal .hint-em {
+  color: var(--accent-text);
+  font-weight: 500;
+  font-family: "Fira Code", Consolas, monospace;
+  font-size: 13px;
+}
+
+.tooltip-portal {
+  animation: tooltipFadeIn 0.15s ease;
+}
+
+.tooltip-text-portal {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 8px 14px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  max-width: 360px;
+  white-space: normal;
+  word-break: break-word;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  position: relative;
+  line-height: 1.4;
+}
+
+.tooltip-text-portal::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--bg-secondary) transparent transparent transparent;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .tooltip-text-portal {
+    max-width: 250px;
+    font-size: 14px;
+  }
+}

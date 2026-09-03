@@ -1,0 +1,40 @@
+/* client/src/components/ConfigControls.css */
+
+.config-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.config-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  width: 100%;
+}
+
+.config-btn.save {
+  background: var(--success);
+  color: white;
+}
+
+.config-btn.save:hover {
+  background: var(--success-hover);
+}
+
+.config-btn.load {
+  background: var(--info);
+  color: white;
+}
+
+.config-btn.load:hover {
+  background: var(--info-hover);
+}

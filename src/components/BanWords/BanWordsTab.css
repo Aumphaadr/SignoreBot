@@ -1,0 +1,286 @@
+/* client/src/components/BanWords/BanWordsTab.css */
+
+.info-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px 24px;
+  text-align: center;
+  flex: 1;
+}
+
+.stat-value {
+  display: block;
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--accent-text);
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.rules-info {
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rule-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.badge.hard {
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.badge.soft {
+  background: var(--warning-light);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.badge.alias {
+  background: var(--accent-light);
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+}
+
+.word-text {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--danger);
+  font-family: monospace;
+}
+
+.word-type-select {
+  height: auto;
+  line-height: normal;
+  padding: 6px 34px 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+}
+
+.word-type-select.hard {
+  background-color: var(--danger-light);
+  color: var(--danger);
+}
+
+.word-type-select.soft {
+  background-color: var(--warning-light);
+  color: var(--warning);
+}
+
+.aliases-count {
+  font-size: 14px;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.show-aliases-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.show-aliases-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+
+.copy-aliases-btn {
+  background: var(--info);
+  color: white;
+  border: none;
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-aliases-btn:hover {
+  background: var(--info-hover);
+}
+
+.regenerate-aliases-btn {
+  background: var(--warning);
+  color: black;
+  border: none;
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.regenerate-aliases-btn:hover {
+  background: var(--warning-hover);
+}
+
+.remove-word-btn {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-word-btn:hover {
+  background: var(--danger-hover);
+}
+
+.banwords-tab .aliases-list {
+  padding: 16px 20px;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border-color);
+}
+
+.banwords-tab .aliases-header {
+  margin-bottom: 12px;
+}
+
+.banwords-tab .aliases-header strong {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.aliases-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.banwords-tab .alias-item {
+  background: var(--bg-input);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-family: monospace;
+  color: var(--info);
+  border: 1px solid var(--info);
+}
+
+.add-word-form {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 20px;
+}
+
+.add-word-form h3 {
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  font-size: 18px;
+}
+
+.add-word-form .form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.add-word-form .form-row input {
+  flex: 2;
+}
+
+.add-word-form .form-row select {
+  flex: 1;
+}
+
+.add-word-btn {
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.add-word-btn:hover {
+  background: var(--success-hover);
+}
+
+.banwords-tab .form-hint {
+  font-size: 14px;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
+}
+
+@media (max-width: 768px) {
+  .info-stats {
+    flex-direction: column;
+  }
+
+  .add-word-form .form-row {
+    flex-direction: column;
+  }
+
+  .add-word-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rule-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

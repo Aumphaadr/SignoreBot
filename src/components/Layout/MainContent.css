@@ -1,0 +1,19 @@
+/* client/src/components/Layout/MainContent.css */
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg-primary);
+}
+
+.main-content-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+
+@media (max-width: 768px) {
+  .main-content-container {
+    padding: 16px;
+  }
+}

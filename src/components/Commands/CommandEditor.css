@@ -1,0 +1,90 @@
+/* client/src/components/Commands/CommandEditor.css */
+
+.command-editor {
+  padding: 8px 0;
+}
+
+.command-editor-header {
+  margin-bottom: 24px;
+}
+
+.command-name-section {
+  margin-bottom: 16px;
+}
+
+.command-name-section label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.command-name-input-wrapper {
+  display: flex;
+  align-items: stretch;
+  max-width: 400px;
+}
+
+.command-name-prefix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-right: none;
+  border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
+  padding: 0 14px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-text);
+  font-family: monospace;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.command-name-input-wrapper .command-name-input {
+  width: 100%;
+  max-width: none;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-left: none;
+  color: var(--text-primary);
+  padding: 12px 16px;
+  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+  font-size: 16px;
+  transition: var(--transition);
+}
+
+.command-name-input-wrapper:focus-within .command-name-prefix {
+  border-color: var(--accent);
+}
+
+.command-name-input-wrapper:focus-within .command-name-input {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+  outline: none;
+}
+
+.command-preview {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preview-label {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.command-preview-name {
+  background: var(--accent-light);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--accent-text);
+  font-family: monospace;
+  font-weight: 500;
+}

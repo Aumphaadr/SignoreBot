@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 693.78699 693.78698"
+   width="693.78699"
+   height="693.78699"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="check.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs9" />
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.7008547"
+     inkscape:cx="438.03659"
+     inkscape:cy="256.11585"
+     inkscape:window-width="1920"
+     inkscape:window-height="1001"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="Штрих"
+     id="layer1"
+     transform="translate(-56.933389,-41.852377)">
+    <path
+       d="m 721.25,128.14346 c 22.17,-3.64 35.2,20.51 27,38.87 -4.55,10.19 -185.22,202.51 -209.32,229.16 -53.13,58.77 -107.18,116.85 -160.96,175 -16.32,17.65 -52.43,60.69 -69.22,73.15 -5.68,4.22 -14.57,6.21 -21.5,5.08 -5.84,-0.95 -11.31,-3.3 -16,-6.91 -8.92,-6.89 -16.87,-16.2 -24.67,-24.32 -22.07,-22.97 -44.93,-45.09 -67.12,-68 -18.38,-18.98 -112.69,-110.2 -119.71,-123.7 -4.05,-7.79 -3.6,-17.15 0.5,-24.74 3.18,-5.9 8.47,-10.56 15,-12.33 5.82,-1.58 12.44,-2.59 18.15,0.27 14.3,7.15 30.18,27.79 41.35,39.67 38.6,41.02 78.86,80.53 118.2,120.83 6.09,6.24 34.01,37.97 41.02,34.5 5.39,-2.67 66.16,-71.31 75.33,-81.5 70.11,-77.83 141.37,-154.7 212.45,-231.71 30.49,-33.03 60.56,-66.54 91,-99.63 11.11,-12.08 21.31,-25.96 33.5,-36.97 4.09,-3.69 9.66,-5.84 15,-6.72 z"
+       fill="#000000"
+       fill-rule="nonzero"
+       id="path2" />
+  </g>
+</svg>

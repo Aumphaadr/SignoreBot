@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 733.21399 733.21399"
+   width="733.21399"
+   height="733.21399"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="play.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs9" />
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.92031425"
+     inkscape:cx="212.97073"
+     inkscape:cy="397.14695"
+     inkscape:window-width="1920"
+     inkscape:window-height="1001"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="Штрих"
+     id="layer1"
+     transform="translate(-118.80176,-48.786883)">
+    <path
+       d="m 170.44929,689.24979 c -2.85,-104.33 0.21,-209.13 0.1,-313.5 -0.07,-76.87 -4.05,-162.13 0.13,-238 0.51,-9.2 2.54,-19.41 6.04,-27.87 14.17,-34.289998 43.7,-60.419998 82.5,-61.079998 12.91,-0.23 25.86,2.57 37.5,7.98 35.37,16.45 68.33,42.04 101.5,62.639998 81.55,50.64 163.64,100.91 245,152 29.3,18.4 116.03,66.8 136,85.77 15.75,14.97 23.09,36.59 22.82,58.06 -0.25,19.46 -7.44,40.36 -21.82,53.86 -19.37,18.17 -46.24,31.92 -69,45.42 -61.71,36.62 -122.96,75.78 -183,115.16 -47.13,30.91 -95.24,60.81 -143.5,89.87 -27.05,16.29 -52.85,36.02 -80.81,50.69 -13.74,7.21 -28.42,11.84 -44.19,11.75 -51.2,-0.29 -87.92,-43.51 -89.27,-92.75 z m 85.03,-577 c -29.54,5.38 -23.38,43.66 -23.23,65.5 0.12,16.33 -0.01,32.67 0.02,49 0.26,122.5 0.12,245.01 -0.13,367.5 -0.05,25.1 -4.9,87.34 2.35,108 3.76,10.71 15.14,17.78 26.23,17.97 5.51,0.09 11.07,-1.54 16,-3.83 27.87,-12.96 70.31,-43.61 97.5,-61.37 86.49,-56.5 175.62,-108.77 262,-165.27 19.25,-12.59 89.81,-52.06 101,-64.17 2.96,-3.2 4.36,-8.08 4.19,-12.33 -0.15,-3.92 -1.92,-7.84 -4.69,-10.6 -11.28,-11.29 -81.82,-50.86 -100.58,-62.4 -91.85,-56.53 -183.03,-114.32 -274.92,-171 -19.36,-11.94 -70.2,-48.52 -87.5,-54.74 -6,-2.15 -11.77,-3.44 -18.24,-2.26 z"
+       fill="#000000"
+       fill-rule="nonzero"
+       id="path2" />
+  </g>
+</svg>

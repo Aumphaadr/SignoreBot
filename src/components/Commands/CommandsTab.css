@@ -1,0 +1,180 @@
+/* client/src/components/Commands/CommandsTab.css */
+
+.commands-description {
+  margin-bottom: 16px;
+}
+
+.create-command-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.create-command-btn:hover {
+  background: var(--accent-hover);
+}
+
+.command-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.command-aliases-badge {
+  background: var(--warning-light);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.permissions-badge {
+  background: var(--accent-light);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+}
+
+.permissions-selector {
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.permissions-selector > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.role-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.role-btn {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.role-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.role-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.users-section {
+  margin-top: 16px;
+}
+
+.users-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  min-height: 40px;
+}
+
+.user-tag {
+  background: var(--bg-input);
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  border: 1px solid var(--border-color);
+}
+
+.remove-user {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+}
+
+.remove-user:hover {
+  color: var(--danger-hover);
+}
+
+.add-user {
+  display: flex;
+  gap: 10px;
+}
+
+.add-user input {
+  flex: 1;
+}
+
+.add-user-btn {
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+}
+
+.add-user-btn:hover {
+  background: var(--success-hover);
+}
+
+.permissions-warning {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: var(--warning-light);
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  color: var(--warning);
+  border-left: 3px solid var(--warning);
+}
+
+@media (max-width: 768px) {
+  .role-buttons {
+    flex-direction: column;
+  }
+
+  .role-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .add-user {
+    flex-direction: column;
+  }
+
+  .add-user-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
