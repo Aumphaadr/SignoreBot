@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>SignoreBot Overlay</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #media-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            background: transparent;
+        }
+        .immediate-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            background: transparent;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #0f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            z-index: 99999;
+            display: none;
+        }
+        .debug-info.visible {
+            display: block;
+        }
+        /*__SHARED_CSS__*/
+    </style>
+</head>
+
+<body>
+    <div id="debug-info" class="debug-info"></div>
+    <div id="media-container" class="hidden"></div>
+
+    <script>
+        const DEBUG = localStorage.getItem('overlay_debug') === 'true' || new URLSearchParams(window.location.search).get('debug') === '1';
+        const WS_RECONNECT_DELAY = 3000;
+        // Настройки приходят от сервера первым WS-сообщением (command: "config").
+        let MEDIA_PAUSE_DELAY = 3000;
+        let IMAGE_DURATION = 10;
+
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const overlayPath = pathParts.length > 1 ? pathParts[pathParts.length - 1] : 'default';
+        const overlayKey = new URLSearchParams(window.location.search).get('key') || '';
+        let overlayId = 'default';
+        const mediaUrl = (file) => `/media/${encodeURIComponent(file)}?key=${encodeURIComponent(overlayKey)}`;
+
+        let ws = null;
+        let reconnectTimer = null;
+        let mediaQueue = [];
+        let isPlaying = false;
+        let audioContext = null;
+        let currentMedia = null;
+        let knownServerStartTime = null;
+        let serverDown = false;
+        let immediateZIndex = 2000;
+        let activeImmediateCount = 0;
+        let queuedPlaybackGeneration = 0;
+        let immediatePlaybackGeneration = 0;
+        const immediateAbortControllers = new Set();
+
+        const container = document.getElementById('media-container');
+        const debugEl = document.getElementById('debug-info');
+
+        function log(...args) {
+            if (DEBUG) {
+                console.log('[Overlay]', ...args);
+                if (debugEl) debugEl.textContent = `[${new Date().toLocaleTimeString()}] ${args.join(' ')}`;
+            }
+        }
+        function error(...args) {
+            console.error('[Overlay]', ...args);
+            if (debugEl) {
+                debugEl.style.color = '#ff6b6b';
+                debugEl.textContent = `❌ [${new Date().toLocaleTimeString()}] ${args.join(' ')}`;
+            }
+        }
+        if (DEBUG) debugEl.classList.add('visible');
+
+        async function resolveOverlayId() {
+            try {
+                const response = await fetch(`/api/overlay-info/${encodeURIComponent(overlayPath)}?key=${encodeURIComponent(overlayKey)}`);
+                if (response.ok) {
+                    const found = await response.json();
+                    overlayId = found.id;
+                    if (found.settings) applySettings(found.settings.pauseBetweenMs, found.settings.imageDurationSec);
+                    log(`📋 Оверлей: "${found.name}" (id: ${found.id}, path: ${found.path})`);
+                } else {
+                    log(`⚠️ Оверлей с path="${overlayPath}" не найден, используем path`);
+                }
+            } catch (err) {
+                error('❌ Не удалось получить сведения об оверлее:', err);
+            }
+        }
+
+        function applySettings(pauseMs, imageSec) {
+            if (typeof pauseMs === 'number' && pauseMs >= 0) MEDIA_PAUSE_DELAY = pauseMs;
+            if (typeof imageSec === 'number' && imageSec > 0) IMAGE_DURATION = imageSec;
+        }
+
+        async function registerOfflineOverlayShell() {
+            if (!('serviceWorker' in navigator)) {
+                log('ℹ️ Service Worker не поддерживается');
+                return;
+            }
+
+            if (!window.isSecureContext) {
+                log('ℹ️ Service Worker недоступен: используйте localhost/127.0.0.1 или HTTPS');
+                return;
+            }
+
+            try {
+                await navigator.serviceWorker.register('/overlay-sw.js', { scope: '/' });
+                log('🛡️ Service Worker зарегистрирован');
+            } catch (err) {
+                error('❌ Не удалось зарегистрировать Service Worker:', err);
+            }
+        }
+
+        async function checkServerHealth() {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                const resp = await fetch('/api/health', { signal: controller.signal, cache: 'no-store' });
+                clearTimeout(timeoutId);
+                if (!resp.ok) throw new Error('Not OK');
+                const data = await resp.json();
+                if (knownServerStartTime === null) {
+                    knownServerStartTime = data.startTime;
+                } else if (data.startTime !== knownServerStartTime) {
+                    window.location.reload(); return;
+                }
+                if (serverDown) { window.location.reload(); return; }
+                serverDown = false;
+            } catch (e) {
+                if (!serverDown) log('⚠️ Сервер недоступен');
+                serverDown = true;
+            }
+        }
+        function startServerMonitor() {
+            setTimeout(checkServerHealth, 2000);
+            setInterval(checkServerHealth, 5000);
+        }
+
+        function getMediaType(filename) {
+            if (!filename) return 'unknown';
+            const ext = filename.split('.').pop().toLowerCase();
+            if (['mp4', 'webm', 'mov', 'avi', 'mkv', 'flv', 'm4v'].includes(ext)) return 'video';
+            if (['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'opus'].includes(ext)) return 'audio';
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'apng'].includes(ext)) return 'image';
+            return 'unknown';
+        }
+        function formatTime(s) {
+            return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
+        }
+
+        function createAnimatedText(textContent, animationType, fontSettings, amplitude) {
+            const el = document.createElement('div');
+            el.className = 'text-element';
+            if (fontSettings) {
+                if (fontSettings.fontFamily) el.style.fontFamily = fontSettings.fontFamily;
+                if (fontSettings.fontSize) el.style.fontSize = fontSettings.fontSize + 'px';
+                if (fontSettings.fontWeight) el.style.fontWeight = fontSettings.fontWeight;
+                if (fontSettings.fontStyle) el.style.fontStyle = fontSettings.fontStyle;
+                if (fontSettings.color) el.style.color = fontSettings.color;
+            }
+            if (!animationType || animationType === 'none') {
+                el.textContent = textContent;
+                return el;
+            }
+            const amp = amplitude || 1;
+            textContent.split('').forEach((char, i) => {
+                const span = document.createElement('span');
+                span.className = `char char-anim-${animationType}`;
+                span.style.animationDelay = `${i * 0.05}s`;
+                span.style.setProperty('--amp', amp);
+                span.textContent = char;
+                el.appendChild(span);
+            });
+            return el;
+        }
+
+        function createMediaWithText(mediaData) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'media-wrapper';
+
+            const textPosition = mediaData.text?.position || 'overlay';
+            const hasText = mediaData.text?.enabled && mediaData.text?.content;
+            wrapper.classList.add(hasText ? 'has-text' : 'media-only');
+
+            if (hasText) {
+                wrapper.classList.add('position-' + textPosition);
+            } else {
+                wrapper.classList.add('position-overlay');
+            }
+
+            let mediaElement = null;
+            if (mediaData.type === 'video') {
+                mediaElement = document.createElement('video');
+                mediaElement.className = 'media-element video';
+                mediaElement.controls = false;
+                mediaElement.autoplay = true;
+                mediaElement.loop = false;
+                mediaElement.muted = false;
+                mediaElement.playsInline = true;
+                mediaElement.volume = mediaData.volume / 100;
+                mediaElement.preload = 'auto';
+
+                mediaElement.addEventListener('loadedmetadata', () => {
+                    log(`[VIDEO] Размер: ${mediaElement.videoWidth}x${mediaElement.videoHeight}, соотношение: ${(mediaElement.videoWidth / mediaElement.videoHeight).toFixed(2)}`);
+                });
+            } else if (mediaData.type === 'image') {
+                mediaElement = document.createElement('img');
+                mediaElement.className = 'media-element image';
+                mediaElement.alt = '';
+                mediaElement.loading = 'eager';
+
+                mediaElement.onload = () => {
+                    log(`[IMAGE] Размер: ${mediaElement.naturalWidth}x${mediaElement.naturalHeight}, соотношение: ${(mediaElement.naturalWidth / mediaElement.naturalHeight).toFixed(2)}`);
+                };
+            }
+
+            if (mediaElement) {
+                mediaElement.src = mediaData.src;
+
+                if (mediaData.chromakey && mediaData.chromakey !== 'none') {
+                    mediaElement.style.mixBlendMode = mediaData.chromakey;
+                }
+            }
+
+            let textElement = null;
+            if (hasText) {
+                textElement = createAnimatedText(
+                    mediaData.text.content,
+                    mediaData.text.animation || 'none',
+                    mediaData.text.font || null,
+                    mediaData.text.animationAmplitude || 1
+                );
+            }
+
+            if (hasText && textElement && mediaElement) {
+                const pos = textPosition;
+                if (pos === 'above') {
+                    wrapper.appendChild(textElement);
+                    wrapper.appendChild(mediaElement);
+                } else if (pos === 'below') {
+                    wrapper.appendChild(mediaElement);
+                    wrapper.appendChild(textElement);
+                } else if (pos === 'left') {
+                    wrapper.appendChild(textElement);
+                    wrapper.appendChild(mediaElement);
+                } else if (pos === 'right') {
+                    wrapper.appendChild(mediaElement);
+                    wrapper.appendChild(textElement);
+                } else {
+                    wrapper.appendChild(mediaElement);
+                    wrapper.appendChild(textElement);
+                }
+            } else if (mediaElement) {
+                wrapper.appendChild(mediaElement);
+                wrapper.classList.add('position-overlay');
+                mediaElement.style.maxWidth = '100%';
+                mediaElement.style.maxHeight = '100%';
+                mediaElement.style.width = 'auto';
+                mediaElement.style.height = 'auto';
+            } else if (textElement) {
+                wrapper.appendChild(textElement);
+            }
+
+            const enterAnim = mediaData.animation?.enter;
+            const enterDuration = mediaData.animation?.enterDuration || 0.5;
+            if (enterAnim && enterAnim !== 'none') {
+                wrapper.classList.add(`media-enter-${enterAnim}`);
+                wrapper.style.animationDuration = `${enterDuration}s`;
+            }
+
+            return wrapper;
+        }
+
+        function applyExitAnimation(containerEl, exitAnim, exitDuration, onComplete) {
+            if (!exitAnim || exitAnim === 'none') {
+                onComplete();
+                return;
+            }
+            const wrapper = containerEl.querySelector('.media-wrapper');
+            if (wrapper) {
+                wrapper.className = wrapper.className.replace(/media-enter-\S+/g, '').trim();
+                wrapper.classList.add(`media-exit-${exitAnim}`);
+                wrapper.style.animationDuration = `${exitDuration}s`;
+                setTimeout(onComplete, exitDuration * 1000);
+            } else {
+                onComplete();
+            }
+        }
+
+        function describeVideoError(videoEl) {
+            const err = videoEl.error;
+            if (!err) return 'Неизвестная ошибка';
+            switch (err.code) {
+                case 1: return 'Воспроизведение прервано (MEDIA_ERR_ABORTED)';
+                case 2: return 'Сетевая ошибка при загрузке (MEDIA_ERR_NETWORK)';
+                case 3: return 'Ошибка декодирования — возможно, неподдерживаемый кодек (H.265/HEVC). Перекодируйте в H.264 (MEDIA_ERR_DECODE)';
+                case 4: return 'Формат видео не поддерживается браузером (MEDIA_ERR_SRC_NOT_SUPPORTED)';
+                default: return `Код ошибки: ${err.code}, ${err.message || ''}`;
+            }
+        }
+
+        async function playAudioWithWebAudio(src, volume, onFinished, generation) {
+            try {
+                log('🎵 Аудио (очередь):', src);
+                if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioContext.state === 'suspended') await audioContext.resume();
+                const response = await fetch(src);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                if (generation !== queuedPlaybackGeneration) return;
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = volume / 100;
+                source.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                currentMedia = { type: 'audio', source, gainNode };
+                source.start();
+                source.onended = () => {
+                    log('✅ Аудио закончилось');
+                    source.disconnect(); gainNode.disconnect();
+                    if (generation !== queuedPlaybackGeneration) return;
+                    currentMedia = null;
+                    if (onFinished) onFinished();
+                };
+            } catch (err) {
+                error('❌ Ошибка аудио:', err);
+                currentMedia = null;
+                if (onFinished) onFinished();
+            }
+        }
+
+        async function playAudioDirect(src, volume, onEnded, signal) {
+            try {
+                log('🎵 Аудио (immediate):', src);
+                if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioContext.state === 'suspended') await audioContext.resume();
+                const response = await fetch(src, { signal });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                if (signal?.aborted) return;
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = volume / 100;
+                source.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                signal?.addEventListener('abort', () => {
+                    try { source.stop(); } catch (e) { }
+                    try { source.disconnect(); gainNode.disconnect(); } catch (e) { }
+                }, { once: true });
+                source.start();
+                source.onended = () => {
+                    source.disconnect(); gainNode.disconnect();
+                    if (signal?.aborted) return;
+                    if (onEnded) onEnded();
+                };
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                error('❌ Ошибка аудио (immediate):', err);
+                if (onEnded) onEnded();
+            }
+        }
+
+        function finishQueuedMedia(exitAnim, exitDuration, generation) {
+            if (generation !== queuedPlaybackGeneration) return;
+            applyExitAnimation(container, exitAnim, exitDuration || 0.5, () => {
+                if (generation !== queuedPlaybackGeneration) return;
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                currentMedia = null;
+                setTimeout(() => playNext(), MEDIA_PAUSE_DELAY);
+            });
+        }
+
+        async function playNext() {
+            if (mediaQueue.length === 0) {
+                isPlaying = false;
+                container.innerHTML = '';
+                container.classList.add('hidden');
+                currentMedia = null;
+                log('⏸️ Очередь пуста');
+                return;
+            }
+
+            if (activeImmediateCount > 0) {
+                isPlaying = false;
+                log(`⏳ Очередь ждёт завершения immediate-медиа (${activeImmediateCount} активных)`);
+                return;
+            }
+
+            isPlaying = true;
+            const item = mediaQueue.shift();
+            const generation = queuedPlaybackGeneration;
+            currentMedia = item;
+            log(`▶️ Очередь: ${item.type}: ${item.file} (осталось ${mediaQueue.length})`);
+
+            const exitAnim = item.animation?.exit || 'none';
+            const exitDuration = item.animation?.exitDuration || 0.5;
+
+            try {
+                // Только аудио (без картинки)
+                if (item.type === 'audio' && !item.hasVisual) {
+                    container.innerHTML = '';
+
+                    if (item.text?.enabled && item.text?.content) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'media-wrapper';
+
+                        const enterAnim = item.animation?.enter;
+                        const enterDur = item.animation?.enterDuration || 0.5;
+                        if (enterAnim && enterAnim !== 'none') {
+                            wrapper.classList.add(`media-enter-${enterAnim}`);
+                            wrapper.style.animationDuration = `${enterDur}s`;
+                        }
+
+                        wrapper.appendChild(createAnimatedText(
+                            item.text.content,
+                            item.text.animation || 'none',
+                            item.text.font || null,
+                            item.text.animationAmplitude || 1
+                        ));
+                        container.classList.remove('hidden');
+                        container.appendChild(wrapper);
+                    } else {
+                        container.classList.add('hidden');
+                    }
+
+                    playAudioWithWebAudio(
+                        item.audioSrc || item.src,
+                        item.volume,
+                        () => finishQueuedMedia(exitAnim, exitDuration, generation),
+                        generation
+                    );
+
+                } else if (item.type === 'image' && item.hasAudio) {
+                    // Картинка + звук
+                    const element = createMediaWithText(item);
+                    container.innerHTML = '';
+                    container.classList.remove('hidden');
+                    container.appendChild(element);
+
+                    const duration = item.duration || IMAGE_DURATION;
+
+                    // Запускаем аудио
+                    let audioFinished = false;
+                    let timerFinished = false;
+                    let finished = false;
+
+                    const checkFinish = () => {
+                        if (finished) return;
+                        if (audioFinished && timerFinished) {
+                            finished = true;
+                            finishQueuedMedia(exitAnim, exitDuration, generation);
+                        }
+                    };
+
+                    playAudioWithWebAudio(
+                        item.audioSrc,
+                        item.volume,
+                        () => {
+                            audioFinished = true;
+                            checkFinish();
+                        },
+                        generation
+                    );
+
+                    setTimeout(() => {
+                        timerFinished = true;
+                        checkFinish();
+                    }, duration * 1000);
+
+                } else {
+                    // Видео или картинка без звука
+                    const element = createMediaWithText(item);
+                    container.innerHTML = '';
+                    container.classList.remove('hidden');
+                    container.appendChild(element);
+
+                    if (item.type === 'video') {
+                        const video = element.querySelector('video');
+                        if (video) {
+                            let finished = false;
+                            const finish = (reason) => {
+                                if (finished) return;
+                                finished = true;
+                                log(`✅ Видео ${reason}`);
+                                finishQueuedMedia(exitAnim, exitDuration, generation);
+                            };
+                            video.addEventListener('ended', () => finish('закончилось'));
+                            video.addEventListener('error', () => {
+                                const msg = describeVideoError(video);
+                                error(`❌ Ошибка видео: ${msg}`);
+                                finish('ошибка');
+                            });
+                            video.addEventListener('loadedmetadata', () => {
+                                log(`[VIDEO] ${video.videoWidth}x${video.videoHeight}, ${formatTime(video.duration)}`);
+                            });
+                            try {
+                                await video.play();
+                                log(`▶️ Видео играет (${formatTime(video.duration)})`);
+                            } catch (playErr) {
+                                error('❌ Видео не воспроизводится:', playErr.message);
+                                if (playErr.name === 'NotSupportedError') {
+                                    error('Кодек видео не поддерживается. Используйте H.264 (MP4) или VP9 (WebM).');
+                                }
+                                finish('play() error');
+                            }
+                        }
+                    } else if (item.type === 'image') {
+                        const duration = item.duration || IMAGE_DURATION;
+                        log(`🖼️ Изображение: ${duration} сек`);
+                        setTimeout(
+                            () => finishQueuedMedia(exitAnim, exitDuration, generation),
+                            duration * 1000
+                        );
+                    }
+                }
+            } catch (err) {
+                error('❌ Ошибка:', err);
+                finishQueuedMedia(exitAnim, exitDuration, generation);
+            }
+        }
+
+        function addToQueue(mediaData) {
+            mediaQueue.push(mediaData);
+            log(`📥 В очередь: ${mediaData.file} (${mediaQueue.length})`);
+            if (!isPlaying && activeImmediateCount === 0) playNext();
+        }
+
+        function onImmediateComplete(generation) {
+            if (generation !== immediatePlaybackGeneration) return;
+            activeImmediateCount = Math.max(0, activeImmediateCount - 1);
+            log(`⚡ Immediate завершено (активных: ${activeImmediateCount})`);
+
+            if (activeImmediateCount === 0 && mediaQueue.length > 0 && !isPlaying) {
+                playNext();
+            }
+        }
+
+        function playImmediate(mediaData) {
+            const generation = immediatePlaybackGeneration;
+            const abortController = new AbortController();
+            immediateAbortControllers.add(abortController);
+            activeImmediateCount++;
+            log(`⚡ Немедленно: ${mediaData.type}: ${mediaData.file} (активных: ${activeImmediateCount})`);
+
+            const exitAnim = mediaData.animation?.exit || 'none';
+            const exitDuration = mediaData.animation?.exitDuration || 0.5;
+
+            const layer = document.createElement('div');
+            layer.className = 'immediate-layer';
+            layer.style.zIndex = String(immediateZIndex++);
+            document.body.appendChild(layer);
+            let completed = false;
+
+            function cleanup() {
+                if (completed) return;
+                completed = true;
+                immediateAbortControllers.delete(abortController);
+                if (generation !== immediatePlaybackGeneration) {
+                    layer.remove();
+                    return;
+                }
+                applyExitAnimation(layer, exitAnim, exitDuration, () => {
+                    layer.remove();
+                    onImmediateComplete(generation);
+                });
+            }
+
+            try {
+                // Только аудио (без картинки)
+                if (mediaData.type === 'audio' && !mediaData.hasVisual) {
+                    if (mediaData.text?.enabled && mediaData.text?.content) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'media-wrapper';
+
+                        const enterAnim = mediaData.animation?.enter;
+                        const enterDur = mediaData.animation?.enterDuration || 0.5;
+                        if (enterAnim && enterAnim !== 'none') {
+                            wrapper.classList.add(`media-enter-${enterAnim}`);
+                            wrapper.style.animationDuration = `${enterDur}s`;
+                        }
+
+                        wrapper.appendChild(createAnimatedText(
+                            mediaData.text.content,
+                            mediaData.text.animation || 'none',
+                            mediaData.text.font || null,
+                            mediaData.text.animationAmplitude || 1
+                        ));
+                        layer.appendChild(wrapper);
+                    }
+
+                    playAudioDirect(
+                        mediaData.audioSrc || mediaData.src,
+                        mediaData.volume,
+                        cleanup,
+                        abortController.signal
+                    );
+
+                } else if (mediaData.type === 'image' && mediaData.hasAudio) {
+                    // Картинка + звук
+                    const element = createMediaWithText(mediaData);
+                    layer.appendChild(element);
+
+                    const duration = mediaData.duration || IMAGE_DURATION;
+                    let audioFinished = false;
+                    let timerFinished = false;
+                    let finished = false;
+
+                    const checkFinish = () => {
+                        if (finished) return;
+                        if (audioFinished && timerFinished) {
+                            finished = true;
+                            cleanup();
+                        }
+                    };
+
+                    playAudioDirect(
+                        mediaData.audioSrc,
+                        mediaData.volume,
+                        () => {
+                            audioFinished = true;
+                            checkFinish();
+                        },
+                        abortController.signal
+                    );
+
+                    setTimeout(() => {
+                        timerFinished = true;
+                        checkFinish();
+                    }, duration * 1000);
+
+                } else {
+                    // Видео или картинка без звука
+                    const element = createMediaWithText(mediaData);
+                    layer.appendChild(element);
+
+                    if (mediaData.type === 'video') {
+                        const video = element.querySelector('video');
+                        if (video) {
+                            let finished = false;
+                            const finish = (reason) => {
+                                if (finished) return;
+                                finished = true;
+                                log(`✅ Видео (imm) ${reason}`);
+                                cleanup();
+                            };
+                            video.addEventListener('ended', () => finish('закончилось'));
+                            video.addEventListener('error', () => {
+                                error(`❌ Видео (imm) ошибка: ${describeVideoError(video)}`);
+                                finish('ошибка');
+                            });
+                            video.play().catch(err => {
+                                error('❌ Видео (imm) не воспроизводится:', err.message);
+                                finish('play() error');
+                            });
+                        }
+                    } else if (mediaData.type === 'image') {
+                        setTimeout(cleanup, (mediaData.duration || IMAGE_DURATION) * 1000);
+                    }
+                }
+            } catch (err) {
+                error('❌ Ошибка (imm):', err);
+                cleanup();
+            }
+        }
+
+        function handleMediaCommand(data) {
+            const mediaFile = data.videoFile;
+            const secondaryFile = data.secondaryFile || null;
+            const mediaType = getMediaType(mediaFile);
+            const secondaryType = secondaryFile ? getMediaType(secondaryFile) : null;
+
+            let visualFile = null;
+            let visualType = null;
+            let audioFile = null;
+
+            if (mediaType === 'video') {
+                visualFile = mediaFile;
+                visualType = 'video';
+            } else if (mediaType === 'image') {
+                visualFile = mediaFile;
+                visualType = 'image';
+                if (secondaryType === 'audio') {
+                    audioFile = secondaryFile;
+                }
+            } else if (mediaType === 'audio') {
+                audioFile = mediaFile;
+                if (secondaryType === 'image') {
+                    visualFile = secondaryFile;
+                    visualType = 'image';
+                }
+            }
+
+            const mediaItem = {
+                src: visualFile ? mediaUrl(visualFile) : null,
+                audioSrc: audioFile ? mediaUrl(audioFile) : null,
+                file: mediaFile,
+                type: visualType || (audioFile ? 'audio' : 'unknown'),
+                hasAudio: !!audioFile,
+                hasVisual: !!visualFile,
+                volume: data.volume ?? 100,
+                duration: data.duration || IMAGE_DURATION,
+                text: data.text || { enabled: false },
+                animation: data.animation || { enter: 'none', exit: 'none', enterDuration: 0.5, exitDuration: 0.5 },
+                queueMode: data.queueMode || 'queue',
+                chromakey: data.chromakey || 'none'
+            };
+
+            if (mediaItem.queueMode === 'immediate') {
+                playImmediate(mediaItem);
+            } else {
+                addToQueue(mediaItem);
+            }
+        }
+
+        function clearQueue() {
+            queuedPlaybackGeneration++;
+            mediaQueue = [];
+            container.querySelectorAll('video').forEach(video => {
+                video.pause();
+                video.removeAttribute('src');
+                video.load();
+            });
+            if (currentMedia) {
+                if (currentMedia.type === 'audio' && currentMedia.source) {
+                    try { currentMedia.source.stop(); currentMedia.source.disconnect(); currentMedia.gainNode.disconnect(); } catch (e) { }
+                }
+                currentMedia = null;
+            }
+            container.innerHTML = '';
+            container.classList.add('hidden');
+            isPlaying = false;
+            log('🧹 Очередь очищена');
+        }
+
+        function clearAll() {
+            clearQueue();
+            immediatePlaybackGeneration++;
+            immediateAbortControllers.forEach(controller => controller.abort());
+            immediateAbortControllers.clear();
+            document.querySelectorAll('.immediate-layer').forEach(layer => {
+                layer.querySelectorAll('video').forEach(video => {
+                    video.pause();
+                    video.removeAttribute('src');
+                    video.load();
+                });
+                layer.remove();
+            });
+            activeImmediateCount = 0;
+            log('🧹 Всё очищено (очередь + immediate)');
+        }
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsHost = window.location.host; // тот же хост и порт, что и страница
+
+        function connectWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) return;
+            if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+
+            const wsUrl = `${wsProtocol}//${wsHost}/ws?path=${encodeURIComponent(overlayPath)}&key=${encodeURIComponent(overlayKey)}`;
+
+            try {
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    log(`✅ WS подключен (overlay: ${overlayId})`);
+                    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+                    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        log('📩', data.command, data.videoFile || '');
+
+                        if (data.command === 'playVideo') {
+                            handleMediaCommand(data);
+                        } else if (data.command === 'config') {
+                            applySettings(data.pauseBetweenMs, data.imageDurationSec);
+                        } else if (data.command === 'clearQueue') {
+                            clearQueue();
+                        } else if (data.command === 'clearAll') {
+                            clearAll();
+                        } else if (data.command === 'ping') {
+                            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ command: 'pong' }));
+                        }
+                    } catch (err) { error('❌ Ошибка WS-сообщения:', err); }
+                };
+
+                ws.onerror = () => error('❌ WS ошибка');
+
+                ws.onclose = () => {
+                    log('🔌 WS отключен');
+                    if (!reconnectTimer) reconnectTimer = setTimeout(connectWebSocket, WS_RECONNECT_DELAY);
+                };
+            } catch (err) {
+                error('❌ WS:', err);
+                if (!reconnectTimer) reconnectTimer = setTimeout(connectWebSocket, WS_RECONNECT_DELAY);
+            }
+        }
+
+        async function init() {
+            log('🚀 Инициализация...');
+            await registerOfflineOverlayShell();
+            await resolveOverlayId();
+            connectWebSocket();
+            startServerMonitor();
+
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && audioContext && audioContext.state === 'suspended') audioContext.resume();
+            });
+
+            if (DEBUG) {
+                const resizeObserver = new ResizeObserver(entries => {
+                    for (let entry of entries) {
+                        if (entry.target === container) {
+                            log(`📐 Контейнер: ${entry.contentRect.width}x${entry.contentRect.height}`);
+                        }
+                    }
+                });
+                resizeObserver.observe(container);
+
+                window.getContainerSize = () => {
+                    const rect = container.getBoundingClientRect();
+                    log(`Контейнер: ${rect.width}x${rect.height}`);
+                    const wrapper = container.querySelector('.media-wrapper');
+                    if (wrapper) {
+                        const wrapperRect = wrapper.getBoundingClientRect();
+                        log(`Wrapper: ${wrapperRect.width}x${wrapperRect.height}`);
+                        const media = wrapper.querySelector('.media-element');
+                        if (media) {
+                            const mediaRect = media.getBoundingClientRect();
+                            log(`Media: ${mediaRect.width}x${mediaRect.height}`);
+                            if (media.tagName === 'VIDEO') {
+                                log(`Video native: ${media.videoWidth}x${media.videoHeight}`);
+                            }
+                            if (media.tagName === 'IMG') {
+                                log(`Image native: ${media.naturalWidth}x${media.naturalHeight}`);
+                            }
+                        }
+                    }
+                };
+            }
+
+            log('✅ Готово');
+        }
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+        else init();
+
+        window.addEventListener('error', (event) => error('🌍', event.error || event.message));
+        window.addEventListener('unhandledrejection', (event) => error('🌍', event.reason));
+        window.addEventListener('online', () => {
+            log('🌐 Сеть снова доступна, переподключаем WS');
+            connectWebSocket();
+        });
+
+        window.addEventListener('focus', () => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('🎯 Окно снова активно, проверяем WS');
+                connectWebSocket();
+            }
+        });
+    </script>
+</body>
+
+</html>

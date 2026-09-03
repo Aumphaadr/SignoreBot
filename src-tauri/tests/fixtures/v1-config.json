@@ -1,0 +1,1119 @@
+{
+  "tokens": {
+    "channelName": "cozy_stream",
+    "botUsername": "cozy_stream_bot",
+    "accessToken": "REDACTED",
+    "refreshToken": "REDACTED",
+    "broadcasterAccessToken": "REDACTED",
+    "broadcasterRefreshToken": "REDACTED"
+  },
+  "commands": {
+    "!команды": {
+      "enabled": true,
+      "name": "команды",
+      "permissions": [],
+      "aliases": [
+        "!help",
+        "!хелп"
+      ],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Команды бота: !дискорд !тг !ютуб !правила !расписание !пк !обнять !кубик !цитата — и звуки: !барабан !фанфары !сверчки"
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "!правила": {
+      "enabled": true,
+      "name": "правила",
+      "permissions": [],
+      "aliases": [
+        "!rules"
+      ],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Правила простые: уважаем друг друга, без спойлеров и политики. Модераторы — наши друзья."
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "!расписание": {
+      "enabled": true,
+      "name": "расписание",
+      "permissions": [],
+      "aliases": [],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Стримы по вторникам и пятницам с 20:00 по Москве. Иногда внезапно в воскресенье."
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "!пк": {
+      "enabled": true,
+      "name": "пк",
+      "permissions": [],
+      "aliases": [
+        "!железо",
+        "!specs"
+      ],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Железо: Ryzen 5 5600, RTX 3060, 32 ГБ, два монитора. Микрофон — Fifine K669."
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "!дискорд": {
+      "enabled": true,
+      "name": "дискорд",
+      "permissions": [],
+      "aliases": [
+        "!discord",
+        "!ds"
+      ],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Заходи в наш уютный Discord: https://discord.example/cozy-stream"
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "!тг": {
+      "enabled": true,
+      "name": "тг",
+      "permissions": [],
+      "aliases": [
+        "!telegram",
+        "!tg"
+      ],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Анонсы стримов и мемы — в телеграме: https://t.me/example_stream"
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "!ютуб": {
+      "enabled": true,
+      "name": "ютуб",
+      "permissions": [],
+      "aliases": [
+        "!yt"
+      ],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Нарезки лучших моментов: https://youtube.example/@cozy_stream"
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "!привет": {
+      "enabled": true,
+      "name": "привет",
+      "permissions": [],
+      "aliases": [],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Привет, "
+            },
+            {
+              "type": "author"
+            },
+            {
+              "type": "static",
+              "value": "! Рады видеть тебя на стриме 💜"
+            }
+          ]
+        },
+        "media": {
+          "enabled": true,
+          "file": "hello.mp3",
+          "volume": 60,
+          "overlay": {
+            "id": "overlay_mmz72aqo_4iyf",
+            "path": "audio"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "none",
+            "exit": "none"
+          },
+          "queueMode": "queue"
+        }
+      }
+    },
+    "!обнять": {
+      "enabled": true,
+      "name": "обнять",
+      "permissions": [],
+      "aliases": [
+        "!hug"
+      ],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "author"
+            },
+            {
+              "type": "static",
+              "value": " крепко обнимает "
+            },
+            {
+              "type": "target"
+            },
+            {
+              "type": "static",
+              "value": " 🤗"
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "!кубик": {
+      "enabled": true,
+      "name": "кубик",
+      "permissions": [],
+      "aliases": [
+        "!roll"
+      ],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "author"
+            },
+            {
+              "type": "static",
+              "value": " бросает кубик: выпало "
+            },
+            {
+              "type": "random",
+              "min": 1,
+              "max": 6
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "!цитата": {
+      "enabled": true,
+      "name": "цитата",
+      "permissions": [],
+      "aliases": [],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "phrase",
+              "phrases": [
+                "Не откладывай на завтра то, что можно отложить на послезавтра.",
+                "Лучший момент для стрима — сейчас.",
+                "Чай остыл, зато чат тёплый.",
+                "Если игра не идёт — идём мы."
+              ]
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "!барабан": {
+      "enabled": true,
+      "name": "барабан",
+      "permissions": [],
+      "aliases": [
+        "!drum"
+      ],
+      "response": {
+        "chat": {
+          "enabled": false,
+          "components": []
+        },
+        "media": {
+          "enabled": true,
+          "file": "drumroll.mp3",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mmz72aqo_4iyf",
+            "path": "audio"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "none",
+            "exit": "none"
+          },
+          "queueMode": "queue"
+        }
+      }
+    },
+    "!фанфары": {
+      "enabled": true,
+      "name": "фанфары",
+      "permissions": [],
+      "aliases": [],
+      "response": {
+        "chat": {
+          "enabled": false,
+          "components": []
+        },
+        "media": {
+          "enabled": true,
+          "file": "fanfare.mp3",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mmz72aqo_4iyf",
+            "path": "audio"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "none",
+            "exit": "none"
+          },
+          "queueMode": "immediate"
+        }
+      }
+    },
+    "!сверчки": {
+      "enabled": true,
+      "name": "сверчки",
+      "permissions": [
+        "moderators",
+        "vips"
+      ],
+      "aliases": [],
+      "response": {
+        "chat": {
+          "enabled": false,
+          "components": []
+        },
+        "media": {
+          "enabled": true,
+          "file": "crickets.mp3",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mmz72aqo_4iyf",
+            "path": "audio"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "none",
+            "exit": "none"
+          },
+          "queueMode": "queue"
+        }
+      }
+    },
+    "!звук": {
+      "enabled": true,
+      "name": "звук",
+      "permissions": [
+        "moderators"
+      ],
+      "aliases": [],
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Модераторский тест звука"
+            }
+          ]
+        },
+        "media": {
+          "enabled": true,
+          "file": "airhorn.mp3",
+          "volume": 40,
+          "overlay": {
+            "id": "overlay_mmz72aqo_4iyf",
+            "path": "audio"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "none",
+            "exit": "none"
+          },
+          "queueMode": "queue"
+        }
+      }
+    }
+  },
+  "banwords": {
+    "words": [
+      {
+        "word": "спам",
+        "type": "hard",
+        "aliases": [
+          "спам",
+          "cпam",
+          "cпaм",
+          "cпаm",
+          "cпам",
+          "спam",
+          "спaм",
+          "спаm"
+        ]
+      },
+      {
+        "word": "казино",
+        "type": "soft",
+        "aliases": [
+          "казино",
+          "kазино",
+          "казинo",
+          "kазинo"
+        ]
+      }
+    ]
+  },
+  "periodicEvents": {
+    "discord": {
+      "enabled": true,
+      "interval": 1800,
+      "offset": 0,
+      "color": "#7d77d4",
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Общаемся вне стрима в Discord — !дискорд. Там анонсы и мемы."
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "follow": {
+      "enabled": true,
+      "interval": 1800,
+      "offset": 900,
+      "color": "#4fbf7a",
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Понравился стрим? Фоллоу помогает каналу расти 💜"
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "stretch": {
+      "enabled": true,
+      "interval": 3600,
+      "offset": 1500,
+      "color": "#d9a441",
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Час прошёл — разминка для всех, кто сидит: шея, плечи, глаза от экрана."
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    }
+  },
+  "overlays": [
+    {
+      "id": "overlay_mmz72aqo_4iyf",
+      "name": "Аудио",
+      "path": "audio"
+    },
+    {
+      "id": "overlay_mmz72fp3_qqjg",
+      "name": "Видео",
+      "path": "video"
+    },
+    {
+      "id": "overlay_mp6pi1eh_apd7",
+      "name": "VIPS",
+      "path": "vips"
+    }
+  ],
+  "rewards": {
+    "reward_hydrate": {
+      "enabled": true,
+      "rewardId": "0d8611c8-caf4-52f5-b93c-afe17616a05c",
+      "rewardTitle": "Попить воды",
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "author"
+            },
+            {
+              "type": "static",
+              "value": " напоминает: попей воды! 💧"
+            }
+          ]
+        },
+        "media": {
+          "enabled": true,
+          "file": "water.mp3",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mmz72aqo_4iyf",
+            "path": "audio"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "none",
+            "exit": "none"
+          },
+          "queueMode": "queue"
+        }
+      }
+    },
+    "reward_stretch": {
+      "enabled": true,
+      "rewardId": "8ca956e8-d587-5e42-87a4-ad45fb5050ad",
+      "rewardTitle": "Размяться",
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Встаём, тянемся, крутим плечами — 30 секунд!"
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "reward_applause": {
+      "enabled": true,
+      "rewardId": "7752e779-1b3f-56cf-90bf-a87ceaf576e2",
+      "rewardTitle": "Аплодисменты",
+      "response": {
+        "chat": {
+          "enabled": false,
+          "components": []
+        },
+        "media": {
+          "enabled": true,
+          "file": "applause.mp3",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mmz72aqo_4iyf",
+            "path": "audio"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "none",
+            "exit": "none"
+          },
+          "queueMode": "queue"
+        }
+      }
+    },
+    "reward_trombone": {
+      "enabled": true,
+      "rewardId": "9f325634-cb26-5be2-bdd1-45a18eedc06f",
+      "rewardTitle": "Грустный тромбон",
+      "response": {
+        "chat": {
+          "enabled": false,
+          "components": []
+        },
+        "media": {
+          "enabled": true,
+          "file": "sad-trombone.mp3",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mmz72aqo_4iyf",
+            "path": "audio"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "none",
+            "exit": "none"
+          },
+          "queueMode": "queue"
+        }
+      }
+    },
+    "reward_boo": {
+      "enabled": true,
+      "rewardId": "eaef8c84-bb15-599f-b541-8e6137b2e4df",
+      "rewardTitle": "Бу!",
+      "response": {
+        "chat": {
+          "enabled": false,
+          "components": []
+        },
+        "media": {
+          "enabled": true,
+          "file": "boo.mp4",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mmz72fp3_qqjg",
+            "path": "video"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "scaleIn",
+            "exit": "scaleOut"
+          },
+          "queueMode": "immediate"
+        }
+      }
+    },
+    "reward_song": {
+      "enabled": true,
+      "rewardId": "7399ff63-45e6-5197-93d6-f42194025237",
+      "rewardTitle": "Заказать трек",
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "author"
+            },
+            {
+              "type": "static",
+              "value": " заказывает: "
+            },
+            {
+              "type": "variable",
+              "name": "message"
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    },
+    "reward_vip": {
+      "enabled": true,
+      "rewardId": "e1e4e098-6a3c-5adc-bbf5-93f3ca134e74",
+      "rewardTitle": "Показать VIP-алерт",
+      "response": {
+        "chat": {
+          "enabled": false,
+          "components": []
+        },
+        "media": {
+          "enabled": true,
+          "file": "vip.png",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mp6pi1eh_apd7",
+            "path": "vips"
+          },
+          "text": {
+            "enabled": true,
+            "content": "{user} — VIP этого стрима!",
+            "position": "below",
+            "animation": "wave",
+            "font": {}
+          },
+          "animation": {
+            "enter": "fadeInTop",
+            "exit": "fadeOutTop"
+          },
+          "queueMode": "queue"
+        }
+      }
+    },
+    "reward_hat": {
+      "enabled": true,
+      "rewardId": "bf4c9f59-e296-5f67-991c-861a47202c18",
+      "rewardTitle": "Надеть шляпу на 5 минут",
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Стример надевает шляпу. Все смотрим на шляпу."
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    }
+  },
+  "events": {
+    "follow": {
+      "enabled": true,
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Добро пожаловать, "
+            },
+            {
+              "type": "author"
+            },
+            {
+              "type": "static",
+              "value": "! Располагайся 💜"
+            }
+          ]
+        },
+        "media": {
+          "enabled": true,
+          "file": "follow.png",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mmz72fp3_qqjg",
+            "path": "video"
+          },
+          "text": {
+            "enabled": true,
+            "content": "Новый фолловер: {user}!",
+            "position": "below",
+            "animation": "wave",
+            "font": {
+              "fontFamily": "'Fira Code', sans-serif",
+              "fontSize": 48
+            }
+          },
+          "animation": {
+            "enter": "fadeInTop",
+            "exit": "fadeOutTop"
+          },
+          "queueMode": "queue",
+          "secondaryFile": "follow.mp3"
+        }
+      }
+    },
+    "subscribe": {
+      "enabled": true,
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "{user} теперь с подпиской {tier} — спасибо за поддержку! 🎉"
+            }
+          ]
+        },
+        "media": {
+          "enabled": true,
+          "file": "new-sub.mp4",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mmz72fp3_qqjg",
+            "path": "video"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "none",
+            "exit": "none"
+          },
+          "queueMode": "immediate"
+        }
+      }
+    },
+    "raid": {
+      "enabled": true,
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "Рейд от {user} с командой из {viewers} человек — добро пожаловать, располагайтесь!"
+            }
+          ]
+        },
+        "media": {
+          "enabled": true,
+          "file": "raid.mp4",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mmz72fp3_qqjg",
+            "path": "video"
+          },
+          "text": {
+            "enabled": true,
+            "content": "Рейд: {user} × {viewers}",
+            "position": "below",
+            "animation": "wave",
+            "font": {}
+          },
+          "animation": {
+            "enter": "fadeInTop",
+            "exit": "fadeOutRight"
+          },
+          "queueMode": "queue"
+        }
+      }
+    },
+    "bits": {
+      "enabled": true,
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "{user}, спасибо за {bits} bits! ✨"
+            }
+          ]
+        },
+        "media": {
+          "enabled": true,
+          "file": "bits.mp3",
+          "volume": 100,
+          "overlay": {
+            "id": "overlay_mp6pi1eh_apd7",
+            "path": "vips"
+          },
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay",
+            "animation": "none",
+            "font": {}
+          },
+          "animation": {
+            "enter": "none",
+            "exit": "none"
+          },
+          "queueMode": "queue"
+        }
+      }
+    },
+    "watchStreak": {
+      "enabled": true,
+      "response": {
+        "chat": {
+          "enabled": true,
+          "components": [
+            {
+              "type": "static",
+              "value": "{user}, ты с нами {streakCount}-й стрим подряд — это уже традиция!"
+            }
+          ]
+        },
+        "media": {
+          "enabled": false,
+          "file": "",
+          "volume": 100,
+          "overlay": null,
+          "text": {
+            "enabled": false,
+            "content": "",
+            "position": "overlay"
+          }
+        }
+      }
+    }
+  },
+  "autoshoutout": [
+    "night_owl_plays",
+    "cozy_kate"
+  ],
+  "shoutoutSettings": {
+    "raidMode": "none"
+  },
+  "obs": {
+    "enabled": true,
+    "url": "ws://127.0.0.1:4455",
+    "password": "",
+    "autoRefresh": true,
+    "browserSources": [
+      {
+        "overlayPath": "audio",
+        "inputName": "Overlay Audio"
+      },
+      {
+        "overlayPath": "video",
+        "inputName": "Overlay Video"
+      },
+      {
+        "overlayPath": "vips",
+        "inputName": "Overlay VIPS"
+      }
+    ]
+  },
+  "notes": []
+}

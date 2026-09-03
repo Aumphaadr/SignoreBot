@@ -1,0 +1,383 @@
+/* client/src/components/Notes/NotesTab.css */
+
+.notes-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.notes-header h2 {
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.notes-description {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.create-note-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--border-radius-sm);
+  font-size: 15px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+  align-self: flex-start;
+}
+
+.create-note-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* Note Editor */
+.note-editor-card {
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.note-editor-card.creating {
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.note-editor-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.note-textarea {
+  width: 100%;
+  min-height: 100px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.note-textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.note-editor-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.note-save-btn {
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+}
+
+.note-save-btn:hover {
+  background: var(--success-hover);
+}
+
+.note-cancel-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 8px 20px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+}
+
+.note-cancel-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Notes Sections */
+.notes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notes-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.notes-section-title {
+  color: var(--text-secondary);
+  font-size: 15px;
+  margin: 0;
+}
+
+/* Если section-header нет (активные), title сам получает border */
+.notes-section > .notes-section-title {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bulk-delete-btn {
+  background: var(--bg-tertiary);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+}
+
+.bulk-delete-btn:hover {
+  background: var(--danger);
+  color: white;
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Note Card */
+.note-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  transition: var(--transition);
+}
+
+.note-card:hover {
+  border-color: var(--accent);
+}
+
+.note-card.done {
+  opacity: 0.6;
+  border-left: 3px solid var(--success);
+}
+
+.note-card.done .note-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.note-card.cancelled {
+  opacity: 0.5;
+  border-left: 3px solid var(--danger);
+}
+
+.note-card.cancelled .note-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.note-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.note-text {
+  flex: 1;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  margin: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.note-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.note-date {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.note-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Status buttons */
+.note-status-buttons {
+  display: flex;
+  gap: 4px;
+  margin-right: 6px;
+  padding-right: 6px;
+  border-right: 1px solid var(--border-color);
+}
+
+.note-status-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  width: 30px;
+  height: 30px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  transition: var(--transition);
+  padding: 0;
+}
+
+.note-status-btn { font-size: 13px; padding: 0; color: var(--text-muted); }
+.note-status-btn.status-active { color: var(--info); }
+.note-status-btn.status-done { color: var(--success); }
+.note-status-btn.status-cancelled { color: var(--danger); }
+
+.note-status-btn.status-active:hover {
+  background: var(--info-light);
+  border-color: var(--info);
+}
+
+.note-status-btn.status-done:hover {
+  background: var(--success-light);
+  border-color: var(--success);
+}
+
+.note-status-btn.status-cancelled:hover {
+  background: var(--danger-light);
+  border-color: var(--danger);
+}
+
+/* Action buttons */
+.note-action-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  font-size: 14px;
+}
+
+.note-action-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.note-action-btn.edit:hover {
+  background: var(--info-light);
+  border-color: var(--info);
+  color: var(--info);
+}
+
+.note-action-btn.delete:hover {
+  background: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* Done/Cancelled sections */
+.done-section,
+.cancelled-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--border-color);
+}
+
+/* Empty */
+.empty-notes {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-card);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-muted);
+}
+
+.empty-notes .hint {
+  font-size: 14px;
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .note-editor-actions {
+    flex-direction: column;
+  }
+
+  .note-save-btn,
+  .note-cancel-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .note-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .note-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .notes-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bulk-delete-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

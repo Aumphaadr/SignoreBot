@@ -1,0 +1,354 @@
+/* client/src/shared.css */
+.command-card,
+.event-card,
+.reward-card,
+.periodic-card,
+.word-card,
+.overlay-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.command-card:hover,
+.event-card:hover,
+.reward-card:hover,
+.periodic-card:hover,
+.word-card:hover,
+.overlay-card:hover {
+  border-color: var(--accent);
+}
+
+.command-card.disabled,
+.event-card.disabled,
+.reward-card.disabled,
+.periodic-card.disabled {
+  opacity: 0.6;
+}
+
+.command-card-header,
+.event-card-header,
+.reward-card-header,
+.periodic-card-header,
+.word-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--bg-tertiary);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.command-title,
+.event-title,
+.reward-title,
+.periodic-title,
+.word-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.command-actions,
+.event-actions,
+.reward-actions,
+.periodic-actions,
+.word-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.commands-list,
+.events-list,
+.rewards-list,
+.periodic-list,
+.words-list,
+.overlays-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.commands-header,
+.events-header,
+.rewards-header,
+.periodic-header,
+.overlays-header,
+.shoutouts-header,
+.banwords-header {
+  margin-bottom: 24px;
+}
+
+.commands-header h2,
+.events-header h2,
+.rewards-header h2,
+.periodic-header h2,
+.overlays-header h2,
+.shoutouts-header h2,
+.banwords-header h2 {
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.commands-description,
+.events-description,
+.rewards-description,
+.periodic-description,
+.overlays-description,
+.shoutouts-description,
+.banwords-description {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.command-status-badge,
+.event-status-badge,
+.reward-status-badge,
+.periodic-status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.command-status-badge.enabled,
+.event-status-badge.enabled,
+.reward-status-badge.enabled,
+.periodic-status-badge.enabled {
+  background: var(--success-light);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.command-status-badge.disabled,
+.event-status-badge.disabled,
+.reward-status-badge.disabled,
+.periodic-status-badge.disabled {
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.command-type-badge,
+.event-type-badge,
+.reward-type-badge,
+.periodic-type-badge {
+  background: var(--bg-input);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.overlay-badge {
+  background: var(--info-light);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--info);
+  border: 1px solid var(--info);
+}
+
+.status-toggle-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+.status-toggle-btn.on { color: var(--success); border-color: var(--success); }
+.status-toggle-btn.off { color: var(--danger); border-color: var(--danger); }
+.status-toggle-btn:hover { background: var(--bg-hover); }
+
+.edit-btn {
+  background: var(--info);
+  color: white;
+  border: none;
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+.edit-btn:hover { background: var(--info-hover); }
+
+.delete-btn {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+.delete-btn:hover { background: var(--danger-hover); }
+
+.test-btn {
+  background: var(--info);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+}
+.test-btn:hover { background: var(--info-hover); }
+
+.trigger-btn {
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+.trigger-btn:hover { background: var(--success-hover); }
+
+.empty-commands,
+.empty-rewards,
+.empty-periodic,
+.empty-overlays,
+.empty-words,
+.empty-shoutout-list {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-card);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-muted);
+}
+
+.empty-commands .hint,
+.empty-rewards .hint,
+.empty-periodic .hint,
+.empty-overlays .hint,
+.empty-words .hint,
+.empty-shoutout-list .hint {
+  font-size: 14px;
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+/* === EDITOR ACTIONS (footer) === */
+.command-editor-actions,
+.event-editor-actions,
+.reward-editor-actions,
+.periodic-editor-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.save-command-btn,
+.save-event-btn,
+.save-reward-btn,
+.save-periodic-btn {
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.save-command-btn:hover:not(:disabled),
+.save-event-btn:hover:not(:disabled),
+.save-reward-btn:hover:not(:disabled),
+.save-periodic-btn:hover:not(:disabled) {
+  background: var(--success-hover);
+  transform: translateY(-1px);
+}
+
+.save-command-btn:disabled,
+.save-event-btn:disabled,
+.save-reward-btn:disabled,
+.save-periodic-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.error-message {
+  background: var(--danger-light);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 10px 14px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .command-title,
+  .event-title,
+  .reward-title,
+  .periodic-title,
+  .word-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .command-actions,
+  .event-actions,
+  .reward-actions,
+  .periodic-actions,
+  .word-actions {
+    flex-wrap: wrap;
+  }
+}
+/* Две иконки подряд в капсуле «Текст + Медиа» — с просветом */
+.badge-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  vertical-align: -0.14em;
+}
+.badge-icons .icon { vertical-align: baseline; }
+
+/* Медиа без выбранного оверлея уходит копией на каждый — отмечаем это */
+.overlay-badge.all-overlays {
+  background: var(--warning-light);
+  border-color: var(--warning);
+  color: var(--warning);
+}

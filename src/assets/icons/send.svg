@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 792.40699 792.40699"
+   width="792.40698"
+   height="792.40698"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="send.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs9" />
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.83758938"
+     inkscape:cx="241.16829"
+     inkscape:cy="405.32988"
+     inkscape:window-width="1920"
+     inkscape:window-height="1001"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="Штрих"
+     id="layer1"
+     transform="translate(-116.7,-84.233346)">
+    <path
+       d="m 127.57726,404.25016 c 1.7,-20.43 11.95,-39.32 29.05,-50.96 25.59,-17.42 109.01,-45.62 142,-57.27 58.34,-20.6 114.69,-47.03 173,-67.5 79.28,-27.84 157.54,-59.42 235.5,-90.4 27.32,-10.85 123.26,-52.809996 146,-53.839996 12.49,-0.56 21.61,3.97 31.36,10.97 7.57,8.259996 13.53,17.339996 13.74,28.999996 0.37,21.32 -41.02,127.16 -51.38,153 -28.02,69.92 -51.42,142.42 -76.47,213.5 -27,76.6 -57.77,152.26 -82.51,229.5 -8.19,25.6 -34.16,109.74 -47.54,127.5 -12.96,17.2 -29.87,27.65 -51.7,28.89 -18.7,-0.45 -37.98,-8.02 -49.5,-23.55 -21.65,-29.16 -69.44,-213.56 -83.76,-261.34 -3.01,-10.03 -4.82,-31.3 -11.74,-39.02 -11.79,-13.14 -262.1,-72.82 -294.26,-99.98 -14.44,-12.19 -21.65,-29.82 -21.79,-48.5 z m 618.19,-211.5 c -99.58,34.62 -197.96,75.57 -296.64,113.79 -84.46,32.71 -172.44,62.71 -253.94,99.21 25.69,8.98 257.11,85.1 264.44,83.58 7.14,-1.48 261.7,-268.72 286.14,-296.58 z m 51.86,37.3 c -26.5,25.24 -290.99,297.94 -291.86,302.7 -2.35,12.84 71.68,248.03 81.86,277.6 0.14,-0.27 2.72,-0.24 3.36,-1.6 8.64,-18.44 13.37,-39.4 20.41,-58.5 17.11,-46.36 33.56,-92.87 49.93,-139.5 44.61,-127 91.91,-253.58 136.3,-380.7 z"
+       fill="#000000"
+       fill-rule="nonzero"
+       id="path2" />
+  </g>
+</svg>

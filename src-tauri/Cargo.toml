@@ -1,0 +1,72 @@
+[package]
+name = "signorebot"
+version = "1.0.0"
+description = "SignoreBot — локальный Twitch-бот с оверлеями для OBS"
+authors = ["Aumphaadr"]
+edition = "2021"
+rust-version = "1.80"
+
+[lib]
+name = "signorebot_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# --- Tauri ---
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+
+# --- сериализация / схема ---
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ts-rs = { version = "10", features = ["serde-json-impl", "no-serde-warnings"] }
+
+# --- async / сеть ---
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+futures-util = "0.3"
+axum = { version = "0.8", features = ["ws", "macros"] }
+tower-http = { version = "0.6", features = ["fs", "set-header"] }
+tower = "0.5"
+mime = "0.3"
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+url = "2"
+
+# --- OBS ---
+obws = "0.14"
+
+# --- секреты ---
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
+
+# --- утилиты ---
+anyhow = "1"
+thiserror = "2"
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1"
+aho-corasick = "1"
+rand = "0.8"
+parking_lot = "0.12"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+infer = "0.16"
+mime_guess = "2"
+uuid = { version = "1", features = ["v4"] }
+local-ip-address = "0.6"
+open = "5"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-notification = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

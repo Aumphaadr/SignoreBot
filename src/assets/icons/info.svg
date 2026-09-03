@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 852.76202 852.76203"
+   width="852.76202"
+   height="852.76202"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="info.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs9" />
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.85774059"
+     inkscape:cx="263.48293"
+     inkscape:cy="427.28537"
+     inkscape:window-width="1920"
+     inkscape:window-height="1001"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="Штрих"
+     id="layer1"
+     transform="translate(-70.188269,-51.025815)">
+    <path
+       d="m 77.589446,481.2502 c -1.74,-230.04 190.320004,-434.040003 423.550004,-430.170003 231.72,3.84 416.71,199.750003 414.4,430.170003 -2.28,227.77 -191.95,424.67 -422.4,422.52 -226.96,-2.11 -413.840004,-197.08 -415.550004,-422.52 z m 420.050004,-374.02 c -200,-0.03 -364.76,170.41 -365.7,369.02 -0.94,197.35 162.27,370.02 361.2,372.04 201.87,2.06 367.73,-170.94 367.96,-370.54 0.22,-197.85 -163.43,-370.49 -363.46,-370.52 z m -42.86,197.02 c 0.46,-21.43 18.65,-40.7 40.36,-41.21 23.46,-0.54 42.96,20.09 42.77,43.21 -0.18,21.94 -18.61,41.52 -40.77,41.75 -23.73,0.23 -42.87,-20.32 -42.36,-43.75 z m 41.86,409.69 c -12.05,0.12 -22.33,-6.99 -26.37,-18.19 -3.12,-8.64 -3.66,-270.85 -0.26,-284 3.15,-12.22 16.26,-19.17 28.13,-18.62 10.51,0.88 20.92,7.66 24,18.12 3.42,11.61 2.84,275.12 -0.29,284.5 -3.68,11.04 -13.73,17.78 -25.21,18.19 z"
+       fill="#000000"
+       fill-rule="nonzero"
+       id="path2" />
+  </g>
+</svg>

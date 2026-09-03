@@ -1,0 +1,38 @@
+/* client/src/components/Common/VariableBadge.css */
+
+.variable-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  vertical-align: middle;
+}
+
+.variable-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent-light);
+  color: var(--accent-text);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-family: monospace;
+  border: 1px solid var(--accent);
+  line-height: 1.2;
+  transition: var(--transition);
+}
+
+.variable-badge:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.inline-variable-list {
+  margin: 0 4px;
+}
+
+.variable-badges .tooltip-container,
+.event-vars .tooltip-container,
+.text-vars-badges .tooltip-container {
+  margin-left: 0;
+}

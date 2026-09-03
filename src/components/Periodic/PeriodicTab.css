@@ -1,0 +1,306 @@
+/* client/src/components/Periodic/PeriodicTab.css */
+
+.periodic-description {
+  margin-bottom: 16px;
+}
+
+.periodic-header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.restart-timers-btn {
+  background: var(--info);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.restart-timers-btn:hover {
+  background: var(--info-hover);
+}
+
+.create-periodic-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.create-periodic-btn:hover {
+  background: var(--accent-hover);
+}
+
+.periodic-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.periodic-interval-badge {
+  background: var(--info-light);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--info);
+  border: 1px solid var(--info);
+}
+
+/* Periodic Editor */
+.periodic-editor {
+  padding: 8px 0;
+}
+
+.periodic-editor-header {
+  margin-bottom: 20px;
+}
+
+.periodic-name-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.periodic-name-field {
+  flex: 2;
+  min-width: 250px;
+}
+
+.periodic-name-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.periodic-name-input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+}
+
+.periodic-name-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.periodic-toggle-field {
+  flex: 1;
+  min-width: 150px;
+}
+
+.periodic-toggle-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.interval-setting {
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.interval-setting > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.interval-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.interval-input {
+  width: 150px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  border-radius: var(--border-radius-sm);
+  text-align: center;
+}
+
+.interval-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.preset-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--info);
+}
+
+.preset-btn.active {
+  background: var(--info);
+  color: white;
+  border-color: var(--info);
+}
+
+.periodic-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Бейдж смещения */
+.periodic-offset-badge {
+  background: var(--accent-light);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+}
+
+/* Color setting в редакторе */
+.color-setting {
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.color-setting > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.color-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.color-preset-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  padding: 0;
+}
+
+.color-preset-btn:hover {
+  transform: scale(1.15);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.color-preset-btn.active {
+  border-color: white;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 8px rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.color-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-color);
+}
+
+.color-picker-input {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  cursor: pointer;
+  background: var(--bg-input);
+  padding: 0;
+}
+
+.color-picker-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-picker-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+/* Offset setting в редакторе */
+.offset-setting {
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.offset-setting > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.offset-input-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.offset-preview {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.offset-preview strong {
+  color: var(--accent-text);
+}
+
+@media (max-width: 768px) {
+  .periodic-name-row { flex-direction: column; align-items: stretch; }
+  .interval-presets { flex-direction: column; }
+  .preset-btn { width: 100%; text-align: center; }
+  .periodic-header-actions { flex-direction: column; }
+  .restart-timers-btn,
+  .create-periodic-btn { width: 100%; justify-content: center; }
+  .color-presets { justify-content: center; }
+  .offset-input-group { flex-direction: column; align-items: flex-start; }
+}
