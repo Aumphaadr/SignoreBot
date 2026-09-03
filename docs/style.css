@@ -66,8 +66,11 @@ section { padding: 56px 0; border-top: 1px solid var(--border); }
 /* скачать */
 .dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .dl .card { display: flex; flex-direction: column; gap: 8px; }
+.dl .card .btn { justify-content: center; }
+.dl-hint { margin-top: auto; padding-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.dl-hint code { font-size: 12px; overflow-wrap: anywhere; word-break: normal; }
 .dl .os { font-size: 15px; color: var(--muted); }
-.dl .name { font-family: "Fira Code", Consolas, monospace; font-size: 14px; color: var(--text2); word-break: break-all; }
+.dl .name { font-family: "Fira Code", Consolas, monospace; font-size: 14px; color: var(--text2); overflow-wrap: anywhere; }
 .status-line { margin-top: 14px; color: var(--muted); font-size: 14px; }
 .notes { margin-top: 18px; }
 .notes pre { white-space: pre-wrap; }
