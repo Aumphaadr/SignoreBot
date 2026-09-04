@@ -54,6 +54,12 @@ section { padding: 56px 0; border-top: 1px solid var(--border); }
 .card h3 { display: flex; align-items: center; gap: 8px; }
 .card p:last-child { margin-bottom: 0; }
 
+/* два принципа */
+.why { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.why-card p { font-size: 16px; }
+.why-card img { width: 100%; margin-top: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.why-card h3 { font-size: 21px; }
+
 /* скриншоты */
 .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .shots figure { margin: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: zoom-in; }
@@ -97,7 +103,7 @@ footer .wrap { display: flex; gap: 16px; flex-wrap: wrap; justify-content: space
 @media (max-width: 860px) {
   .hero .wrap { grid-template-columns: 1fr; }
   .hero h1 { font-size: 34px; }
-  .grid.c3, .grid.c2, .shots, .dl { grid-template-columns: 1fr; }
+  .grid.c3, .grid.c2, .shots, .dl, .why { grid-template-columns: 1fr; }
   .top nav { display: none; }
 }
 
