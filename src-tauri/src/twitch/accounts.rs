@@ -57,7 +57,8 @@ pub struct AuthManager {
     shared: std::sync::atomic::AtomicBool,
 }
 
-/// Объединённый набор прав для режима «один аккаунт».
+/// Права стримера вместе с правами бота: запрашиваются у стримера всегда,
+/// обязательны — только в режиме «один аккаунт».
 fn union_scopes() -> &'static [&'static str] {
     static UNION: std::sync::OnceLock<Vec<&'static str>> = std::sync::OnceLock::new();
     UNION.get_or_init(|| {
@@ -337,8 +338,11 @@ impl AuthManager {
     /// Начать Device-Code-авторизацию. Возвращает код для пользователя;
     /// опрос идёт в фоне до успеха/отказа/истечения.
     pub async fn start_device_flow(self: &Arc<Self>, kind: AccountKind) -> Result<DeviceCode, AuthError> {
-        let scopes = self.required_scopes_for(kind);
         let kind = self.k(kind);
+        // Стримеру всегда запрашиваем объединённый набор (его права + права
+        // бота): тогда режим «один аккаунт» включается без повторной
+        // авторизации. Обязательными права бота становятся только в этом режиме.
+        let scopes = if kind == AccountKind::Broadcaster { union_scopes() } else { auth::BOT_SCOPES };
         let client_id = self.client_id();
         let dc = auth::device_code(&client_id, scopes).await?;
         {

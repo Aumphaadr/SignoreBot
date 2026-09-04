@@ -138,17 +138,17 @@ export default function AuthTab() {
       <label className="toggle-label oauth-same-toggle">
         <span className="toggle-switch"><input type="checkbox" checked={same} onChange={(e) => void toggleSame(e.target.checked)} /><span className="toggle-slider"></span></span>
         <span className="toggle-text">Бот — тот же аккаунт, что и стример</span>
-        <Tooltip text="Сообщения бота будут идти в чат от вашего имени, а не от отдельного ника. Один код авторизации вместо двух: стример получает и права бота (отправка и удаление сообщений). Ваши собственные команды в чате при этом работают." />
+        <Tooltip text="Сообщения бота будут идти в чат от вашего имени, а не от отдельного ника. Права бота у стримера уже есть (они запрашиваются при авторизации), поэтому включается сразу; заново авторизоваться попросит только старый токен, выданный до 1.0.1. Ваши собственные команды в чате при этом работают." />
       </label>
       <div className="oauth-two-columns">
-        <AccountCard kind="broadcaster" st={status.broadcaster} title={<><Icon name="streamer-camera" /> {same ? "Стример и бот" : "Стример"}</>} badge={same ? "Один аккаунт на обе роли" : "Основной аккаунт"} hint={same ? "Права: чтение чата, фолловеры, подписки, награды за баллы, bits, список зрителей, shoutout, а также отправка и удаление сообщений — бот пишет от вашего имени." : "Права: чтение чата, фолловеры, подписки, награды за баллы, bits, список зрителей, shoutout."} />
+        <AccountCard kind="broadcaster" st={status.broadcaster} title={<><Icon name="streamer-camera" /> {same ? "Стример и бот" : "Стример"}</>} badge={same ? "Один аккаунт на обе роли" : "Основной аккаунт"} hint={same ? "Права: чтение чата, фолловеры, подписки, награды за баллы, bits, список зрителей, shoutout, отправка и удаление сообщений — бот пишет от вашего имени." : "Права: чтение чата, фолловеры, подписки, награды за баллы, bits, список зрителей, shoutout. Заодно запрашиваются отправка и удаление сообщений — чтобы режим «один аккаунт» включался без повторной авторизации."} />
         {same ? (
           <div className="oauth-card oauth-card-shared">
             <div className="oauth-card-header"><h3><Icon name="robot" /> Бот</h3><span className="oauth-badge bot">Использует аккаунт стримера</span></div>
             <div className="oauth-card-content">
               <div className="oauth-auth-status muted"><div>
                 {status.broadcaster.state === "authorized" ? <>Пишет в чат как <strong>{status.broadcaster.login}</strong>.</> : "Появится, как только авторизуется стример."}
-                {status.broadcaster.state === "authorized" && status.broadcaster.missingScopes.length > 0 && <div className="oauth-scopes text-warning" style={{ marginTop: 8 }}><Icon name="warning" /> Токену стримера не хватает прав бота — нажмите «Авторизоваться заново» слева, Twitch запросит их одним кодом.</div>}
+                {status.broadcaster.state === "authorized" && status.broadcaster.missingScopes.length > 0 && <div className="oauth-scopes text-warning" style={{ marginTop: 8 }}><Icon name="warning" /> Токен стримера выдан до 1.0.1 и без прав бота — нажмите «Авторизоваться заново» слева, один код — и готово.</div>}
               </div></div>
               <div className="oauth-hint"><Icon name="lightbulb" /> Отдельный аккаунт для бота нужен только затем, чтобы ответы в чате шли от другого ника. Выключите переключатель выше — и карточка бота вернётся.</div>
             </div>
