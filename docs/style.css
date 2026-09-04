@@ -5,7 +5,7 @@
   --text: #e8eaee; --text2: #b4b9c2; --muted: #7f8693;
   --accent: #7d77d4; --accent2: #6f69c4; --accent-light: rgba(125,119,212,.14); --accent-text: #b9b5ea;
   --success: #4fbf7a; --warning: #d9a441; --danger: #df6069; --info: #5a9be6;
-  --radius: 10px; --radius-sm: 7px; --max: 1080px;
+  --radius: 10px; --radius-sm: 7px; --max: 1200px;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
