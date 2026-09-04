@@ -2,7 +2,7 @@ import Icon, { type IconName } from "../Icon";
 import { useState } from "react";
 import Tooltip from "../Tooltip";
 
-const ROLES: [string, IconName, string][] = [["broadcaster", "owner-crown", "Стример"], ["moderators", "moderator-shield", "Модераторы"], ["vips", "vip-star", "VIP"], ["subscribers", "television", "Подписчики"]];
+const ROLES: [string, IconName, string][] = [["broadcaster", "owner-crown", "Стример"], ["moderators", "moderator-sword", "Модераторы"], ["vips", "gem", "VIP"], ["subscribers", "vip-star", "Подписчики"]];
 
 /** Кто может вызывать команду. «Все» исключает остальные; роли и «Выбранные»
  *  (ручной список логинов) сочетаются между собой. Пустой список = все. */

@@ -61,16 +61,22 @@ pub fn is_newer(latest: &str, current: &str) -> bool {
 
 pub async fn check(repo_url: &str) -> Result<UpdateInfo, String> {
     let current = env!("CARGO_PKG_VERSION").to_string();
-    let (owner, repo) = parse_repo(repo_url).ok_or_else(|| format!("Некорректная ссылка на репозиторий: {repo_url}"))?;
-    let api = format!("https://api.github.com/repos/{owner}/{repo}/releases/latest");
+    // Ссылка на репозиторий GitHub → его API «последний релиз». Любая другая
+    // http-ссылка — прямой адрес JSON в том же формате (свой сервер у форка
+    // или проверочная подмена).
+    let (api, releases_url) = match parse_repo(repo_url) {
+        Some((owner, repo)) => (format!("https://api.github.com/repos/{owner}/{repo}/releases/latest"), format!("https://github.com/{owner}/{repo}/releases")),
+        None if repo_url.trim().starts_with("http://") || repo_url.trim().starts_with("https://") => (repo_url.trim().to_string(), repo_url.trim().to_string()),
+        None => return Err(format!("Некорректная ссылка на репозиторий: {repo_url}")),
+    };
     let client = reqwest::Client::builder().user_agent("SignoreBot/0.1").timeout(std::time::Duration::from_secs(15)).build().map_err(|e| e.to_string())?;
     let resp = client.get(&api).header("Accept", "application/vnd.github+json").send().await.map_err(|e| format!("сеть: {e}"))?;
     let checked_at = chrono::Utc::now().timestamp_millis();
     if resp.status().as_u16() == 404 {
-        return Ok(UpdateInfo { current, latest: None, is_newer: false, url: Some(format!("https://github.com/{owner}/{repo}/releases")), published_at: None, notes: Some("В репозитории пока нет релизов".into()), assets: vec![], checked_at });
+        return Ok(UpdateInfo { current, latest: None, is_newer: false, url: Some(releases_url), published_at: None, notes: Some("В репозитории пока нет релизов".into()), assets: vec![], checked_at });
     }
     if !resp.status().is_success() {
-        return Err(format!("GitHub ответил {}", resp.status()));
+        return Err(format!("Сервер обновлений ответил {}", resp.status()));
     }
     let v: serde_json::Value = resp.json().await.map_err(|e| format!("ответ GitHub не разобран: {e}"))?;
     let tag = v["tag_name"].as_str().unwrap_or("").to_string();

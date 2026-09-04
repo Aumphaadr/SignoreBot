@@ -236,3 +236,19 @@
   .form-actions { flex-direction: column; }
   .form-actions button { width: 100%; justify-content: center; }
 }
+/* Возврат баллов, управляемые копии, список погашений */
+.reward-refund-block { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 12px 14px; margin-bottom: 14px; }
+.reward-refund-block .toggle-label.disabled { opacity: .7; }
+.reward-status-badge.managed { color: var(--info); border-color: var(--info); background: var(--info-light); }
+.reward-status-badge.refund { color: var(--success); border-color: var(--success); background: var(--success-light); }
+.reward-status-badge.warning-badge { color: var(--warning); border-color: var(--warning); background: var(--warning-light); }
+.redemptions-section { margin-top: 22px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 16px 20px; }
+.redemptions-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.redemptions-header h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.redemptions-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.redemption-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-left: 4px solid var(--warning); border-radius: var(--border-radius-sm); }
+.redemption-row.refunded { border-left-color: var(--success); }
+.redemption-user { color: var(--accent-text); }
+.redemption-time { color: var(--text-muted); margin-left: 10px; font-size: 14px; }
+.redemption-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.managed-copy-steps ol { margin: 10px 0 14px 20px; line-height: 1.6; }

@@ -37,6 +37,10 @@ pub struct ChatMessage {
 pub enum TwitchEvent {
     Chat(ChatMessage),
     Redemption { redemption_id: String, reward_id: String, reward_title: String, user_name: String, user_input: String },
+    /// Погашение закрыто (стример/модератор/бот): status = fulfilled | canceled.
+    RedemptionUpdate { redemption_id: String, reward_id: String, status: String },
+    /// Награда на канале создана/изменена/удалена — панели пора перечитать список.
+    RewardChanged { reward_id: String, title: String, removed: bool },
     Follow { user_name: String, user_id: String },
     Subscribe { user_name: String, user_id: String, tier: String, is_gift: bool },
     Resub { user_name: String, tier: String, months: u64, streak_months: u64, message: String },
@@ -112,6 +116,13 @@ pub fn parse_notification(sub_type: &str, ev: &Value) -> Option<TwitchEvent> {
                 is_subscriber,
                 reward_id,
             })
+        }
+        "channel.channel_points_custom_reward_redemption.update" => {
+            let reward = ev.get("reward").cloned().unwrap_or(Value::Null);
+            TwitchEvent::RedemptionUpdate { redemption_id: s(ev, "id"), reward_id: s(&reward, "id"), status: s(ev, "status").to_lowercase() }
+        }
+        "channel.channel_points_custom_reward.add" | "channel.channel_points_custom_reward.update" | "channel.channel_points_custom_reward.remove" => {
+            TwitchEvent::RewardChanged { reward_id: s(ev, "id"), title: s(ev, "title"), removed: sub_type == "channel.channel_points_custom_reward.remove" }
         }
         "channel.channel_points_custom_reward_redemption.add" => {
             let reward = ev.get("reward").cloned().unwrap_or(Value::Null);
@@ -262,6 +273,10 @@ fn subscriptions(bid: &str) -> Vec<SubSpec> {
         SubSpec { kind: "channel.chat.message", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
         SubSpec { kind: "channel.chat.notification", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
         SubSpec { kind: "channel.channel_points_custom_reward_redemption.add", version: "1", condition: bc.clone() },
+        SubSpec { kind: "channel.channel_points_custom_reward_redemption.update", version: "1", condition: bc.clone() },
+        SubSpec { kind: "channel.channel_points_custom_reward.add", version: "1", condition: bc.clone() },
+        SubSpec { kind: "channel.channel_points_custom_reward.update", version: "1", condition: bc.clone() },
+        SubSpec { kind: "channel.channel_points_custom_reward.remove", version: "1", condition: bc.clone() },
         SubSpec { kind: "channel.follow", version: "2", condition: serde_json::json!({ "broadcaster_user_id": bid, "moderator_user_id": bid }) },
         SubSpec { kind: "channel.subscribe", version: "1", condition: bc.clone() },
         SubSpec { kind: "channel.subscription.message", version: "1", condition: bc.clone() },

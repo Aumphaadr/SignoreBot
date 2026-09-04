@@ -106,6 +106,11 @@ impl OverlayHub {
     /// Отправить всем оверлеям с данным path. Если никого нет — в очередь.
     /// Возвращает `true`, если доставлено хотя бы одному.
     pub fn send_to_path(&self, path: &str, message: &str) -> bool {
+        self.send_to_path_opt(path, message, true)
+    }
+
+    /// `queue = false` — не ждать в отложенной очереди, если оверлей не подключён.
+    pub fn send_to_path_opt(&self, path: &str, message: &str, queue: bool) -> bool {
         let mut inner = self.inner.lock();
         let mut sent = false;
         for c in inner.clients.values() {
@@ -113,7 +118,7 @@ impl OverlayHub {
                 sent = true;
             }
         }
-        if !sent {
+        if !sent && queue {
             let q = inner.pending.entry(path.to_string()).or_default();
             let now = Instant::now();
             q.retain(|(t, _)| now.duration_since(*t) <= PENDING_TTL);

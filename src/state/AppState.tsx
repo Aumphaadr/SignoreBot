@@ -67,7 +67,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (selfSaves.current > 0) selfSaves.current -= 1;
         else void reloadConfig();
       }
-      if (what === "auth" || what === "server" || what === "overlays" || what === "eventsub" || what === "runtime") void reloadStatus();
+      if (what === "auth" || what === "server" || what === "overlays" || what === "eventsub" || what === "runtime" || what === "updates") void reloadStatus();
       listeners.current.get(what)?.forEach((cb) => cb());
     }).then((u) => (unlisten = u));
     const t = setInterval(() => void reloadStatus(), 15000);

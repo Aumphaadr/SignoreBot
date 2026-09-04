@@ -7,6 +7,8 @@ use signorebot_lib::paths::AppPaths;
 use signorebot_lib::secrets::Secrets;
 use signorebot_lib::twitch::accounts::AuthManager;
 use signorebot_lib::twitch::eventsub::{ChatMessage, TwitchEvent};
+#[allow(unused_imports)]
+use signorebot_lib::config::Response;
 use signorebot_lib::twitch::helix::Helix;
 use std::sync::Arc;
 
@@ -32,7 +34,7 @@ async fn command_sends_media_with_antispam_and_permissions() {
     paths.ensure_dirs().unwrap();
     let mut cfg = Config::default();
     cfg.normalize();
-    cfg.overlays.push(Overlay { id: "o1".into(), name: "Аудио".into(), path: "audio".into() });
+    cfg.overlays.push(Overlay { id: "o1".into(), name: "Аудио".into(), path: "audio".into(), fallback: None, fallback_enabled: false });
     let mut cmd = Command { name: "звук".into(), aliases: vec!["snd".into()], ..Default::default() };
     cmd.response.media.enabled = true;
     cmd.response.media.file = "a.mp3".into();
@@ -98,7 +100,7 @@ fn media_engine(dir: &std::path::Path) -> (Arc<Engine>, tokio::sync::mpsc::Recei
     let mut cfg = Config::default();
     cfg.normalize();
     cfg.overlay_settings.antispam_window_ms = 0;
-    cfg.overlays.push(Overlay { id: "o1".into(), name: "Аудио".into(), path: "audio".into() });
+    cfg.overlays.push(Overlay { id: "o1".into(), name: "Аудио".into(), path: "audio".into(), fallback: None, fallback_enabled: false });
     let mut cmd = Command { name: "snd".into(), ..Default::default() };
     cmd.response.media.enabled = true;
     cmd.response.media.file = "a.mp3".into();
@@ -144,4 +146,118 @@ async fn separate_bot_account_messages_are_ignored_by_author() {
     assert!(rx.try_recv().is_err(), "сообщение от отдельного бота не команда");
     engine.dispatch(msg("x-2", "1", "!snd")).await;
     assert!(rx.recv().await.is_some(), "стример с отдельным ботом — команда работает");
+}
+
+fn overlay(id: &str, name: &str, path: &str, fallback: Option<Response>) -> Overlay {
+    Overlay { id: id.into(), name: name.into(), path: path.into(), fallback_enabled: fallback.is_some(), fallback }
+}
+
+/// Оверлей с резервной реакцией: медиа не ждёт в очереди, резерв уходит на
+/// другой оверлей; без резерва — старое поведение (очередь до подключения).
+#[tokio::test]
+async fn overlay_fallback_replaces_pending_queue() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = AppPaths::new(dir.path());
+    paths.ensure_dirs().unwrap();
+    let mut cfg = Config::default();
+    cfg.normalize();
+    cfg.overlay_settings.antispam_window_ms = 0;
+    let mut fb = Response::default();
+    fb.media.enabled = true;
+    fb.media.file = "wait.gif".into();
+    fb.media.overlay = Some("o-b".into());
+    cfg.overlays.push(overlay("o-a", "Видео", "video", Some(fb)));
+    cfg.overlays.push(overlay("o-b", "Аудио", "audio", None));
+    cfg.overlays.push(overlay("o-c", "VIPS", "vips", None));
+    let mut a = Command { name: "a".into(), ..Default::default() };
+    a.response.media.enabled = true; a.response.media.file = "a.mp4".into(); a.response.media.overlay = Some("o-a".into());
+    let mut c = Command { name: "c".into(), ..Default::default() };
+    c.response.media.enabled = true; c.response.media.file = "c.mp4".into(); c.response.media.overlay = Some("o-c".into());
+    cfg.commands.push(a); cfg.commands.push(c);
+    let config: SharedConfig = Arc::new(parking_lot::RwLock::new(cfg));
+    let auth = AuthManager::new("cid".into(), Secrets::file_only(&paths));
+    let helix = Arc::new(Helix::new(Arc::clone(&auth)));
+    let hub = OverlayHub::new();
+    let engine = Engine::new(config, auth, helix, hub.clone(), paths.deleted_messages_log());
+    let (_ib, mut rx_b) = hub.connect("audio", "t".into());
+
+    // «Видео» не подключён, у него резерв → резервное медиа уходит на «Аудио»
+    engine.dispatch(chat("alice", "!a")).await;
+    let v: serde_json::Value = serde_json::from_str(&rx_b.recv().await.unwrap()).unwrap();
+    assert_eq!(v["videoFile"], "wait.gif");
+    // и в отложенной очереди «Видео» ничего нет: подключившись, он не получит a.mp4
+    let (_ia, mut rx_a) = hub.connect("video", "t".into());
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    assert!(rx_a.try_recv().is_err(), "с резервом медиа не должно ждать в очереди");
+
+    // «VIPS» без резерва: медиа ждёт и приходит при подключении
+    engine.dispatch(chat("bob", "!c")).await;
+    let (_ic, mut rx_c) = hub.connect("vips", "t".into());
+    let v: serde_json::Value = serde_json::from_str(&rx_c.recv().await.unwrap()).unwrap();
+    assert_eq!(v["videoFile"], "c.mp4");
+}
+
+/// Награда с медиа на выключенный оверлей попадает в список невыполненных
+/// погашений; закрытие погашения в Twitch (EventSub) меняет статус.
+#[tokio::test]
+async fn unavailable_overlay_records_pending_redemption() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = AppPaths::new(dir.path());
+    paths.ensure_dirs().unwrap();
+    let mut cfg = Config::default();
+    cfg.normalize();
+    cfg.overlays.push(overlay("o-a", "Видео", "video", None));
+    let mut rw = Reward { reward_id: "rw-1".into(), reward_title: "Бу!".into(), ..Default::default() };
+    rw.response.media.enabled = true; rw.response.media.file = "boo.mp4".into(); rw.response.media.overlay = Some("o-a".into());
+    cfg.rewards.push(rw);
+    let config: SharedConfig = Arc::new(parking_lot::RwLock::new(cfg));
+    let auth = AuthManager::new("cid".into(), Secrets::file_only(&paths));
+    let helix = Arc::new(Helix::new(Arc::clone(&auth)));
+    let hub = OverlayHub::new();
+    let engine = Engine::new(config, auth, helix, hub.clone(), paths.deleted_messages_log());
+    engine.dispatch(TwitchEvent::Redemption { redemption_id: "red-1".into(), reward_id: "rw-1".into(), reward_title: "Бу!".into(), user_name: "carol".into(), user_input: String::new() }).await;
+    let list = engine.redemptions();
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].status, "pending");
+    assert_eq!(list[0].user, "carol");
+    assert!(list[0].reason.contains("Видео"));
+    // файл записан и переживает перезапуск движка
+    assert!(dir.path().join("redemptions.json").exists());
+    // модератор вернул баллы в очереди Twitch → статус canceled
+    engine.dispatch(TwitchEvent::RedemptionUpdate { redemption_id: "red-1".into(), reward_id: "rw-1".into(), status: "canceled".into() }).await;
+    assert_eq!(engine.redemptions()[0].status, "canceled");
+    engine.dismiss_redemption("red-1");
+    assert_eq!(engine.redemptions()[0].status, "dismissed");
+}
+
+/// Награда с возвратом баллов: медиа для выключенного оверлея не ждёт в
+/// очереди (иначе зритель получил бы и баллы, и медиа через полминуты).
+#[tokio::test]
+async fn refund_reward_does_not_queue_media() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = AppPaths::new(dir.path());
+    paths.ensure_dirs().unwrap();
+    let mut cfg = Config::default();
+    cfg.normalize();
+    cfg.overlays.push(overlay("o-a", "Аудио", "audio", None));
+    let mut rw = Reward { reward_id: "rw-1".into(), reward_title: "Привет".into(), managed: true, refund_if_unavailable: true, ..Default::default() };
+    rw.response.media.enabled = true; rw.response.media.file = "hi.mp3".into(); rw.response.media.overlay = Some("o-a".into());
+    let mut plain = Reward { reward_id: "rw-2".into(), reward_title: "Обычная".into(), ..Default::default() };
+    plain.response.media.enabled = true; plain.response.media.file = "plain.mp3".into(); plain.response.media.overlay = Some("o-a".into());
+    cfg.rewards.push(rw); cfg.rewards.push(plain);
+    let config: SharedConfig = Arc::new(parking_lot::RwLock::new(cfg));
+    let auth = AuthManager::new("cid".into(), Secrets::file_only(&paths));
+    let helix = Arc::new(Helix::new(Arc::clone(&auth)));
+    let hub = OverlayHub::new();
+    let engine = Engine::new(config, auth, helix, hub.clone(), paths.deleted_messages_log());
+    engine.dispatch(TwitchEvent::Redemption { redemption_id: "r1".into(), reward_id: "rw-1".into(), reward_title: "Привет".into(), user_name: "dan".into(), user_input: String::new() }).await;
+    engine.dispatch(TwitchEvent::Redemption { redemption_id: "r2".into(), reward_id: "rw-2".into(), reward_title: "Обычная".into(), user_name: "eve".into(), user_input: String::new() }).await;
+    // возврат без прав не прошёл, но запись есть; обычная награда — тоже в списке
+    assert_eq!(engine.redemptions().len(), 2);
+    // оверлей подключился: приходит только медиа обычной награды
+    let (_i, mut rx) = hub.connect("audio", "t".into());
+    let v: serde_json::Value = serde_json::from_str(&rx.recv().await.unwrap()).unwrap();
+    assert_eq!(v["videoFile"], "plain.mp3");
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    assert!(rx.try_recv().is_err(), "медиа награды с возвратом не должно быть в очереди");
 }

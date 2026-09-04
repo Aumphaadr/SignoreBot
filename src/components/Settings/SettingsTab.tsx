@@ -18,7 +18,7 @@ export default function SettingsTab() {
   const [clientId, setClientId] = useState(config.twitch.clientId);
   const upd = config.updates;
   const [repoUrl, setRepoUrl] = useState(upd.repoUrl);
-  const [update, setUpdate] = useState<UpdateInfo | null>(null);
+  const [update, setUpdate] = useState<UpdateInfo | null>(status?.update ?? null);
   const [checking, setChecking] = useState(false);
   const app = config.app;
   const [dataDir, setDataDir] = useState<DataDirInfo | null>(null);
@@ -124,7 +124,7 @@ export default function SettingsTab() {
       <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3>🆕 Обновления</h3></div></div>
         <div style={{ padding: 20 }}>
           <div className="form-group">
-            <label>Репозиторий с релизами <Tooltip text="GitHub-репозиторий, где публикуются версии. Авторы форков могут указать свой." /></label>
+            <label>Репозиторий с релизами <Tooltip text="GitHub-репозиторий, где публикуются версии. Авторы форков могут указать свой — или прямую ссылку на JSON в формате страницы «последний релиз» GitHub, если релизы лежат на своём сервере." /></label>
             <div className="form-row">
               <input type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} onBlur={() => { const v = repoUrl.trim(); if (v && v !== upd.repoUrl) setSection("updates", { ...upd, repoUrl: v }); }} style={{ fontFamily: "monospace" }} />
               <button onClick={() => void checkUpdates()} disabled={checking} style={{ flex: "0 0 auto" }}><Icon name="refresh" className={checking ? "spinning" : ""} /> Проверить</button>
@@ -132,7 +132,7 @@ export default function SettingsTab() {
           </div>
           <label className="toggle-label">
             <span className="toggle-switch"><input type="checkbox" checked={upd.checkOnStart} onChange={(e) => setSection("updates", { ...upd, checkOnStart: e.target.checked })} /><span className="toggle-slider"></span></span>
-            <span className="toggle-text">Проверять при запуске</span>
+            <span className="toggle-text">Проверять при запуске и раз в 12 часов</span>
           </label>
           {update && (
             <div className={`status-hint mt-3 ${update.isNewer ? "status-update-available" : ""}`}>

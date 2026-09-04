@@ -149,7 +149,17 @@ export type Overlay = { id: string, name: string,
 /**
  * Сегмент URL: `[a-z0-9-_]+`, уникален.
  */
-path: string, };
+path: string, 
+/**
+ * Что сделать, если медиа пришло, а оверлей не подключён: текст в чат
+ * и/или медиа на другой оверлей. Когда задано, медиа для этого оверлея
+ * не ждёт в отложенной очереди — срабатывает эта реакция.
+ */
+fallback: Response | null, 
+/**
+ * Резерв включён (состав хранится и в выключенном состоянии).
+ */
+fallbackEnabled: boolean, };
 
 export type OverlaySettings = { 
 /**
@@ -195,7 +205,22 @@ export type Reward = { id: string, enabled: boolean,
 /**
  * UUID награды в Twitch.
  */
-rewardId: string, rewardTitle: string, response: Response, };
+rewardId: string, rewardTitle: string, response: Response, 
+/**
+ * Награда создана через бота (Twitch разрешает менять её и возвращать
+ * баллы только приложению-создателю).
+ */
+managed: boolean, 
+/**
+ * Если медиа не доставлено (оверлей выключен) — вернуть баллы зрителю.
+ * Работает только для `managed`; тогда бот сам закрывает и удачные
+ * погашения (FULFILLED), чтобы они не копились в очереди запросов.
+ */
+refundIfUnavailable: boolean, 
+/**
+ * Id награды, с которой сделана управляемая копия (для подсказок).
+ */
+originalRewardId: string | null, };
 
 export type ShoutoutSettings = { 
 /**

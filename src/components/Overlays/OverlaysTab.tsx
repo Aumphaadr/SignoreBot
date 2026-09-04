@@ -2,12 +2,47 @@ import Icon from "../Icon";
 import { copyText } from "../../api/clipboard";
 import { useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { api, errText, type ObsSource, type Overlay } from "../../api";
+import { api, errText, type ObsSource, type Overlay, type Response } from "../../api";
+import Modal, { ModalActions } from "../Common/Modal";
+import { VariableBadges } from "../Common/VariableBadge";
+import { Hint, hintFallback } from "../Common/hints";
 import { newId } from "../../api/defaults";
 import { useAppState } from "../../state/AppState";
+import ResponseEditor from "../Common/ResponseEditor";
+import { defaultResponse } from "../../api/defaults";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
 import Tooltip from "../Tooltip";
 import "./OverlaysTab.css";
+
+const FB_VARS = ["user", "reaction", "overlay"];
+const FB_DESCR: Record<string, string> = { user: "кто вызвал реакцию", reaction: "какая реакция не показана — команда или награда", overlay: "имя этого оверлея" };
+
+/** Редактор резервной реакции оверлея: состав + включение отдельной вкладкой. */
+function FallbackEditor({ overlay, overlays, onSave }: { overlay: Overlay; overlays: Overlay[]; onSave: (fb: Response, enabled: boolean) => void }) {
+  const [fb, setFb] = useState<Response>(overlay.fallback ?? defaultResponse());
+  const [enabled, setEnabled] = useState(overlay.fallbackEnabled);
+  return (
+    <div className="reward-editor">
+      <ModalActions>
+        <button onClick={() => onSave(fb, enabled)} className="primary"><Icon name="save" /> Сохранить</button>
+      </ModalActions>
+      <div className="reward-refund-block">
+        <label className="toggle-label">
+          <span className="toggle-switch"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /><span className="toggle-slider"></span></span>
+          <span className="toggle-text">Резервная реакция включена</span>
+          <Tooltip text={`Пока включена: если медиа пришло, а оверлей «${overlay.name}» не подключён, бот выполняет эту реакцию, а медиа в очередь оверлея не ставит. Выключенная реакция никуда не девается — состав сохраняется.`} />
+        </label>
+        <div className="form-hint">
+          <Icon name="lightbulb" /> Чтобы бот замечал, что оверлей выключен при смене сцены, в OBS у Browser Source включите <b>«Выключать источник, когда он не виден»</b> (Shutdown source when not visible). Без этого страница живёт на всех сценах, и бот считает оверлей подключённым, даже если зритель его не видит. Заодно полезно включить <b>«Обновлять браузер при активации сцены»</b>.
+        </div>
+      </div>
+      <div className="reward-editor-header">
+        <p className="reward-vars-hint"><Icon name="lightbulb" /> Доступные переменные: <VariableBadges className="inline-variable-list" variables={FB_VARS} descriptions={FB_DESCR} /></p>
+      </div>
+      <ResponseEditor value={fb} onChange={setFb} overlays={overlays.filter((x) => x.id !== overlay.id)} variables={FB_VARS} />
+    </div>
+  );
+}
 
 const sanitize = (s: string) => s.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-_]/g, "").replace(/^-+|-+$/g, "");
 
@@ -21,6 +56,7 @@ export default function OverlaysTab() {
   const [pathEdited, setPathEdited] = useState(false);
   const [sources, setSources] = useState<ObsSource[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [fbEdit, setFbEdit] = useState<Overlay | null>(null);
   const [pathDrafts, setPathDrafts] = useState<Record<string, string>>({});
 
   const setObs = (patch: Partial<typeof obs>) => setSection("obs", { ...obs, ...patch });
@@ -31,7 +67,7 @@ export default function OverlaysTab() {
     const path = sanitize(newPath || newName);
     if (!path) return void showNotification("Адрес оверлея не может быть пустым!", NOTIFICATION_TYPES.WARNING, 2000);
     if (overlays.some((o) => o.path === path)) return void showNotification("Оверлей с таким адресом уже существует!", NOTIFICATION_TYPES.ERROR, 3000);
-    const o: Overlay = { id: newId("overlay"), name: newName.trim(), path };
+    const o: Overlay = { id: newId("overlay"), name: newName.trim(), path, fallback: null, fallbackEnabled: false };
     setSection("overlays", [...overlays, o]);
     if (!obs.browserSources.some((b) => b.overlayPath === path)) setObs({ browserSources: [...obs.browserSources, { overlayPath: path, inputName: `Overlay ${o.name}` }] });
     setNewName(""); setNewPath(""); setPathEdited(false);
@@ -122,12 +158,21 @@ export default function OverlaysTab() {
                 <button onClick={() => st && void openUrl(st.url)} className="overlay-action-btn open" disabled={!st}><Icon name="external-link"  /> Открыть</button>
                 {obs.enabled && bs?.inputName && <button onClick={() => void setUrl(bs.inputName, o.path)} className="overlay-action-btn open" title="Записать этот URL в Browser Source OBS"><Icon name="plug"  /> В OBS</button>}
                 <button onClick={() => void api.overlayClear(o.path, true).then(() => showNotification("Оверлей остановлен", NOTIFICATION_TYPES.INFO, 1500))} className="overlay-action-btn copy" title="Остановить всё, что сейчас играет"><Icon name="stop"  /> Стоп</button>
+                <Hint text={hintFallback(o, overlays)}><button onClick={() => setFbEdit(o)} className={`overlay-action-btn ${o.fallbackEnabled && o.fallback ? "fallback-on" : ""}`}><Icon name="warning" /> Если недоступен</button></Hint>
                 <button onClick={() => remove(o)} className="overlay-action-btn delete"><Icon name="delete"  /> Удалить</button>
               </div>
             </div>
           );
         })}
       </div>
+
+      <Modal isOpen={!!fbEdit} onClose={() => setFbEdit(null)} size="xlarge" title={fbEdit ? `Если оверлей «${fbEdit.name}» недоступен` : ""}>
+        {fbEdit && <FallbackEditor key={fbEdit.id} overlay={fbEdit} overlays={overlays} onSave={(fb, enabled) => {
+          setSection("overlays", overlays.map((x) => (x.id === fbEdit.id ? { ...x, fallback: fb, fallbackEnabled: enabled } : x)));
+          setFbEdit(null);
+          showNotification(`Резервная реакция «${fbEdit.name}» ${enabled ? "сохранена и включена" : "сохранена (выключена)"}`, NOTIFICATION_TYPES.SUCCESS, 2000);
+        }} />}
+      </Modal>
 
       <div className="add-overlay-form">
         <h3><Icon name="add" /> Новый оверлей</h3>

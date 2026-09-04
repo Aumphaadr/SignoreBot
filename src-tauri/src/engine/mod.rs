@@ -33,6 +33,52 @@ pub enum Changed {
     EventSub,
     Viewers,
     Media,
+    /// Награды канала или список погашений изменились.
+    Rewards,
+}
+
+/// Погашение награды, которое бот не смог выполнить (оверлей был выключен),
+/// либо закрыл сам. Показывается на «Баллах канала».
+#[derive(Debug, Clone, Serialize, serde::Deserialize, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "api.ts")]
+pub struct PendingRedemption {
+    pub redemption_id: String,
+    pub reward_id: String,
+    pub reward_title: String,
+    pub user: String,
+    #[ts(type = "number")]
+    pub at: i64,
+    /// Почему не выполнено (какой оверлей был недоступен).
+    pub reason: String,
+    /// pending | refunded (бот вернул) | canceled (вернули в Twitch) | fulfilled | dismissed
+    pub status: String,
+}
+
+/// Итог отправки медиа на оверлеи.
+#[derive(Debug, Default)]
+struct MediaSend {
+    sent: bool,
+    /// В настройках нет ни одного целевого оверлея.
+    no_target: bool,
+    /// Оверлеи (имя, путь), которые не были подключены.
+    unavailable: Vec<(String, String)>,
+    /// Резервные реакции недоступных оверлеев (имя оверлея, реакция).
+    fallbacks: Vec<(String, Response)>,
+}
+
+fn load_redemptions(path: &std::path::Path) -> Vec<PendingRedemption> {
+    std::fs::read(path).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()
+}
+
+/// Итог выполнения реакции.
+#[derive(Debug, Default, Clone)]
+pub struct ExecOutcome {
+    pub chat_sent: bool,
+    pub media_sent: bool,
+    /// Медиа было включено, но ни один целевой оверлей его не получил.
+    pub media_unavailable: bool,
+    pub unavailable_overlays: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, ts_rs::TS, Default)]
@@ -104,11 +150,16 @@ pub struct Engine {
     sent_ids: Mutex<std::collections::VecDeque<String>>,
     /// Сколько отправок ещё не получили ответ Helix (гонка с EventSub).
     in_flight: std::sync::atomic::AtomicUsize,
+    /// Невыполненные/закрытые погашения (последние 200), файл `redemptions.json`.
+    redemptions: Mutex<Vec<PendingRedemption>>,
+    redemptions_file: std::path::PathBuf,
 }
 
 impl Engine {
     pub fn new(config: SharedConfig, auth: Arc<AuthManager>, helix: Arc<Helix>, hub: OverlayHub, deleted_log: std::path::PathBuf) -> Arc<Self> {
         let (changed_tx, _) = broadcast::channel(64);
+        // redemptions.json — рядом с логами, в корне каталога данных
+        let redemptions_file = deleted_log.parent().and_then(|p| p.parent()).map(|p| p.join("redemptions.json")).unwrap_or_else(|| std::path::PathBuf::from("redemptions.json"));
         let matcher = banwords::Matcher::compile(&config.read().banwords);
         Arc::new(Self {
             config,
@@ -125,6 +176,8 @@ impl Engine {
             antispam: Mutex::new(HashMap::new()),
             sent_ids: Mutex::new(std::collections::VecDeque::with_capacity(64)),
             in_flight: std::sync::atomic::AtomicUsize::new(0),
+            redemptions: Mutex::new(load_redemptions(&redemptions_file)),
+            redemptions_file,
             eventsub: Mutex::new(EventSubStatus::default()),
             changed_tx,
         })
@@ -252,6 +305,19 @@ impl Engine {
 
     /// Выполнить реакцию: чат и/или медиа. Возвращает (chat_sent, media_sent).
     pub async fn execute(&self, response: &Response, ctx: &ActionCtx) -> (bool, bool) {
+        let o = self.execute_full(response, ctx).await;
+        (o.chat_sent, o.media_sent)
+    }
+
+    /// То же с подробным итогом (нужно наградам: было ли медиа доставлено).
+    pub async fn execute_full(&self, response: &Response, ctx: &ActionCtx) -> ExecOutcome {
+        self.execute_full_opt(response, ctx, true).await
+    }
+
+    /// `queue = false` — медиа для неподключённого оверлея не откладывать
+    /// (награда с возвратом баллов: зритель получит баллы, а не медиа позже).
+    pub async fn execute_full_opt(&self, response: &Response, ctx: &ActionCtx, queue: bool) -> ExecOutcome {
+        let mut out = ExecOutcome::default();
         let mut chat_sent = false;
         let mut media_sent = false;
 
@@ -269,12 +335,40 @@ impl Engine {
         }
 
         if response.media.enabled && !response.media.file.is_empty() {
-            media_sent = self.send_media(response, ctx);
+            let r = self.send_media(response, ctx, true, queue);
+            media_sent = r.sent;
+            out.media_unavailable = !r.sent && !r.no_target;
+            out.unavailable_overlays = r.unavailable.iter().map(|(n, _)| n.clone()).collect();
+            // Фолбэк оверлея: текст в чат и/или медиа на другой оверлей.
+            for (name, fb) in r.fallbacks {
+                tracing::info!(target: "signorebot::media", "Оверлей «{name}» недоступен — срабатывает его резервная реакция ({})", ctx.label);
+                let mut fctx = ctx.clone();
+                fctx.vars.insert("overlay".into(), name.clone());
+                fctx.vars.insert("reaction".into(), ctx.label.clone());
+                fctx.label = format!("{} → резерв «{name}»", ctx.label);
+                fctx.antispam_user = None;
+                if fb.chat.enabled && !fb.chat.components.is_empty() {
+                    let rctx = RenderCtx { author: fctx.author.clone(), target: fctx.target.clone(), vars: fctx.vars.clone(), random_viewer: None };
+                    let text = render(&fb.chat.components, &rctx);
+                    if !text.is_empty() {
+                        self.say(&text).await;
+                    }
+                }
+                if fb.media.enabled && !fb.media.file.is_empty() {
+                    // без повторного фолбэка — чтобы не зациклиться
+                    let _ = self.send_media(&fb, &fctx, false, true);
+                }
+            }
         }
-        (chat_sent, media_sent)
+        out.chat_sent = chat_sent;
+        out.media_sent = media_sent;
+        out
     }
 
-    fn send_media(&self, response: &Response, ctx: &ActionCtx) -> bool {
+    /// Отправить медиа на целевые оверлеи. Если у оверлея задана резервная
+    /// реакция, сообщение ему не ставится в отложенную очередь — вместо
+    /// этого возвращается реакция для исполнения (`allow_fallback`).
+    fn send_media(&self, response: &Response, ctx: &ActionCtx, allow_fallback: bool, queue: bool) -> MediaSend {
         let m = &response.media;
         let cfg = self.config.read();
 
@@ -289,7 +383,7 @@ impl Engine {
                 if let Some(t) = map.get(&key) {
                     if now.duration_since(*t) < Duration::from_millis(window as u64) {
                         tracing::info!(target: "signorebot::media", "Антиспам: «{}» от {} повторно за {} мс, пропуск", m.file, user, now.duration_since(*t).as_millis());
-                        return false;
+                        return MediaSend::default();
                     }
                 }
                 map.insert(key, now);
@@ -339,19 +433,79 @@ impl Engine {
 
         if targets.is_empty() {
             tracing::warn!(target: "signorebot::media", "Медиа «{}» ({}) — в настройках нет ни одного оверлея", m.file, ctx.label);
-            return false;
+            return MediaSend { no_target: true, ..Default::default() };
         }
-        let mut any = false;
+        let mut out = MediaSend::default();
         for (name, path) in targets {
-            if self.hub.send_to_path(&path, &msg) {
+            let fallback = if allow_fallback { self.config.read().overlays.iter().find(|o| o.path == path && o.fallback_enabled).and_then(|o| o.fallback.clone()) } else { None };
+            let has_fb = fallback.as_ref().map(|f| (f.chat.enabled && !f.chat.components.is_empty()) || (f.media.enabled && !f.media.file.is_empty())).unwrap_or(false);
+            if self.hub.send_to_path_opt(&path, &msg, queue && !has_fb) {
                 tracing::info!(target: "signorebot::media", "Медиа: «{}» → оверлей «{name}»", ctx.label);
-                any = true;
+                out.sent = true;
+            } else if has_fb {
+                tracing::warn!(target: "signorebot::media", "Медиа: «{}» → оверлей «{name}» не подключён; в очередь не ставим — есть резервная реакция", ctx.label);
+                out.unavailable.push((name.clone(), path.clone()));
+                out.fallbacks.push((name, fallback.unwrap()));
+            } else if !queue {
+                tracing::warn!(target: "signorebot::media", "Медиа: «{}» → оверлей «{name}» не подключён; в очередь не ставим — баллы будут возвращены", ctx.label);
+                out.unavailable.push((name, path));
             } else {
                 tracing::warn!(target: "signorebot::media", "Медиа: «{}» → оверлей «{name}» не подключён, поставлено в очередь (30 с)", ctx.label);
+                out.unavailable.push((name, path));
             }
         }
         self.changed(Changed::Media);
-        any
+        out
+    }
+
+    // ------------------------------------------------------------------
+    // Погашения наград
+    // ------------------------------------------------------------------
+
+    pub fn redemptions(&self) -> Vec<PendingRedemption> {
+        self.redemptions.lock().clone()
+    }
+
+    fn save_redemptions(&self, list: &[PendingRedemption]) {
+        if let Ok(json) = serde_json::to_vec_pretty(list) {
+            let _ = std::fs::write(&self.redemptions_file, json);
+        }
+    }
+
+    fn push_redemption(&self, r: PendingRedemption) {
+        let mut l = self.redemptions.lock();
+        l.retain(|x| x.redemption_id != r.redemption_id);
+        l.insert(0, r);
+        l.truncate(200);
+        self.save_redemptions(&l);
+        drop(l);
+        self.changed(Changed::Rewards);
+    }
+
+    fn set_redemption_status(&self, redemption_id: &str, status: &str) -> bool {
+        let mut l = self.redemptions.lock();
+        let Some(r) = l.iter_mut().find(|x| x.redemption_id == redemption_id) else { return false };
+        if r.status == status {
+            return false;
+        }
+        r.status = status.to_string();
+        self.save_redemptions(&l);
+        drop(l);
+        self.changed(Changed::Rewards);
+        true
+    }
+
+    /// Убрать запись из списка (пользователь разобрался сам).
+    pub fn dismiss_redemption(&self, redemption_id: &str) {
+        self.set_redemption_status(redemption_id, "dismissed");
+    }
+
+    /// Погашение закрыто в Twitch (стример/модератор/бот) — отмечаем.
+    pub fn on_redemption_update(&self, redemption_id: &str, status: &str) {
+        let st = match status { "canceled" => "canceled", "fulfilled" => "fulfilled", _ => return };
+        if self.set_redemption_status(redemption_id, st) {
+            tracing::info!(target: "signorebot::rewards", "Погашение {redemption_id}: {}", if st == "canceled" { "баллы возвращены" } else { "выполнено" });
+        }
     }
 
     // ------------------------------------------------------------------
@@ -599,7 +753,52 @@ impl Engine {
             label: format!("Награда: {}", reward.reward_title),
             antispam_user: Some(user.to_lowercase()),
         };
-        self.execute(&reward.response, &ctx).await;
+        // Награда с возвратом: медиа для выключенного оверлея не откладываем —
+        // иначе зритель получит и баллы назад, и медиа через полминуты.
+        let manages = reward.managed && reward.refund_if_unavailable && event_id.is_some();
+        let out = self.execute_full_opt(&reward.response, &ctx, !manages).await;
+        let Some(redemption_id) = event_id else { return }; // чат-путь: id погашения нет
+        if out.media_unavailable {
+            let reason = format!("оверлей недоступен: {}", out.unavailable_overlays.join(", "));
+            let mut entry = PendingRedemption {
+                redemption_id: redemption_id.to_string(),
+                reward_id: reward_id.to_string(),
+                reward_title: reward.reward_title.clone(),
+                user: user.to_string(),
+                at: chrono::Utc::now().timestamp_millis(),
+                reason,
+                status: "pending".into(),
+            };
+            if manages {
+                match self.refund(reward_id, redemption_id).await {
+                    Ok(()) => {
+                        entry.status = "refunded".into();
+                        tracing::info!(target: "signorebot::rewards", "Баллы за «{}» возвращены {user}: оверлей был недоступен", reward.reward_title);
+                    }
+                    Err(e) => tracing::warn!(target: "signorebot::rewards", "Не удалось вернуть баллы за «{}» {user}: {e}", reward.reward_title),
+                }
+            } else {
+                tracing::warn!(target: "signorebot::rewards", "Награда «{}» от {user} не выполнена ({}). Вернуть баллы можно в очереди запросов Twitch", reward.reward_title, entry.reason);
+            }
+            self.push_redemption(entry);
+        } else if manages && (out.media_sent || !reward.response.media.enabled) {
+            // Бот ведёт очередь запросов этой награды: удачные погашения закрываем сами.
+            if let Some(ids) = self.ids() {
+                if let Err(e) = self.helix.update_redemption_status(AccountKind::Broadcaster, &ids.broadcaster_id, reward_id, redemption_id, "FULFILLED").await {
+                    tracing::warn!(target: "signorebot::rewards", "Не удалось пометить погашение выполненным: {e}");
+                }
+            }
+        }
+    }
+
+    /// Вернуть баллы за погашение (CANCELED). Нужно право `channel:manage:redemptions`
+    /// у стримера и награда, созданная нашим приложением.
+    pub async fn refund(&self, reward_id: &str, redemption_id: &str) -> Result<(), String> {
+        let ids = self.ids().ok_or("бот не запущен")?;
+        if !self.auth.has_scope(AccountKind::Broadcaster, "channel:manage:redemptions") {
+            return Err("у стримера нет права channel:manage:redemptions — авторизуйте стримера заново".into());
+        }
+        self.helix.update_redemption_status(AccountKind::Broadcaster, &ids.broadcaster_id, reward_id, redemption_id, "CANCELED").await.map_err(|e| e.to_string())
     }
 
     // ------------------------------------------------------------------
@@ -644,6 +843,45 @@ impl Engine {
             TwitchEvent::Redemption { redemption_id, reward_id, reward_title, user_name, user_input } => {
                 tracing::debug!(target: "signorebot::rewards", "EventSub: «{reward_title}» от {user_name}");
                 self.handle_reward(&reward_id, &user_name, &user_input, RewardSource::EventSub, Some(&redemption_id)).await;
+            }
+            TwitchEvent::RedemptionUpdate { redemption_id, status, .. } => self.on_redemption_update(&redemption_id, &status),
+            TwitchEvent::RewardChanged { reward_id, title, removed } => {
+                let configured = self.config.read().rewards.iter().any(|r| r.reward_id == reward_id);
+                if removed {
+                    if configured {
+                        tracing::warn!(target: "signorebot::rewards", "Награда «{title}» удалена на Twitch; реакция в SignoreBot сохранена — на вкладке «Баллы канала» она помечена «нет на канале»");
+                    }
+                    // удалён оригинал управляемой копии → копия получает прежнее название
+                    let copy = self.config.read().rewards.iter().find(|r| r.original_reward_id.as_deref() == Some(reward_id.as_str())).cloned();
+                    if let (Some(copy), Some(ids)) = (copy, self.ids()) {
+                        let new_title = copy.reward_title.trim_end_matches(" (бот)").to_string();
+                        match self.helix.update_custom_reward_title(AccountKind::Broadcaster, &ids.broadcaster_id, &copy.reward_id, &new_title).await {
+                            Ok(()) => {
+                                if let Some(r) = self.config.write().rewards.iter_mut().find(|r| r.id == copy.id) {
+                                    r.reward_title = new_title.clone();
+                                    r.original_reward_id = None;
+                                }
+                                tracing::info!(target: "signorebot::rewards", "Оригинал «{title}» удалён — копия переименована в «{new_title}»");
+                            }
+                            Err(e) => tracing::warn!(target: "signorebot::rewards", "Оригинал «{title}» удалён, но переименовать копию не удалось: {e}. Нажмите «Убрать пометку» на вкладке «Баллы канала»"),
+                        }
+                    }
+                } else {
+                    // название могли поменять в панели Twitch — держим своё в актуальном состоянии
+                    let mut renamed = false;
+                    if let Some(r) = self.config.write().rewards.iter_mut().find(|r| r.reward_id == reward_id) {
+                        if r.reward_title != title {
+                            r.reward_title = title.clone();
+                            renamed = true;
+                        }
+                    }
+                    if renamed {
+                        tracing::info!(target: "signorebot::rewards", "Награда переименована на Twitch: теперь «{title}»");
+                    } else {
+                        tracing::debug!(target: "signorebot::rewards", "Награда «{title}» изменена на Twitch");
+                    }
+                }
+                self.changed(Changed::Rewards);
             }
             TwitchEvent::Follow { user_name, user_id } => {
                 tracing::info!(target: "signorebot::events", "Новый фолловер: {user_name}");

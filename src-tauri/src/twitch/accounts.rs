@@ -59,10 +59,29 @@ pub struct AuthManager {
 
 /// Права стримера вместе с правами бота: запрашиваются у стримера всегда,
 /// обязательны — только в режиме «один аккаунт».
+/// Обязательные права в общем режиме: стример + бот, без необязательных.
+fn required_union_scopes() -> &'static [&'static str] {
+    static UNION: std::sync::OnceLock<Vec<&'static str>> = std::sync::OnceLock::new();
+    UNION.get_or_init(|| {
+        let mut v: Vec<&'static str> = auth::BROADCASTER_SCOPES.to_vec();
+        for s in auth::BOT_SCOPES {
+            if !v.contains(s) {
+                v.push(s);
+            }
+        }
+        v
+    })
+}
+
 fn union_scopes() -> &'static [&'static str] {
     static UNION: std::sync::OnceLock<Vec<&'static str>> = std::sync::OnceLock::new();
     UNION.get_or_init(|| {
         let mut v: Vec<&'static str> = auth::BROADCASTER_SCOPES.to_vec();
+        for s in auth::BROADCASTER_OPTIONAL_SCOPES {
+            if !v.contains(s) {
+                v.push(s);
+            }
+        }
         for s in auth::BOT_SCOPES {
             if !v.contains(s) {
                 v.push(s);
@@ -86,6 +105,12 @@ impl AuthManager {
         Arc::new(Self { client_id: Mutex::new(client_id), secrets, slots: Mutex::new(slots), refresh_locks, tx, shared: std::sync::atomic::AtomicBool::new(false) })
     }
 
+    /// Есть ли у токена роли конкретное право.
+    pub fn has_scope(&self, kind: AccountKind, scope: &str) -> bool {
+        let kind = self.k(kind);
+        self.slots.lock().get(&kind).and_then(|s| s.tokens.as_ref()).map(|t| t.scopes.iter().any(|x| x == scope)).unwrap_or(false)
+    }
+
     pub fn is_shared(&self) -> bool {
         self.shared.load(std::sync::atomic::Ordering::SeqCst)
     }
@@ -100,7 +125,9 @@ impl AuthManager {
     }
     /// Набор прав, который нужен роли с учётом режима.
     pub fn required_scopes_for(&self, kind: AccountKind) -> &'static [&'static str] {
-        if self.is_shared() { union_scopes() } else { Self::required_scopes(kind) }
+        // в общем режиме обязательны права стримера + бота; необязательные
+        // (управление наградами) лишь запрашиваются при входе
+        if self.is_shared() { required_union_scopes() } else { Self::required_scopes(kind) }
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<AuthEvent> {

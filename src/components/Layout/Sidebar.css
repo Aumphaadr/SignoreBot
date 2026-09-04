@@ -109,3 +109,7 @@
   box-sizing: border-box;
   flex-shrink: 0;
 }
+
+/* Кнопка «Обновить» — только когда проверка нашла новую версию */
+.sidebar-update-btn { display: flex; width: 100%; justify-content: center; align-items: center; gap: 6px; margin-top: 8px; padding: 5px 8px; font-size: 12.5px; font-weight: 600; white-space: nowrap; color: #1b1b1b; background: var(--warning); border: 1px solid transparent; border-radius: var(--border-radius-sm); cursor: pointer; }
+.sidebar-update-btn:hover { filter: brightness(1.08); }

@@ -5,6 +5,8 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { Config, MigrationReport, Response } from "./generated/config";
 import type {
   ChannelReward,
+  ManagedCopyResult,
+  PendingRedemption,
   CoreStatus,
   DataDirInfo,
   DeviceCode,
@@ -36,7 +38,9 @@ export type ChangedWhat =
   | "overlays"
   | "config"
   | "server"
-  | "runtime";
+  | "runtime"
+  | "updates"
+  | "rewards";
 
 export const api = {
   // статус
@@ -80,6 +84,14 @@ export const api = {
   shoutoutRemove: (id: number) => invoke<void>("shoutout_remove", { id }),
   shoutoutReset: () => invoke<void>("shoutout_reset"),
   rewardsChannel: () => invoke<ChannelReward[]>("rewards_channel"),
+  /** Создать через бота копию награды с теми же параметрами и перевести реакцию на неё. */
+  rewardCreateManagedCopy: (id: string) => invoke<ManagedCopyResult>("reward_create_managed_copy", { id }),
+  /** Убрать пометку «(бот)» из названия копии после удаления оригинала. */
+  rewardFinishManagedCopy: (id: string) => invoke<string>("reward_finish_managed_copy", { id }),
+  redemptionsList: () => invoke<PendingRedemption[]>("redemptions_list"),
+  redemptionDismiss: (id: string) => invoke<void>("redemption_dismiss", { id }),
+  redemptionRefund: (id: string) => invoke<void>("redemption_refund", { id }),
+  rewardsQueueUrl: () => invoke<string>("rewards_queue_url"),
   chatSend: (text: string) => invoke<void>("chat_send", { text }),
   viewers: () => invoke<ViewersInfo>("viewers_get"),
 

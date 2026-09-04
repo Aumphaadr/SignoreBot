@@ -109,9 +109,9 @@ fn broken_config_file_does_not_block_startup() {
 #[test]
 fn overlay_paths_are_unique_and_never_empty() {
     let mut cfg = Config::default();
-    cfg.overlays.push(Overlay { id: "1".into(), name: "Аудио".into(), path: "Аудио".into() }); // кириллица → пусто
-    cfg.overlays.push(Overlay { id: "2".into(), name: "Audio".into(), path: "Audio".into() });
-    cfg.overlays.push(Overlay { id: "3".into(), name: "audio".into(), path: "audio".into() });
+    cfg.overlays.push(Overlay { id: "1".into(), name: "Аудио".into(), path: "Аудио".into(), fallback: None, fallback_enabled: false }); // кириллица → пусто
+    cfg.overlays.push(Overlay { id: "2".into(), name: "Audio".into(), path: "Audio".into(), fallback: None, fallback_enabled: false });
+    cfg.overlays.push(Overlay { id: "3".into(), name: "audio".into(), path: "audio".into(), fallback: None, fallback_enabled: false });
     cfg.normalize();
     let paths: Vec<&str> = cfg.overlays.iter().map(|o| o.path.as_str()).collect();
     assert!(paths.iter().all(|p| !p.is_empty()), "пустой path: {paths:?}");
@@ -177,7 +177,7 @@ fn base_cfg() -> Config {
     let mut cfg = Config::default();
     cfg.normalize();
     cfg.overlay_settings.antispam_window_ms = 0;
-    cfg.overlays.push(Overlay { id: "o1".into(), name: "A".into(), path: "a".into() });
+    cfg.overlays.push(Overlay { id: "o1".into(), name: "A".into(), path: "a".into(), fallback: None, fallback_enabled: false });
     cfg
 }
 

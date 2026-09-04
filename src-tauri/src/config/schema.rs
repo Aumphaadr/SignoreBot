@@ -398,6 +398,18 @@ pub struct Reward {
     pub reward_id: String,
     pub reward_title: String,
     pub response: Response,
+    /// Награда создана через бота (Twitch разрешает менять её и возвращать
+    /// баллы только приложению-создателю).
+    #[serde(default)]
+    pub managed: bool,
+    /// Если медиа не доставлено (оверлей выключен) — вернуть баллы зрителю.
+    /// Работает только для `managed`; тогда бот сам закрывает и удачные
+    /// погашения (FULFILLED), чтобы они не копились в очереди запросов.
+    #[serde(default)]
+    pub refund_if_unavailable: bool,
+    /// Id награды, с которой сделана управляемая копия (для подсказок).
+    #[serde(default)]
+    pub original_reward_id: Option<String>,
 }
 
 impl Default for Reward {
@@ -408,6 +420,9 @@ impl Default for Reward {
             reward_id: String::new(),
             reward_title: String::new(),
             response: Response::default(),
+            managed: false,
+            refund_if_unavailable: false,
+            original_reward_id: None,
         }
     }
 }
@@ -552,11 +567,19 @@ pub struct Overlay {
     pub name: String,
     /// Сегмент URL: `[a-z0-9-_]+`, уникален.
     pub path: String,
+    /// Что сделать, если медиа пришло, а оверлей не подключён: текст в чат
+    /// и/или медиа на другой оверлей. Когда задано, медиа для этого оверлея
+    /// не ждёт в отложенной очереди — срабатывает эта реакция.
+    #[serde(default)]
+    pub fallback: Option<Response>,
+    /// Резерв включён (состав хранится и в выключенном состоянии).
+    #[serde(default)]
+    pub fallback_enabled: bool,
 }
 
 impl Default for Overlay {
     fn default() -> Self {
-        Self { id: new_id("overlay"), name: String::new(), path: String::new() }
+        Self { id: new_id("overlay"), name: String::new(), path: String::new(), fallback: None, fallback_enabled: false }
     }
 }
 

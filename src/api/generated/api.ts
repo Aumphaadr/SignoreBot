@@ -21,7 +21,15 @@ error: string | null,
  */
 device: DeviceCode | null, };
 
-export type ChannelReward = { id: string, title: string, cost: number, isEnabled: boolean, isPaused: boolean, requiresInput: boolean, backgroundColor: string, image: string | null, };
+export type ChannelReward = { id: string, title: string, cost: number, isEnabled: boolean, isPaused: boolean, requiresInput: boolean, backgroundColor: string, image: string | null, prompt: string, 
+/**
+ * Погашения проходят мимо очереди запросов (сразу FULFILLED) — вернуть баллы нельзя.
+ */
+skipQueue: boolean, cooldownSeconds: number | null, maxPerStream: number | null, maxPerUserPerStream: number | null, 
+/**
+ * Создана нашим приложением — можно менять и возвращать баллы.
+ */
+isManaged: boolean, };
 
 export type CoreStatus = { broadcaster: AccountStatus, bot: AccountStatus, 
 /**
@@ -31,7 +39,11 @@ running: boolean, eventsub: EventSubStatus, server: ServerStatus, overlays: Arra
 /**
  * Бот работает, а часть оверлеев не открыта ни одним Browser Source.
  */
-overlayAlert: string | null, };
+overlayAlert: string | null, 
+/**
+ * Последняя проверка обновлений (при запуске, раз в 12 часов и по кнопке).
+ */
+update: UpdateInfo | null, };
 
 export type DataDirInfo = { current: string, default: string, source: PathSource, };
 
@@ -56,6 +68,8 @@ level: string,
  * Категория (модуль).
  */
 target: string, message: string, };
+
+export type ManagedCopyResult = { newRewardId: string, newTitle: string, originalRewardId: string, originalTitle: string, rewardsUrl: string, };
 
 export type MediaFile = { name: string, size: number, 
 /**
@@ -88,6 +102,20 @@ since: number, };
 export type OverlayStatusItem = { id: string, name: string, path: string, url: string, connected: boolean, connections: number, pending: number, };
 
 export type PathSource = "default" | "pointer" | "env";
+
+/**
+ * Погашение награды, которое бот не смог выполнить (оверлей был выключен),
+ * либо закрыл сам. Показывается на «Баллах канала».
+ */
+export type PendingRedemption = { redemptionId: string, rewardId: string, rewardTitle: string, user: string, at: number, 
+/**
+ * Почему не выполнено (какой оверлей был недоступен).
+ */
+reason: string, 
+/**
+ * pending | refunded (бот вернул) | canceled (вернули в Twitch) | fulfilled | dismissed
+ */
+status: string, };
 
 export type ProbeResult = { file: string, size: number, kind: string, extension: string, codec: string | null, warnings: Array<string>, };
 
