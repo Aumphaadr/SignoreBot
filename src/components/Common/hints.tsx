@@ -5,7 +5,6 @@
 import type { ReactNode } from "react";
 import type { Overlay, Response } from "../../api";
 import { formatInterval } from "../../api/defaults";
-import Icon from "../Icon";
 import Tooltip from "../Tooltip";
 
 export type Subject = { kind: "command" | "reward" | "event" | "periodic"; name: string };
@@ -41,8 +40,8 @@ export function hintStatus(s: Subject, enabled: boolean): ReactNode {
   const f = s.kind === "command" || s.kind === "reward";
   const on = f ? "включена" : "включено", off = f ? "выключена" : "выключено", it = f ? "её" : "его";
   return enabled
-    ? <>{subj(s)} {on}; выключить — кнопкой <Icon name="power" /> справа</>
-    : <>{subj(s)} {off} — бот {it} не выполняет; включить — кнопкой <Icon name="power" /> справа</>;
+    ? <>{subj(s)} {on} — нажмите, чтобы выключить</>
+    : <>{subj(s)} {off} — бот {it} не выполняет; нажмите, чтобы включить</>;
 }
 
 export function hintAliases(name: string, aliases: string[]): ReactNode {
@@ -103,4 +102,17 @@ export function hintSkipGifted(): ReactNode {
 
 export function hintRewardMissing(title: string): ReactNode {
   return <>награды <Em>«{title}»</Em> больше нет на канале — реакция не сработает; выберите другую награду в редакторе</>;
+}
+
+/** Кнопка «Если недоступен» на карточке оверлея: есть ли резерв, включён ли, из чего состоит. */
+export function hintFallback(ov: Overlay, all: Overlay[]): ReactNode {
+  const fb = ov.fallback;
+  const c = !!fb?.chat.enabled, m = !!fb?.media.enabled;
+  if (!fb || (!c && !m)) return <>резервная реакция для <Em>«{ov.name}»</Em> не настроена: если оверлей выключен, медиа ждёт его в очереди 30 секунд</>;
+  const target = m && fb.media.overlay ? all.find((x) => x.id === fb.media.overlay)?.name : null;
+  const media: ReactNode = <>медиа на {target ? <Em>«{target}»</Em> : "все оверлеи"}</>;
+  const what: ReactNode = c && m ? <>текст в чат и {media}</> : c ? "текст в чат" : media;
+  return ov.fallbackEnabled
+    ? <>если <Em>«{ov.name}»</Em> выключен, бот отправляет {what}; медиа для него в очередь не ставится</>
+    : <>резервная реакция настроена ({what}), но выключена — медиа ждёт оверлей в очереди 30 секунд</>;
 }

@@ -370,3 +370,6 @@
     justify-content: space-between;
   }
 }
+/* Резервная реакция оверлея */
+.overlay-action-btn.fallback-on { color: var(--warning); border-color: var(--warning); }
+.overlays-tab .reward-refund-block, .modal .reward-refund-block { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 12px 14px; margin-bottom: 14px; }

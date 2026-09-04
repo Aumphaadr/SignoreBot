@@ -15,7 +15,7 @@ async fn server_end_to_end() {
     let mut cfg = Config::default();
     cfg.normalize();
     cfg.network.overlay_key = "secret".into();
-    cfg.overlays.push(Overlay { id: "o1".into(), name: "Аудио".into(), path: "audio".into() });
+    cfg.overlays.push(Overlay { id: "o1".into(), name: "Аудио".into(), path: "audio".into(), fallback: None, fallback_enabled: false });
     let config: SharedConfig = Arc::new(parking_lot::RwLock::new(cfg));
     let hub = OverlayHub::new();
     let state = ServerState { config, hub: hub.clone(), media_dir: dir.path().to_path_buf(), start_time: 42 };

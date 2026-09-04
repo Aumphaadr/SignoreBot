@@ -68,6 +68,31 @@ pub struct ChannelReward {
     pub requires_input: bool,
     pub background_color: String,
     pub image: Option<String>,
+    pub prompt: String,
+    /// Погашения проходят мимо очереди запросов (сразу FULFILLED) — вернуть баллы нельзя.
+    pub skip_queue: bool,
+    #[ts(type = "number | null")]
+    pub cooldown_seconds: Option<u64>,
+    #[ts(type = "number | null")]
+    pub max_per_stream: Option<u64>,
+    #[ts(type = "number | null")]
+    pub max_per_user_per_stream: Option<u64>,
+    /// Создана нашим приложением — можно менять и возвращать баллы.
+    pub is_managed: bool,
+}
+
+/// Параметры новой награды (управляемой копии).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct NewReward {
+    pub title: String,
+    pub cost: u64,
+    pub prompt: String,
+    pub is_user_input_required: bool,
+    pub is_enabled: bool,
+    pub background_color: String,
+    pub cooldown_seconds: Option<u64>,
+    pub max_per_stream: Option<u64>,
+    pub max_per_user_per_stream: Option<u64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -82,7 +107,45 @@ struct RawReward {
     background_color: String,
     image: Option<RewardImage>,
     default_image: Option<RewardImage>,
+    #[serde(default)]
+    prompt: String,
+    #[serde(default)]
+    should_redemptions_skip_request_queue: bool,
+    #[serde(default)]
+    global_cooldown_setting: Option<CooldownSetting>,
+    #[serde(default)]
+    max_per_stream_setting: Option<MaxPerStream>,
+    #[serde(default)]
+    max_per_user_per_stream_setting: Option<MaxPerUser>,
 }
+#[derive(Debug, Deserialize, Default)]
+struct CooldownSetting { #[serde(default)] is_enabled: bool, #[serde(default)] global_cooldown_seconds: u64 }
+#[derive(Debug, Deserialize, Default)]
+struct MaxPerStream { #[serde(default)] is_enabled: bool, #[serde(default)] max_per_stream: u64 }
+#[derive(Debug, Deserialize, Default)]
+struct MaxPerUser { #[serde(default)] is_enabled: bool, #[serde(default)] max_per_user_per_stream: u64 }
+fn raw_to_reward(r: RawReward, managed: &std::collections::HashSet<String>) -> ChannelReward {
+    let cd = r.global_cooldown_setting.unwrap_or_default();
+    let mps = r.max_per_stream_setting.unwrap_or_default();
+    let mpu = r.max_per_user_per_stream_setting.unwrap_or_default();
+    ChannelReward {
+        is_managed: managed.contains(&r.id),
+        id: r.id,
+        title: r.title,
+        cost: r.cost,
+        is_enabled: r.is_enabled,
+        is_paused: r.is_paused,
+        requires_input: r.is_user_input_required,
+        background_color: r.background_color,
+        image: r.image.or(r.default_image).map(|i| i.url_1x),
+        prompt: r.prompt,
+        skip_queue: r.should_redemptions_skip_request_queue,
+        cooldown_seconds: if cd.is_enabled { Some(cd.global_cooldown_seconds) } else { None },
+        max_per_stream: if mps.is_enabled { Some(mps.max_per_stream) } else { None },
+        max_per_user_per_stream: if mpu.is_enabled { Some(mpu.max_per_user_per_stream) } else { None },
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RewardImage {
     url_1x: String,
@@ -240,22 +303,55 @@ impl Helix {
         Ok(())
     }
 
+    /// Все награды канала; `is_managed` — по второму запросу с
+    /// `only_manageable_rewards=true` (награды, созданные нашим Client ID).
     pub async fn custom_rewards(&self, kind: AccountKind, broadcaster_id: &str) -> Result<Vec<ChannelReward>, HelixError> {
         let env: Envelope<RawReward> = self.get_json(kind, "channel_points/custom_rewards", &[("broadcaster_id", broadcaster_id)]).await?;
-        Ok(env
-            .data
-            .into_iter()
-            .map(|r| ChannelReward {
-                id: r.id,
-                title: r.title,
-                cost: r.cost,
-                is_enabled: r.is_enabled,
-                is_paused: r.is_paused,
-                requires_input: r.is_user_input_required,
-                background_color: r.background_color,
-                image: r.image.or(r.default_image).map(|i| i.url_1x),
-            })
-            .collect())
+        let managed: std::collections::HashSet<String> = match self
+            .get_json::<Envelope<RawReward>>(kind, "channel_points/custom_rewards", &[("broadcaster_id", broadcaster_id), ("only_manageable_rewards", "true")])
+            .await
+        {
+            Ok(m) => m.data.into_iter().map(|r| r.id).collect(),
+            Err(e) => {
+                tracing::debug!(target: "signorebot::rewards", "Список управляемых наград недоступен: {e}");
+                Default::default()
+            }
+        };
+        Ok(env.data.into_iter().map(|r| raw_to_reward(r, &managed)).collect())
+    }
+
+    /// Создать награду от имени стримера (нужно `channel:manage:redemptions`).
+    pub async fn create_custom_reward(&self, kind: AccountKind, broadcaster_id: &str, r: &NewReward) -> Result<ChannelReward, HelixError> {
+        let body = serde_json::json!({
+            "title": r.title, "cost": r.cost, "prompt": r.prompt,
+            "is_user_input_required": r.is_user_input_required, "is_enabled": r.is_enabled,
+            "background_color": if r.background_color.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(r.background_color.clone()) },
+            "is_global_cooldown_enabled": r.cooldown_seconds.is_some(), "global_cooldown_seconds": r.cooldown_seconds.unwrap_or(0),
+            "is_max_per_stream_enabled": r.max_per_stream.is_some(), "max_per_stream": r.max_per_stream.unwrap_or(0),
+            "is_max_per_user_per_stream_enabled": r.max_per_user_per_stream.is_some(), "max_per_user_per_stream": r.max_per_user_per_stream.unwrap_or(0),
+            "should_redemptions_skip_request_queue": false,
+        });
+        let resp = self.request(kind, reqwest::Method::POST, &format!("{HELIX}/channel_points/custom_rewards"), &[("broadcaster_id", broadcaster_id)], Body::Json(&body)).await?;
+        let env: Envelope<RawReward> = resp.json().await?;
+        let mut managed = std::collections::HashSet::new();
+        let raw = env.data.into_iter().next().ok_or(HelixError::Http { status: 0, message: "пустой ответ".into(), retry_after: None })?;
+        managed.insert(raw.id.clone());
+        Ok(raw_to_reward(raw, &managed))
+    }
+
+    /// Переименовать награду, созданную нашим приложением.
+    pub async fn update_custom_reward_title(&self, kind: AccountKind, broadcaster_id: &str, reward_id: &str, title: &str) -> Result<(), HelixError> {
+        let body = serde_json::json!({ "title": title });
+        self.request(kind, reqwest::Method::PATCH, &format!("{HELIX}/channel_points/custom_rewards"), &[("broadcaster_id", broadcaster_id), ("id", reward_id)], Body::Json(&body)).await?;
+        Ok(())
+    }
+
+    /// Закрыть погашение: `CANCELED` возвращает баллы зрителю, `FULFILLED` — нет.
+    /// Только для наград, созданных нашим приложением, и только пока погашение UNFULFILLED.
+    pub async fn update_redemption_status(&self, kind: AccountKind, broadcaster_id: &str, reward_id: &str, redemption_id: &str, status: &str) -> Result<(), HelixError> {
+        let body = serde_json::json!({ "status": status });
+        self.request(kind, reqwest::Method::PATCH, &format!("{HELIX}/channel_points/custom_rewards/redemptions"), &[("broadcaster_id", broadcaster_id), ("reward_id", reward_id), ("id", redemption_id)], Body::Json(&body)).await?;
+        Ok(())
     }
 
     pub async fn create_eventsub(

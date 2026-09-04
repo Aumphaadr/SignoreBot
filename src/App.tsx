@@ -2,6 +2,7 @@ import { useState } from "react";
 import Sidebar from "./components/Layout/Sidebar";
 import StatusTab from "./components/Status/StatusTab";
 import OverlayAlert from "./components/Status/OverlayAlert";
+import UpdateBanner from "./components/Status/UpdateBanner";
 import AuthTab from "./components/OAuth/AuthTab";
 import OverlaysTab from "./components/Overlays/OverlaysTab";
 import CommandsTab from "./components/Commands/CommandsTab";
@@ -44,7 +45,7 @@ function Shell() {
   return (
     <div className="app-layout">
       <Sidebar active={tab} onChange={goTo} />
-      <main className="main-content"><div className="main-content-container"><OverlayAlert goTo={goTo} /><Content tab={tab} goTo={goTo} /></div></main>
+      <main className="main-content"><div className="main-content-container"><OverlayAlert goTo={goTo} /><UpdateBanner /><Content tab={tab} goTo={goTo} /></div></main>
     </div>
   );
 }

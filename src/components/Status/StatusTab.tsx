@@ -7,7 +7,6 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { api, errText } from "../../api";
 import { useAppState } from "../../state/AppState";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
-import UpdateBanner from "./UpdateBanner";
 import "./StatusTab.css";
 
 export default function StatusTab({ goTo }: { goTo: (tab: string) => void }) {
@@ -45,7 +44,6 @@ export default function StatusTab({ goTo }: { goTo: (tab: string) => void }) {
     <div className="status-tab">
       <div className="commands-header"><h2><Icon name="home" /> Состояние бота</h2><p className="commands-description">SignoreBot {s.version} · данные: <code>{s.dataDir}</code> <button className="small" onClick={() => void api.openDataDir()}><Icon name="folder-open"  /> открыть</button></p></div>
 
-      <UpdateBanner />
       {s.migration && (
         <div className="status-migration">
           <strong><Icon name="package" /> Настройки перенесены из старого формата (v{s.migration.fromVersion}).</strong>

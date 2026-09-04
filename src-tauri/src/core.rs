@@ -57,6 +57,8 @@ pub struct Core {
     server_error: Mutex<Option<String>>,
     /// Текущее предупреждение «оверлеи не подключены» (для панели и трея).
     overlay_alert: Mutex<Option<String>>,
+    /// Результат последней проверки обновлений (для плашки в панели).
+    update: Mutex<Option<crate::updates::UpdateInfo>>,
 }
 
 #[derive(Debug, Clone, Serialize, ts_rs::TS)]
@@ -102,6 +104,8 @@ pub struct CoreStatus {
     pub version: String,
     /// Бот работает, а часть оверлеев не открыта ни одним Browser Source.
     pub overlay_alert: Option<String>,
+    /// Последняя проверка обновлений (при запуске, раз в 12 часов и по кнопке).
+    pub update: Option<crate::updates::UpdateInfo>,
 }
 
 impl Core {
@@ -145,6 +149,7 @@ impl Core {
             obs_auto: Mutex::new(ObsAuto::default()),
             server_error: Mutex::new(None),
             overlay_alert: Mutex::new(None),
+            update: Mutex::new(None),
         });
 
         core.spawn_forwarders();
@@ -156,7 +161,7 @@ impl Core {
         Ok(core)
     }
 
-    fn emit_changed(&self, what: &str) {
+    pub fn emit_changed(&self, what: &str) {
         let _ = self.app.emit("changed", what);
     }
 
@@ -179,11 +184,17 @@ impl Core {
         tauri::async_runtime::spawn(async move {
             let mut rx = c.engine.subscribe_changes();
             while let Ok(ch) = rx.recv().await {
+                if matches!(ch, Changed::Rewards) {
+                    // движок мог поправить реакции (название с Twitch, снятая пометка копии)
+                    let _ = c.save_config();
+                    c.emit_changed("config");
+                }
                 c.emit_changed(match ch {
                     Changed::Shoutout => "shoutout",
                     Changed::EventSub => "eventsub",
                     Changed::Viewers => "viewers",
                     Changed::Media => "media",
+                    Changed::Rewards => "rewards",
                 });
             }
         });
@@ -377,6 +388,7 @@ impl Core {
             tracing::warn!(target: "signorebot::core", "Не авторизован: {}. Откройте вкладку «Авторизация».", missing.join(", "));
         }
         tauri::async_runtime::spawn(refresh_loop(Arc::clone(&self.auth)));
+        tauri::async_runtime::spawn(Arc::clone(&self).update_check_loop());
         self.reconcile().await;
         let mut rx = self.auth.subscribe();
         loop {
@@ -644,6 +656,37 @@ impl Core {
             migration: self.take_migration_report(),
             version: env!("CARGO_PKG_VERSION").into(),
             overlay_alert: self.overlay_alert.lock().clone(),
+            update: self.update.lock().clone(),
+        }
+    }
+
+    /// Проверить релизы на GitHub, запомнить результат, сообщить панели.
+    pub async fn check_updates(&self) -> Result<crate::updates::UpdateInfo, String> {
+        let repo = self.config.read().updates.repo_url.clone();
+        let info = crate::updates::check(&repo).await?;
+        if info.is_newer {
+            tracing::info!(target: "signorebot::updates", "Доступно обновление {} (текущая {})", info.latest.clone().unwrap_or_default(), info.current);
+        } else {
+            tracing::info!(target: "signorebot::updates", "Обновлений нет (текущая {}{})", info.current, info.latest.as_ref().map(|l| format!(", последний релиз {l}")).unwrap_or_default());
+        }
+        *self.update.lock() = Some(info.clone());
+        self.emit_changed("updates");
+        Ok(info)
+    }
+
+    /// Проверка обновлений сама по себе: через 20 с после запуска (если
+    /// включено в настройках) и дальше раз в 12 часов, пока приложение
+    /// живёт в трее. Проверка при закрытии не имеет смысла: «закрыть» обычно
+    /// прячет окно в трей, а результат всё равно нужен на следующем запуске.
+    async fn update_check_loop(self: Arc<Self>) {
+        tokio::time::sleep(Duration::from_secs(20)).await;
+        loop {
+            if self.config.read().updates.check_on_start {
+                if let Err(e) = self.check_updates().await {
+                    tracing::warn!(target: "signorebot::updates", "Проверка обновлений не удалась: {e}");
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(12 * 3600)).await;
         }
     }
 

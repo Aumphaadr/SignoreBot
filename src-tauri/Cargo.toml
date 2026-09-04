@@ -1,6 +1,6 @@
 [package]
 name = "signorebot"
-version = "1.0.1"
+version = "1.0.2"
 description = "SignoreBot — локальный Twitch-бот с оверлеями для OBS"
 authors = ["Aumphaadr"]
 edition = "2021"

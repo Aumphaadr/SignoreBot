@@ -34,6 +34,9 @@ export const defaultCommand = (): Command => ({
 export const defaultReward = (rewardId: string, rewardTitle: string): Reward => ({
   id: newId("reward"),
   enabled: true,
+  managed: false,
+  refundIfUnavailable: false,
+  originalRewardId: null,
   rewardId,
   rewardTitle,
   response: defaultResponse(),
@@ -55,7 +58,7 @@ export const EVENT_TYPES: Record<string, { label: string; icon: IconName; descri
   subscribe: { icon: "vip-star", label: "Новая подписка", description: "Новая платная подписка на канал", vars: ["user", "tier", "isGift"] },
   resubscribe: { icon: "vip-star", label: "Переподписка", description: "Продление подписки с сообщением", vars: ["user", "tier", "months", "streakMonths", "message"] },
   giftSub: { icon: "gift", label: "Подарочная подписка", description: "Кто-то дарит подписки", vars: ["user", "tier", "total", "isAnonymous"] },
-  bits: { icon: "gem", label: "Bits / Cheer", description: "Кто-то отправляет Bits в чат", vars: ["user", "bits", "message", "isAnonymous"] },
+  bits: { icon: "bits", label: "Bits / Cheer", description: "Кто-то отправляет Bits в чат", vars: ["user", "bits", "message", "isAnonymous"] },
   raid: { icon: "users", label: "Рейд", description: "Входящий рейд на канал", vars: ["user", "viewers"] },
   watchStreak: { icon: "lightning", label: "Watch Streak", description: "Зритель делится серией просмотренных стримов", vars: ["user", "streakCount", "channelPointsAwarded", "systemMessage", "message"] },
 };

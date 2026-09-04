@@ -17,6 +17,10 @@ pub const BROADCASTER_SCOPES: &[&str] = &[
     "moderator:manage:shoutouts",  // /shoutout от имени стримера
 ];
 
+/// Дополнительные права, которые запрашиваем у стримера, но не требуем:
+/// нужны только для наград, созданных через бота (возврат баллов).
+pub const BROADCASTER_OPTIONAL_SCOPES: &[&str] = &["channel:manage:redemptions"];
+
 /// Права бота (пишет в чат и удаляет сообщения как модератор).
 pub const BOT_SCOPES: &[&str] = &[
     "user:read:chat",

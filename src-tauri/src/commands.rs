@@ -317,6 +317,108 @@ pub async fn rewards_channel(s: State<'_, CoreState>) -> Res<Vec<ChannelReward>>
     c.helix.custom_rewards(AccountKind::Broadcaster, &ids.broadcaster_id).await.map_err(|e| e.to_string())
 }
 
+#[derive(Serialize, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "api.ts")]
+pub struct ManagedCopyResult {
+    pub new_reward_id: String,
+    pub new_title: String,
+    pub original_reward_id: String,
+    pub original_title: String,
+    pub rewards_url: String,
+}
+
+/// Создать управляемую копию награды (созданную нашим приложением) с теми же
+/// параметрами и перевести реакцию на неё. Копия получает пометку «(бот)»
+/// в названии, пока оригинал не удалён: Twitch не допускает двух наград с
+/// одним названием.
+#[tauri::command]
+pub async fn reward_create_managed_copy(s: State<'_, CoreState>, id: String) -> Res<ManagedCopyResult> {
+    let c = core(&s);
+    let ids = c.engine.ids().ok_or("Стример не авторизован")?;
+    if !c.auth.has_scope(AccountKind::Broadcaster, "channel:manage:redemptions") {
+        return Err("Нужно право «channel:manage:redemptions»: авторизуйте стримера заново на вкладке «Авторизация», Twitch запросит его одним кодом".into());
+    }
+    let reward = c.config.read().rewards.iter().find(|r| r.id == id).cloned().ok_or("реакция не найдена")?;
+    let channel = c.helix.custom_rewards(AccountKind::Broadcaster, &ids.broadcaster_id).await.map_err(|e| e.to_string())?;
+    let orig = channel.iter().find(|r| r.id == reward.reward_id).ok_or("награды нет на канале — нечего копировать")?;
+    if orig.is_managed {
+        return Err("эта награда уже создана через бота".into());
+    }
+    let login = c.auth.info(AccountKind::Broadcaster).map(|i| i.login).unwrap_or_default();
+    let new_title = format!("{} (бот)", orig.title);
+    let spec = crate::twitch::helix::NewReward {
+        title: new_title.clone(), cost: orig.cost, prompt: orig.prompt.clone(), is_user_input_required: orig.requires_input,
+        is_enabled: orig.is_enabled, background_color: orig.background_color.clone(),
+        cooldown_seconds: orig.cooldown_seconds, max_per_stream: orig.max_per_stream, max_per_user_per_stream: orig.max_per_user_per_stream,
+    };
+    let created = c.helix.create_custom_reward(AccountKind::Broadcaster, &ids.broadcaster_id, &spec).await.map_err(|e| format!("Twitch не создал награду: {e}"))?;
+    let (orig_id, orig_title) = (orig.id.clone(), orig.title.clone());
+    c.update_config(|cfg| {
+        if let Some(r) = cfg.rewards.iter_mut().find(|r| r.id == id) {
+            r.original_reward_id = Some(orig_id.clone());
+            r.reward_id = created.id.clone();
+            r.reward_title = created.title.clone();
+            r.managed = true;
+        }
+    })?;
+    tracing::info!(target: "signorebot::rewards", "Создана управляемая копия награды «{}» → «{}»; реакция переведена на копию", orig_title, created.title);
+    c.emit_changed("rewards");
+    Ok(ManagedCopyResult { new_reward_id: created.id, new_title: created.title, original_reward_id: orig_id, original_title: orig_title, rewards_url: format!("https://dashboard.twitch.tv/u/{login}/viewer-rewards/channel-points/rewards") })
+}
+
+/// Убрать пометку «(бот)» из названия копии — после того как оригинал удалён.
+#[tauri::command]
+pub async fn reward_finish_managed_copy(s: State<'_, CoreState>, id: String) -> Res<String> {
+    let c = core(&s);
+    let ids = c.engine.ids().ok_or("Стример не авторизован")?;
+    let reward = c.config.read().rewards.iter().find(|r| r.id == id).cloned().ok_or("реакция не найдена")?;
+    if !reward.managed {
+        return Err("награда не создана через бота".into());
+    }
+    let title = reward.reward_title.trim_end_matches(" (бот)").to_string();
+    if title == reward.reward_title {
+        return Ok(title);
+    }
+    c.helix.update_custom_reward_title(AccountKind::Broadcaster, &ids.broadcaster_id, &reward.reward_id, &title).await
+        .map_err(|e| format!("Twitch не переименовал награду ({e}). Обычно это значит, что оригинал с таким названием ещё не удалён"))?;
+    c.update_config(|cfg| {
+        if let Some(r) = cfg.rewards.iter_mut().find(|r| r.id == id) {
+            r.reward_title = title.clone();
+            r.original_reward_id = None;
+        }
+    })?;
+    c.emit_changed("rewards");
+    Ok(title)
+}
+
+#[tauri::command]
+pub fn redemptions_list(s: State<'_, CoreState>) -> Vec<crate::engine::PendingRedemption> {
+    core(&s).engine.redemptions()
+}
+
+#[tauri::command]
+pub fn redemption_dismiss(s: State<'_, CoreState>, id: String) {
+    core(&s).engine.dismiss_redemption(&id);
+}
+
+/// Вернуть баллы вручную из панели (только награды, созданные ботом).
+#[tauri::command]
+pub async fn redemption_refund(s: State<'_, CoreState>, id: String) -> Res<()> {
+    let c = core(&s);
+    let entry = c.engine.redemptions().into_iter().find(|r| r.redemption_id == id).ok_or("погашение не найдено")?;
+    c.engine.refund(&entry.reward_id, &entry.redemption_id).await?;
+    c.engine.on_redemption_update(&entry.redemption_id, "canceled");
+    Ok(())
+}
+
+/// Ссылка на очередь запросов Twitch (её видят стример и модераторы).
+#[tauri::command]
+pub fn rewards_queue_url(s: State<'_, CoreState>) -> String {
+    let login = core(&s).auth.info(AccountKind::Broadcaster).map(|i| i.login).unwrap_or_default();
+    format!("https://www.twitch.tv/popout/{login}/reward-queue")
+}
+
 #[tauri::command]
 pub async fn chat_send(s: State<'_, CoreState>, text: String) -> Res<()> {
     let c = core(&s);
@@ -422,14 +524,7 @@ pub fn overlay_key_regenerate(s: State<'_, CoreState>) -> Res<String> {
 /// Проверить обновления по релизам GitHub (`updates.repoUrl` из конфига).
 #[tauri::command]
 pub async fn updates_check(s: State<'_, CoreState>) -> Res<crate::updates::UpdateInfo> {
-    let repo = core(&s).config.read().updates.repo_url.clone();
-    let info = crate::updates::check(&repo).await?;
-    if info.is_newer {
-        tracing::info!(target: "signorebot::updates", "Доступно обновление {} (текущая {})", info.latest.clone().unwrap_or_default(), info.current);
-    } else {
-        tracing::info!(target: "signorebot::updates", "Обновлений нет (текущая {}{})", info.current, info.latest.as_ref().map(|l| format!(", последний релиз {l}")).unwrap_or_default());
-    }
-    Ok(info)
+    core(&s).check_updates().await
 }
 
 #[tauri::command]

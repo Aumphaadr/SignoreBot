@@ -1,6 +1,8 @@
 import Icon, { type IconName } from "../Icon";
 import { useAppState } from "../../state/AppState";
 import logo from "../../assets/logo.svg";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { Hint } from "../Common/hints";
 import "./Sidebar.css";
 
 export const MENU: { id: string; label: string; icon: IconName }[] = [
@@ -23,11 +25,17 @@ export default function Sidebar({ active, onChange }: { active: string; onChange
   const { status } = useAppState();
   const ok = status?.running && status.eventsub.connected;
   const warn = status && !status.running;
+  const upd = status?.update;
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
         <h1><img src={logo} alt="" className="sidebar-logo" /> SignoreBot</h1>
         <p className="sidebar-subtitle"><span className={`sidebar-dot ${ok ? "ok" : warn ? "bad" : "warn"}`} /> {ok ? "в работе" : warn ? "остановлен" : "подключение…"}</p>
+        {upd?.isNewer && upd.url && (
+          <Hint text={<>вышла версия <b>{upd.latest}</b>, у вас {upd.current}; кнопка открывает страницу релиза со ссылками на файлы</>}>
+            <button className="sidebar-update-btn" onClick={() => void openUrl(upd.url!)}><Icon name="download" /> Обновить до {upd.latest}</button>
+          </Hint>
+        )}
       </div>
       <nav className="sidebar-nav">
         {MENU.map(({ id, label, icon }) => (

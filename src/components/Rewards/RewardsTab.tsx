@@ -1,7 +1,9 @@
 import Icon from "../Icon";
-import { Hint, hintOverlay, hintOverlayAll, hintReaction, hintRewardMissing, hintStatus } from "../Common/hints";
+import Tooltip from "../Tooltip";
+import { Em, Hint, hintOverlay, hintOverlayAll, hintReaction, hintRewardMissing, hintStatus } from "../Common/hints";
 import { useCallback, useEffect, useState } from "react";
-import { api, errText, type ChannelReward, type Reward } from "../../api";
+import { api, errText, type ChannelReward, type ManagedCopyResult, type PendingRedemption, type Reward } from "../../api";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { defaultReward } from "../../api/defaults";
 import { useAppState } from "../../state/AppState";
 import { reactionBadge } from "../Commands/CommandsTab";
@@ -62,6 +64,10 @@ export default function RewardsTab() {
   const [channel, setChannel] = useState<ChannelReward[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ reward: Reward | null; isNew: boolean } | null>(null);
+  const [redemptions, setRedemptions] = useState<PendingRedemption[]>([]);
+  const [copyInfo, setCopyInfo] = useState<{ reward: Reward; result: ManagedCopyResult } | null>(null);
+  const loadRedemptions = useCallback(() => { api.redemptionsList().then(setRedemptions).catch(() => {}); }, []);
+  useEffect(() => { loadRedemptions(); }, [loadRedemptions]);
 
   const running = !!status?.running;
   const load = useCallback(async () => {
@@ -72,6 +78,20 @@ export default function RewardsTab() {
   }, [showNotification, running]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => onChanged("runtime", () => void load()), [onChanged, load]);
+  useEffect(() => onChanged("rewards", () => { void load(); loadRedemptions(); }), [onChanged, load, loadRedemptions]);
+  const openQueue = async () => { try { await openUrl(await api.rewardsQueueUrl()); } catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 4000); } };
+  const makeCopy = (r: Reward) => showConfirm(
+    `Создать через бота копию награды «${r.rewardTitle}»?\n\nКопия получит те же цену, подсказку и лимиты и название «${r.rewardTitle} (бот)». Реакция SignoreBot перейдёт на копию. Оригинал останется на канале — его нужно будет удалить в панели Twitch, после чего пометку «(бот)» можно убрать одной кнопкой.`,
+    async () => {
+      try { const result = await api.rewardCreateManagedCopy(r.id); setCopyInfo({ reward: r, result }); void load(); }
+      catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 8000); }
+    },
+  );
+  const finishCopy = async (r: Reward) => {
+    try { const t = await api.rewardFinishManagedCopy(r.id); showNotification(`Название награды: «${t}»`, NOTIFICATION_TYPES.SUCCESS, 3000); setCopyInfo(null); void load(); }
+    catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 8000); }
+  };
+  const openRedemptions = redemptions.filter((x) => x.status === "pending" || x.status === "refunded");
 
   const es = status?.eventsub;
   const save = (r: Reward) => {
@@ -102,15 +122,17 @@ export default function RewardsTab() {
                 <div className="reward-title">
                   {info?.image && <img src={info.image} alt="" className="reward-icon" />}
                   <span className="reward-name">{r.rewardTitle}</span>
-                  {info && <span className="reward-cost">{info.cost} <Icon name="gem" /></span>}
+                  {info && <span className="reward-cost">{info.cost} <Icon name="channel-points" /></span>}
                   {channel.length > 0 && !info && <Hint text={hintRewardMissing(r.rewardTitle)}><span className="reward-status-badge disabled">нет на канале</span></Hint>}
-                  <Hint text={hintStatus({ kind: "reward", name: r.rewardTitle }, r.enabled)}><span className={`reward-status-badge ${r.enabled ? "enabled" : "disabled"}`}>{r.enabled ? "Вкл" : "Выкл"}</span></Hint>
+                  {info?.isManaged && <Hint text={<>награда <Em>«{r.rewardTitle}»</Em> создана через бота: бот может менять её и возвращать баллы зрителям</>}><span className="reward-status-badge managed"><Icon name="robot" /></span></Hint>}
+                  {r.managed && r.originalRewardId && <Hint text={<>копия ещё с пометкой «(бот)»: удалите оригинал в панели Twitch и нажмите «Убрать пометку» в редакторе</>}><span className="reward-status-badge warning-badge">оригинал не удалён</span></Hint>}
+                  {r.refundIfUnavailable && info?.isManaged && <Hint text={<>если оверлей выключен, бот вернёт баллы зрителю; удачные погашения бот закрывает сам</>}><span className="reward-status-badge refund"><Icon name="redo" /> возврат</span></Hint>}
                   <Hint text={hintReaction({ kind: "reward", name: r.rewardTitle }, r.response)}><span className="reward-type-badge">{reactionBadge(r.response)}</span></Hint>
                   {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="overlay-screen" /> {ov.name}</span></Hint>}
                   {!ov && r.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="broadcast" /> Все оверлеи</span></Hint>}
                 </div>
                 <div className="reward-actions">
-                  <button onClick={() => { setSection("rewards", rewards.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x))); }} className={`status-toggle-btn ${r.enabled ? "on" : "off"}`}><Icon name="power"  /></button>
+                  <Hint text={hintStatus({ kind: "reward", name: r.rewardTitle }, r.enabled)}><button onClick={() => { setSection("rewards", rewards.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x))); }} className={`status-toggle-btn ${r.enabled ? "on" : "off"}`}><Icon name="power"  /></button></Hint>
                   <button onClick={() => setEditing({ reward: r, isNew: false })} className="edit-btn" title="Редактировать"><Icon name="edit"  /></button>
                   <button onClick={() => showConfirm(`Удалить реакцию на награду "${r.rewardTitle}"?`, () => { setSection("rewards", rewards.filter((x) => x.id !== r.id)); showNotification("Реакция удалена", NOTIFICATION_TYPES.WARNING, 2000); })} className="delete-btn" title="Удалить"><Icon name="delete"  /></button>
                 </div>
@@ -122,22 +144,90 @@ export default function RewardsTab() {
       <div className="add-reward-section">
         <button className="add-reward-main-btn" onClick={() => setEditing({ reward: null, isNew: true })}><Icon name="add"  /> Добавить реакцию на награду</button>
       </div>
+
+      <div className="redemptions-section">
+        <div className="redemptions-header">
+          <h3><Icon name="hourglass" /> Невыполненные погашения {openRedemptions.length > 0 && <span className="badge badge-warning">{openRedemptions.length}</span>}</h3>
+          <div className="flex gap-2">
+            <button className="small" onClick={() => void openQueue()} disabled={!running} title="Очередь запросов Twitch — там стример и модераторы возвращают баллы или отмечают выполнение"><Icon name="external-link" /> Очередь запросов Twitch</button>
+          </div>
+        </div>
+        <p className="form-hint">Сюда попадают награды, чьё медиа не дошло до оверлея (он был выключен). Вернуть баллы зрителю можно в очереди запросов Twitch — это умеют стример и модераторы. Для наград, созданных через бота с включённым возвратом, бот делает это сам.</p>
+        {openRedemptions.length === 0 ? <div className="form-hint">Пока пусто.</div> : (
+          <div className="redemptions-list">
+            {openRedemptions.map((x) => {
+              const rw = rewards.find((r) => r.rewardId === x.rewardId);
+              const managed = !!channel.find((c) => c.id === x.rewardId)?.isManaged;
+              return (
+                <div key={x.redemptionId} className={`redemption-row ${x.status}`}>
+                  <div className="redemption-main">
+                    <strong>{x.rewardTitle}</strong> — <span className="redemption-user">{x.user}</span>
+                    <span className="redemption-time">{new Date(x.at).toLocaleString("ru-RU")}</span>
+                    <div className="form-hint">{x.status === "refunded" ? "баллы возвращены ботом" : x.reason}</div>
+                  </div>
+                  <div className="redemption-actions">
+                    {x.status === "pending" && managed && <button className="small" onClick={() => api.redemptionRefund(x.redemptionId).then(() => showNotification(`Баллы за «${x.rewardTitle}» возвращены ${x.user}`, NOTIFICATION_TYPES.SUCCESS, 3000)).catch((e) => showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 6000))}><Icon name="redo" /> Вернуть баллы</button>}
+                    {x.status === "pending" && !managed && rw && <button className="small" onClick={() => void openQueue()} title="Награда создана в панели Twitch — вернуть баллы можно только там"><Icon name="external-link" /> В очереди Twitch</button>}
+                    <button className="small" onClick={() => api.redemptionDismiss(x.redemptionId).then(loadRedemptions)} title="Убрать из списка"><Icon name="close" /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <Modal isOpen={!!copyInfo} onClose={() => setCopyInfo(null)} title="Копия награды создана" size="medium">
+        {copyInfo && (
+          <div className="managed-copy-steps">
+            <p>На канале теперь две награды: <strong>«{copyInfo.result.originalTitle}»</strong> — оригинал, и <strong>«{copyInfo.result.newTitle}»</strong> — копия, созданная ботом. Реакция SignoreBot уже переведена на копию.</p>
+            <ol>
+              <li>Откройте <a href="#" onClick={(e) => { e.preventDefault(); void openUrl(copyInfo.result.rewardsUrl); }}>страницу наград в панели Twitch</a>.</li>
+              <li>Найдите награду <strong>без</strong> пометки «(бот)» — это оригинал — и удалите её. Копию с пометкой «(бот)» не трогайте.</li>
+              <li>Загрузите копии картинку награды: Twitch не принимает картинки от приложений, только через панель. Без неё у награды будет стандартный значок.</li>
+              <li>Вернитесь сюда и нажмите «Убрать пометку»: копия получит прежнее название, зрители не заметят разницы. Если оригинал удалён при работающем боте, пометку он снимает сам.</li>
+            </ol>
+            <div className="flex gap-2">
+              <button className="primary" onClick={() => void finishCopy(copyInfo.reward)}><Icon name="check" /> Убрать пометку «(бот)»</button>
+              <button onClick={() => setCopyInfo(null)}>Позже</button>
+            </div>
+            <p className="form-hint" style={{ marginTop: 10 }}>Если нажать раньше, чем удалён оригинал, Twitch откажет: два одинаковых названия не допускаются.</p>
+          </div>
+        )}
+      </Modal>
       <Modal isOpen={!!editing} onClose={() => setEditing(null)} size={editing?.reward ? "xlarge" : "medium"}
         title={!editing ? "" : !editing.reward ? "Выберите награду" : editing.isNew ? `Создание реакции на «${editing.reward.rewardTitle}»` : `Редактирование реакции на «${editing.reward.rewardTitle}»`}>
         {editing && !editing.reward && (
           <RewardSelector channel={channel} existing={rewards} loading={loading} onRefresh={() => void load()} onPick={(c) => setEditing({ reward: defaultReward(c.id, c.title), isNew: true })} onCancel={() => setEditing(null)} />
         )}
-        {editing?.reward && <RewardEditor key={editing.reward.id} initial={editing.reward} isNew={editing.isNew} onSave={save} />}
+        {editing?.reward && <RewardEditor key={editing.reward.id} initial={editing.reward} isNew={editing.isNew} onSave={save} info={channel.find((c) => c.id === editing.reward!.rewardId)} onMakeCopy={(rw) => { save(rw); makeCopy(rw); }} onFinishCopy={(rw) => { save(rw); void finishCopy(rw); }} />}
       </Modal>
     </div>
   );
 }
 
-function RewardEditor({ initial, isNew, onSave }: { initial: Reward; isNew: boolean; onSave: (r: Reward) => void }) {
+function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy }: { initial: Reward; isNew: boolean; onSave: (r: Reward) => void; info?: ChannelReward; onMakeCopy: (r: Reward) => void; onFinishCopy: (r: Reward) => void }) {
   const { config } = useAppState();
   const [r, setR] = useState(initial);
+  const managed = !!info?.isManaged;
   return (
     <div className="reward-editor">
+      <div className="reward-refund-block">
+        <label className={`toggle-label ${managed ? "" : "disabled"}`}>
+          <span className="toggle-switch"><input type="checkbox" checked={r.refundIfUnavailable} disabled={!managed} onChange={(e) => setR({ ...r, refundIfUnavailable: e.target.checked })} /><span className="toggle-slider"></span></span>
+          <span className="toggle-text">Возвращать баллы, если оверлей недоступен</span>
+          <Tooltip text="Если медиа не дошло до оверлея (он был выключен), бот отменит погашение — Twitch вернёт зрителю баллы. Взамен бот сам закрывает удачные погашения, чтобы они не копились в очереди запросов. Работает только для наград, созданных через бота: Twitch разрешает это только приложению-создателю." />
+        </label>
+        {!managed && info && (
+          <div className="form-hint">
+            Награда создана в панели Twitch, а не через бота — Twitch не позволяет приложению отменять её погашения. Можно создать через бота копию с теми же параметрами и перевести реакцию на неё; бот подскажет, что удалить. Картинку награды придётся загрузить копии заново — её Twitch через приложение не принимает.
+            <div style={{ marginTop: 8 }}><button className="small" onClick={() => onMakeCopy(r)}><Icon name="copy" /> Создать управляемую копию</button></div>
+          </div>
+        )}
+        {managed && info?.skipQueue && <div className="form-hint text-warning"><Icon name="warning" /> У награды включено «пропускать очередь запросов»: такие погашения закрываются сразу, и вернуть баллы нельзя. Выключите этот пункт в настройках награды на Twitch.</div>}
+        {r.managed && r.originalRewardId && <div className="form-hint"><Icon name="warning" /> Копия ещё с пометкой «(бот)». Удалите оригинал в панели Twitch и нажмите: <button className="small" onClick={() => onFinishCopy(r)}>Убрать пометку</button></div>}
+        {!info && <div className="form-hint">Список наград канала недоступен (бот не запущен) — управление возвратом появится, когда бот подключится.</div>}
+      </div>
       <ModalActions>
         <button onClick={() => onSave(r)} className="save-reward-btn primary">{isNew ? <><Icon name="add"  /> Создать реакцию</> : <><Icon name="save"  /> Сохранить</>}</button>
       </ModalActions>
