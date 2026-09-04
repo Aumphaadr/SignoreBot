@@ -436,6 +436,11 @@ impl Core {
         let cancel = CancellationToken::new();
         *self.runtime.lock() = Some(cancel.clone());
         self.engine.set_ids(Some(ids.clone()));
+        {
+            // названия наград могли поменять, пока бот был выключен
+            let e = Arc::clone(&self.engine);
+            tauri::async_runtime::spawn(async move { e.sync_rewards_from_twitch().await });
+        }
         let b = self.auth.info(AccountKind::Broadcaster).map(|i| i.login).unwrap_or_default();
         let o = self.auth.info(AccountKind::Bot).map(|i| i.login).unwrap_or_default();
         if self.auth.is_shared() {

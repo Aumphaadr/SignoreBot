@@ -190,6 +190,47 @@ impl Engine {
         let _ = self.changed_tx.send(what);
     }
 
+    /// Сверка реакций со списком наград Twitch при запуске: пока бот был
+    /// выключен, награду могли переименовать или удалить — событий об этом
+    /// он не видел. Названия подтягиваются, об отсутствующих — предупреждение.
+    pub async fn sync_rewards_from_twitch(&self) {
+        let Some(ids) = self.ids() else { return };
+        if self.config.read().rewards.is_empty() {
+            return;
+        }
+        let channel = match self.helix.custom_rewards(AccountKind::Broadcaster, &ids.broadcaster_id).await {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::warn!(target: "signorebot::rewards", "Не удалось сверить награды с Twitch: {e}");
+                return;
+            }
+        };
+        let mut renamed: Vec<(String, String)> = Vec::new();
+        let mut missing: Vec<String> = Vec::new();
+        {
+            let mut cfg = self.config.write();
+            for r in cfg.rewards.iter_mut() {
+                match channel.iter().find(|c| c.id == r.reward_id) {
+                    Some(c) if c.title != r.reward_title => {
+                        renamed.push((r.reward_title.clone(), c.title.clone()));
+                        r.reward_title = c.title.clone();
+                    }
+                    Some(_) => {}
+                    None => missing.push(r.reward_title.clone()),
+                }
+            }
+        }
+        for (old, new) in &renamed {
+            tracing::info!(target: "signorebot::rewards", "Награда «{old}» переименована на Twitch, пока бот был выключен: теперь «{new}»");
+        }
+        if !missing.is_empty() {
+            tracing::warn!(target: "signorebot::rewards", "Наград нет на канале (удалены на Twitch): {}; реакции сохранены, на вкладке «Баллы канала» они помечены «нет на канале»", missing.iter().map(|m| format!("«{m}»")).collect::<Vec<_>>().join(", "));
+        }
+        if !renamed.is_empty() {
+            self.changed(Changed::Rewards);
+        }
+    }
+
     pub fn set_ids(&self, ids: Option<Ids>) {
         *self.ids.lock() = ids;
     }
