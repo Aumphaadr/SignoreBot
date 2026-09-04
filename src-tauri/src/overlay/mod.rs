@@ -3,3 +3,4 @@
 pub mod hub;
 pub mod obs;
 pub mod server;
+pub mod fonts_gen;

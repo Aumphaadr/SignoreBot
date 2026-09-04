@@ -27,7 +27,7 @@ pub const OVERLAY_SW: &str = include_str!("../../overlay/overlay-sw.js");
 /// Страница оверлея со встроенным общим CSS.
 pub fn overlay_html() -> &'static str {
     static HTML: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-    HTML.get_or_init(|| OVERLAY_HTML_TEMPLATE.replace("/*__SHARED_CSS__*/", OVERLAY_CSS))
+    HTML.get_or_init(|| OVERLAY_HTML_TEMPLATE.replace("/*__SHARED_CSS__*/", &format!("{}\n{}", super::fonts_gen::FONT_FACE_CSS, OVERLAY_CSS)))
 }
 
 #[derive(Clone)]
@@ -94,6 +94,16 @@ async fn overlay_info(State(st): State<ServerState>, Path(path): Path<String>, Q
         .into_response(),
         None => (StatusCode::NOT_FOUND, "оверлей не найден").into_response(),
     }
+}
+
+/// Встроенные шрифты для текста на оверлее. Без ключа: файлы открытые (OFL),
+/// а @font-face в странице не может подставить ключ.
+async fn font_file(Path(file): Path<String>) -> Response {
+    let Some((_, bytes)) = super::fonts_gen::FONTS.iter().find(|(n, _)| *n == file) else {
+        return (StatusCode::NOT_FOUND, "шрифт не найден").into_response();
+    };
+    let mime = if file.ends_with(".otf") { "font/otf" } else { "font/ttf" };
+    ([(header::CONTENT_TYPE, HeaderValue::from_static(mime)), (header::CACHE_CONTROL, HeaderValue::from_static("public, max-age=31536000, immutable")), (header::ACCESS_CONTROL_ALLOW_ORIGIN, HeaderValue::from_static("*"))], *bytes).into_response()
 }
 
 async fn media(State(st): State<ServerState>, Path(file): Path<String>, Query(q): Query<KeyQuery>, req: axum::extract::Request) -> Response {
@@ -179,6 +189,7 @@ pub fn router(state: ServerState) -> Router {
         .route("/overlay/{path}", get(overlay_page))
         .route("/overlay-sw.js", get(overlay_sw))
         .route("/media/{file}", get(media))
+        .route("/fonts/{file}", get(font_file))
         .route("/ws", get(ws_upgrade))
         .route("/api/health", get(health))
         .route("/api/overlay-info/{path}", get(overlay_info))

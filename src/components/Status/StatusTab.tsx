@@ -56,7 +56,7 @@ export default function StatusTab({ goTo }: { goTo: (tab: string) => void }) {
 
       <div className="status-grid">
         {acc(s.broadcaster, <><Icon name="streamer-camera" /> Стример</>)}
-        {acc(s.bot, <><Icon name="robot" /> Бот</>)}
+        {acc(s.bot, <><Icon name="robot" /> Бот{config.accounts.sameAccount && " (тот же аккаунт)"}</>)}
         <div className={`status-tile ${s.running ? (s.eventsub.connected ? "ok" : "warn") : "bad"}`}>
           <div className="status-tile-label"><Icon name="settings" /> Ядро</div>
           <div className="status-tile-value">{s.running ? (s.eventsub.connected ? "работает" : "EventSub переподключается…") : "остановлено"}</div>

@@ -5,7 +5,11 @@ export type AccountInfo = { login: string, userId: string, displayName: string, 
 /**
  * Несекретная информация об авторизованных аккаунтах.
  */
-export type Accounts = { broadcaster: AccountInfo | null, bot: AccountInfo | null, };
+export type Accounts = { broadcaster: AccountInfo | null, bot: AccountInfo | null, 
+/**
+ * Бот — тот же аккаунт, что и стример: один токен с объединёнными правами.
+ */
+sameAccount: boolean, };
 
 /**
  * Поведение самого приложения (окно, трей).

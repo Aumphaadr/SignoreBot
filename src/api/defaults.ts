@@ -60,20 +60,7 @@ export const EVENT_TYPES: Record<string, { label: string; icon: IconName; descri
   watchStreak: { icon: "lightning", label: "Watch Streak", description: "Зритель делится серией просмотренных стримов", vars: ["user", "streakCount", "channelPointsAwarded", "systemMessage", "message"] },
 };
 
-export const FONT_FAMILIES = [
-  { label: "Segoe UI", value: "'Segoe UI', sans-serif" },
-  { label: "Arial", value: "Arial, sans-serif" },
-  { label: "Verdana", value: "Verdana, sans-serif" },
-  { label: "Tahoma", value: "Tahoma, sans-serif" },
-  { label: "Trebuchet MS", value: "'Trebuchet MS', sans-serif" },
-  { label: "Georgia", value: "Georgia, serif" },
-  { label: "Times New Roman", value: "'Times New Roman', serif" },
-  { label: "Courier New", value: "'Courier New', monospace" },
-  { label: "Impact", value: "Impact, sans-serif" },
-  { label: "Comic Sans MS", value: "'Comic Sans MS', cursive" },
-  { label: "Consolas", value: "Consolas, monospace" },
-  { label: "Calibri", value: "Calibri, sans-serif" },
-];
+export { FONT_FAMILIES } from "./fonts.generated";
 
 export const TEXT_ANIMATIONS = [
   { value: "none", label: "— Без анимации —" },

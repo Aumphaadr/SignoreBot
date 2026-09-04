@@ -1,0 +1,180 @@
+[
+ {
+  "family": "Inter",
+  "label": "Inter",
+  "faces": [
+   {
+    "file": "Inter.ttf",
+    "weight": "100 900",
+    "style": "normal"
+   }
+  ],
+  "license": "Inter-OFL.txt"
+ },
+ {
+  "family": "Roboto",
+  "label": "Roboto",
+  "faces": [
+   {
+    "file": "Roboto.ttf",
+    "weight": "100 900",
+    "style": "normal"
+   }
+  ],
+  "license": "Roboto-OFL.txt"
+ },
+ {
+  "family": "Montserrat",
+  "label": "Montserrat",
+  "faces": [
+   {
+    "file": "Montserrat.ttf",
+    "weight": "100 900",
+    "style": "normal"
+   }
+  ],
+  "license": "Montserrat-OFL.txt"
+ },
+ {
+  "family": "Jost",
+  "label": "Jost",
+  "faces": [
+   {
+    "file": "Jost.ttf",
+    "weight": "100 900",
+    "style": "normal"
+   }
+  ],
+  "license": "Jost-OFL.txt"
+ },
+ {
+  "family": "Noto Sans Display",
+  "label": "Noto Sans Display",
+  "faces": [
+   {
+    "file": "NotoSansDisplay.ttf",
+    "weight": "100 900",
+    "style": "normal"
+   }
+  ],
+  "license": "NotoSansDisplay-OFL.txt"
+ },
+ {
+  "family": "Noto Serif",
+  "label": "Noto Serif",
+  "faces": [
+   {
+    "file": "NotoSerif.ttf",
+    "weight": "100 900",
+    "style": "normal"
+   }
+  ],
+  "license": "NotoSerif-OFL.txt"
+ },
+ {
+  "family": "Oswald",
+  "label": "Oswald",
+  "faces": [
+   {
+    "file": "Oswald.ttf",
+    "weight": "200 700",
+    "style": "normal"
+   }
+  ],
+  "license": "Oswald-OFL.txt"
+ },
+ {
+  "family": "Comfortaa",
+  "label": "Comfortaa",
+  "faces": [
+   {
+    "file": "Comfortaa.ttf",
+    "weight": "300 700",
+    "style": "normal"
+   }
+  ],
+  "license": "Comfortaa-OFL.txt"
+ },
+ {
+  "family": "Bellota",
+  "label": "Bellota",
+  "faces": [
+   {
+    "file": "Bellota-Regular.ttf",
+    "weight": "400",
+    "style": "normal"
+   },
+   {
+    "file": "Bellota-Bold.ttf",
+    "weight": "700",
+    "style": "normal"
+   }
+  ],
+  "license": "Bellota-OFL.txt"
+ },
+ {
+  "family": "Comic Relief",
+  "label": "Comic Relief",
+  "faces": [
+   {
+    "file": "ComicRelief-Regular.ttf",
+    "weight": "400",
+    "style": "normal"
+   },
+   {
+    "file": "ComicRelief-Bold.ttf",
+    "weight": "700",
+    "style": "normal"
+   }
+  ],
+  "license": "ComicRelief-OFL.txt"
+ },
+ {
+  "family": "Lobster",
+  "label": "Lobster",
+  "faces": [
+   {
+    "file": "Lobster.ttf",
+    "weight": "400",
+    "style": "normal"
+   }
+  ],
+  "license": "Lobster-OFL.txt"
+ },
+ {
+  "family": "Neucha",
+  "label": "Neucha",
+  "faces": [
+   {
+    "file": "Neucha.ttf",
+    "weight": "400",
+    "style": "normal"
+   }
+  ],
+  "license": "Neucha-OFL.txt"
+ },
+ {
+  "family": "Handjet",
+  "label": "Handjet",
+  "faces": [
+   {
+    "file": "Handjet.ttf",
+    "weight": "100 900",
+    "style": "normal"
+   }
+  ],
+  "license": "Handjet-OFL.txt"
+ },
+ {
+  "family": "Rubik Mono One",
+  "label": "Rubik Mono One",
+  "faces": [
+   {
+    "file": "RubikMonoOne.ttf",
+    "weight": "400",
+    "style": "normal"
+   }
+  ],
+  "license": "RubikMonoOne-OFL.txt"
+ }
+]

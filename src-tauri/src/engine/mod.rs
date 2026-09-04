@@ -98,6 +98,12 @@ pub struct Engine {
     antispam: Mutex<HashMap<(String, String), Instant>>,
     eventsub: Mutex<EventSubStatus>,
     changed_tx: broadcast::Sender<Changed>,
+    /// Идентификаторы сообщений, отправленных ботом (последние 64): по ним
+    /// отсеиваем собственное эхо из EventSub, не завися от того, совпадает ли
+    /// аккаунт бота с аккаунтом стримера.
+    sent_ids: Mutex<std::collections::VecDeque<String>>,
+    /// Сколько отправок ещё не получили ответ Helix (гонка с EventSub).
+    in_flight: std::sync::atomic::AtomicUsize,
 }
 
 impl Engine {
@@ -117,6 +123,8 @@ impl Engine {
             viewers: Mutex::new(Viewers::default()),
             cooldowns: Mutex::new(HashMap::new()),
             antispam: Mutex::new(HashMap::new()),
+            sent_ids: Mutex::new(std::collections::VecDeque::with_capacity(64)),
+            in_flight: std::sync::atomic::AtomicUsize::new(0),
             eventsub: Mutex::new(EventSubStatus::default()),
             changed_tx,
         })
@@ -219,7 +227,13 @@ impl Engine {
             tracing::warn!(target: "signorebot::chat", "Чат недоступен (аккаунты не готовы), сообщение не отправлено");
             return false;
         };
-        match self.helix.send_chat_message(AccountKind::Bot, &ids.broadcaster_id, &ids.bot_id, text, None).await {
+        self.in_flight.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let result = self.helix.send_chat_message(AccountKind::Bot, &ids.broadcaster_id, &ids.bot_id, text, None).await;
+        if let Ok(r) = &result {
+            self.remember_sent(&r.message_id);
+        }
+        self.in_flight.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+        match result {
             Ok(r) if r.is_sent => {
                 tracing::info!(target: "signorebot::chat", "Чат: {text}");
                 true
@@ -344,12 +358,58 @@ impl Engine {
     // Чат
     // ------------------------------------------------------------------
 
-    pub async fn on_chat(&self, msg: ChatMessage) {
-        let ids = self.ids();
-        if let Some(ids) = &ids {
-            if msg.user_id == ids.bot_id {
-                return;
+    /// Запомнить id отправленного сообщения (для отсева эха).
+    pub fn remember_sent(&self, message_id: &str) {
+        if message_id.is_empty() {
+            return;
+        }
+        let mut q = self.sent_ids.lock();
+        if q.len() >= 64 {
+            q.pop_front();
+        }
+        q.push_back(message_id.to_string());
+    }
+
+    fn take_sent(&self, message_id: &str) -> bool {
+        let mut q = self.sent_ids.lock();
+        if let Some(pos) = q.iter().position(|x| x == message_id) {
+            q.remove(pos);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Это эхо нашего же сообщения? Сначала по `message_id`. Если аккаунты
+    /// разные — достаточно автора. Если бот и стример — один аккаунт, автор
+    /// ничего не говорит: тогда ждём, пока завершатся отправки «в полёте»
+    /// (EventSub может обогнать ответ Helix), и проверяем id ещё раз.
+    async fn is_own_echo(&self, msg: &ChatMessage) -> bool {
+        if self.take_sent(&msg.message_id) {
+            return true;
+        }
+        let Some(ids) = self.ids() else { return false };
+        if msg.user_id != ids.bot_id {
+            return false;
+        }
+        if ids.bot_id != ids.broadcaster_id {
+            return true; // отдельный бот: всё от него — наше
+        }
+        for _ in 0..10 {
+            if self.in_flight.load(std::sync::atomic::Ordering::SeqCst) == 0 {
+                break;
             }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            if self.take_sent(&msg.message_id) {
+                return true;
+            }
+        }
+        self.take_sent(&msg.message_id)
+    }
+
+    pub async fn on_chat(&self, msg: ChatMessage) {
+        if self.is_own_echo(&msg).await {
+            return;
         }
         self.note_chatter(&msg.user_name);
 

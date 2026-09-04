@@ -269,3 +269,5 @@
     width: 100%;
   }
 }
+.oauth-same-toggle { margin: 0 0 16px; }
+.oauth-card-shared .oauth-auth-status { align-items: flex-start; }

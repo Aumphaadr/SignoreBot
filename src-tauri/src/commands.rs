@@ -165,6 +165,12 @@ pub async fn auth_logout(s: State<'_, CoreState>, kind: String) -> Res<()> {
     Ok(())
 }
 
+/// Бот — тот же аккаунт, что и стример (один токен, объединённые права).
+#[tauri::command]
+pub fn auth_set_same_account(s: State<'_, CoreState>, on: bool) -> Res<()> {
+    core(&s).set_same_account(on)
+}
+
 #[tauri::command]
 pub async fn auth_refresh(s: State<'_, CoreState>, kind: String) -> Res<()> {
     let c = core(&s);

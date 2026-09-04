@@ -4,7 +4,7 @@
 // нет сети) — на странице остаются рабочие ссылки на текущую версию.
 (function () {
   const REPO = "Aumphaadr/SignoreBot";
-  const FALLBACK = "1.0.0";
+  const FALLBACK = "1.0.1";
   const status = document.getElementById("dl-status");
 
   const KINDS = {

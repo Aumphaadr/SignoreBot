@@ -118,6 +118,7 @@ impl Core {
         let auth = AuthManager::new(config.read().twitch.client_id.clone(), secrets.clone());
         {
             let c = config.read();
+            auth.set_shared(c.accounts.same_account);
             auth.seed_info(AccountKind::Broadcaster, c.accounts.broadcaster.clone());
             auth.seed_info(AccountKind::Bot, c.accounts.bot.clone());
         }
@@ -425,7 +426,11 @@ impl Core {
         self.engine.set_ids(Some(ids.clone()));
         let b = self.auth.info(AccountKind::Broadcaster).map(|i| i.login).unwrap_or_default();
         let o = self.auth.info(AccountKind::Bot).map(|i| i.login).unwrap_or_default();
-        tracing::info!(target: "signorebot::core", "Запуск: канал {b}, бот {o}");
+        if self.auth.is_shared() {
+            tracing::info!(target: "signorebot::core", "Запуск: канал {b}, бот — тот же аккаунт");
+        } else {
+            tracing::info!(target: "signorebot::core", "Запуск: канал {b}, бот {o}");
+        }
 
         // EventSub → движок
         let (tx, mut rx) = tokio::sync::mpsc::channel::<TwitchEvent>(256);
@@ -640,6 +645,14 @@ impl Core {
             version: env!("CARGO_PKG_VERSION").into(),
             overlay_alert: self.overlay_alert.lock().clone(),
         }
+    }
+
+    /// Включить/выключить режим «бот — тот же аккаунт».
+    pub fn set_same_account(self: &Arc<Self>, on: bool) -> Result<(), String> {
+        self.update_config(|cfg| cfg.accounts.same_account = on)?;
+        self.auth.set_shared(on);
+        self.emit_changed("config");
+        Ok(())
     }
 
     pub fn dismiss_migration(&self) {

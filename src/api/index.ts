@@ -58,6 +58,8 @@ export const api = {
   authCancel: (kind: AccountKind) => invoke<void>("auth_cancel", { kind }),
   authLogout: (kind: AccountKind) => invoke<void>("auth_logout", { kind }),
   authRefresh: (kind: AccountKind) => invoke<void>("auth_refresh", { kind }),
+  /** Бот — тот же аккаунт, что и стример (один токен, объединённые права). */
+  authSetSameAccount: (on: boolean) => invoke<void>("auth_set_same_account", { on }),
 
   // медиа
   mediaList: () => invoke<MediaFile[]>("media_list"),

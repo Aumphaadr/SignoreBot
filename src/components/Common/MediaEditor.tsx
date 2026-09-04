@@ -11,6 +11,8 @@ import Tooltip from "../Tooltip";
 import { VariableBadges } from "./VariableBadge";
 import "./MediaEditor.css";
 import "../../../src-tauri/overlay/overlay.css";
+import "../../styles/overlay-fonts.css";
+import FontPicker from "./FontPicker";
 
 type Kind = ReturnType<typeof fileKind>;
 
@@ -429,10 +431,7 @@ export default function MediaEditor({ value, onChange, overlays, fullResponse }:
                 {fontMode === "preset" ? (
                   <div className="font-setting-item">
                     <label>Семейство</label>
-                    <select value={m.text.font.fontFamily ?? FONT_FAMILIES[0].value} onChange={(e) => setFont({ fontFamily: e.target.value })} className="font-select">
-                      {FONT_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-                      {m.text.font.fontFamily && !FONT_FAMILIES.some((f) => f.value === m.text.font.fontFamily) && <option value={m.text.font.fontFamily}>{m.text.font.fontFamily}</option>}
-                    </select>
+<FontPicker value={m.text.font.fontFamily ?? FONT_FAMILIES[0].value} onChange={(v) => setFont({ fontFamily: v })} />
                   </div>
                 ) : (
                   <div className="font-setting-item">
