@@ -1,7 +1,7 @@
 {
   "name": "signorebot",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,8 +10,10 @@
     "tauri": "tauri",
     "lint": "eslint .",
     "icons": "node tools/build-icons.mjs",
+    "fonts": "node tools/build-fonts.mjs",
     "test:rust": "cd src-tauri && cargo test",
     "build:linux": "tauri build && bash tools/fix-appimage.sh",
+    "release:collect": "bash tools/collect-release.sh",
     "build:windows": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --no-bundle"
   },
   "dependencies": {

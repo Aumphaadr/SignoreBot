@@ -139,6 +139,8 @@ impl Default for AppSettings {
 pub struct Accounts {
     pub broadcaster: Option<AccountInfo>,
     pub bot: Option<AccountInfo>,
+    /// Бот — тот же аккаунт, что и стример: один токен с объединёнными правами.
+    pub same_account: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Default)]

@@ -1,0 +1,23 @@
+.font-picker { position: relative; }
+.font-picker-current {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  height: 42px; padding: 0 12px; background: var(--bg-input); border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm); color: var(--text-primary); font-size: 16px; text-align: left;
+}
+.font-picker-current:hover { background: var(--bg-input-hover); border-color: var(--border-light); }
+.font-picker.open .font-picker-current { border-color: var(--border-focus); }
+.font-picker-arrow { color: var(--text-muted); font-size: 12px; transition: transform .15s; }
+.font-picker.open .font-picker-arrow { transform: rotate(180deg); }
+.font-picker-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; margin: 0; padding: 6px; list-style: none;
+  max-height: 340px; overflow-y: auto; background: var(--bg-secondary); border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm); box-shadow: 0 10px 30px rgba(0,0,0,.45);
+}
+.font-picker-item {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 6px;
+  cursor: pointer; font-size: 18px; color: var(--text-primary);
+}
+.font-picker-item:hover { background: var(--bg-hover); }
+.font-picker-item.active { background: var(--accent-light); }
+.font-picker-item.muted { color: var(--text-muted); }
+.font-picker-sample { color: var(--text-muted); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

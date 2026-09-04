@@ -1,0 +1,17 @@
+/* СГЕНЕРИРОВАНО tools/build-fonts.mjs — те же шрифты, что отдаёт оверлею сервер */
+@font-face{font-family:"Inter";src:url("../../src-tauri/fonts/Inter.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Roboto";src:url("../../src-tauri/fonts/Roboto.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Montserrat";src:url("../../src-tauri/fonts/Montserrat.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Jost";src:url("../../src-tauri/fonts/Jost.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Noto Sans Display";src:url("../../src-tauri/fonts/NotoSansDisplay.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Noto Serif";src:url("../../src-tauri/fonts/NotoSerif.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Oswald";src:url("../../src-tauri/fonts/Oswald.ttf") format("truetype");font-weight:200 700;font-style:normal;font-display:swap}
+@font-face{font-family:"Comfortaa";src:url("../../src-tauri/fonts/Comfortaa.ttf") format("truetype");font-weight:300 700;font-style:normal;font-display:swap}
+@font-face{font-family:"Bellota";src:url("../../src-tauri/fonts/Bellota-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Bellota";src:url("../../src-tauri/fonts/Bellota-Bold.ttf") format("truetype");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Comic Relief";src:url("../../src-tauri/fonts/ComicRelief-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Comic Relief";src:url("../../src-tauri/fonts/ComicRelief-Bold.ttf") format("truetype");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Lobster";src:url("../../src-tauri/fonts/Lobster.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Neucha";src:url("../../src-tauri/fonts/Neucha.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Handjet";src:url("../../src-tauri/fonts/Handjet.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Rubik Mono One";src:url("../../src-tauri/fonts/RubikMonoOne.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}

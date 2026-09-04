@@ -34,6 +34,15 @@ async fn server_end_to_end() {
     assert_eq!(page.status(), 200);
     assert!(page.text().await.unwrap().contains("SignoreBot Overlay"));
     assert_eq!(http.get(format!("{base}/overlay/nope?key=secret")).send().await.unwrap().status(), 404);
+    // встроенные шрифты: страница объявляет @font-face, файл отдаётся без ключа, чужое имя — 404
+    let page_text = http.get(format!("{base}/overlay/audio?key=secret")).send().await.unwrap().text().await.unwrap();
+    assert!(page_text.contains("@font-face{font-family:\"Inter\""), "нет @font-face в странице оверлея");
+    let font = http.get(format!("{base}/fonts/Inter.ttf")).send().await.unwrap();
+    assert_eq!(font.status(), 200);
+    assert_eq!(font.headers().get("content-type").unwrap(), "font/ttf");
+    assert!(font.bytes().await.unwrap().len() > 100_000);
+    assert_eq!(http.get(format!("{base}/fonts/../Cargo.toml")).send().await.unwrap().status(), 404);
+    assert_eq!(http.get(format!("{base}/fonts/nope.ttf")).send().await.unwrap().status(), 404);
 
     // медиа: ключ, traversal, nosniff для не-медиа
     assert_eq!(http.get(format!("{base}/media/a.mp3")).send().await.unwrap().status(), 403);

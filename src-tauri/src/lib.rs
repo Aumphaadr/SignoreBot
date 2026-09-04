@@ -140,6 +140,7 @@ pub fn run() {
             commands::auth_cancel,
             commands::auth_logout,
             commands::auth_refresh,
+            commands::auth_set_same_account,
             commands::media_list,
             commands::media_import,
             commands::media_delete,
