@@ -1,11 +1,12 @@
 import Icon from "../Icon";
+import TestButton from "../Common/TestButton";
 import { useState } from "react";
 import type { Command, Response } from "../../api";
 import { defaultCommand } from "../../api/defaults";
 import { useAppState } from "../../state/AppState";
 import AliasEditor from "../Common/AliasEditor";
 import Modal, { ModalActions } from "../Common/Modal";
-import { Hint, hintAliases, hintCooldown, hintOverlay, hintOverlayAll, hintPermissions, hintReaction, hintStatus } from "../Common/hints";
+import { Hint, hintAliases, hintCooldown, hintReply, hintOverlay, hintOverlayAll, hintPermissions, hintReaction, hintStatus } from "../Common/hints";
 import ResponseEditor from "../Common/ResponseEditor";
 import { VariableBadges } from "../Common/VariableBadge";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
@@ -30,6 +31,7 @@ function CommandEditor({ initial, isNew, all, onSave }: { initial: Command; isNe
   return (
     <div className="command-editor">
       <ModalActions>
+        <TestButton response={cmd.response} vars={{ user: "TestUser", target: "TestUser", message: "тест" }} />
         <button onClick={() => onSave({ ...cmd, name })} className="save-command-btn primary" disabled={empty} title={empty ? "Введите название команды" : ""}>
           {isNew ? <><Icon name="add"  /> Создать команду</> : <><Icon name="save"  /> Сохранить</>}
         </button>
@@ -45,10 +47,19 @@ function CommandEditor({ initial, isNew, all, onSave }: { initial: Command; isNe
             {!empty && <div className="command-preview"><span className="preview-label">Будет доступна как:</span><code className="command-preview-name">!{name}</code></div>}
           </div>
           <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-            <label><Icon name="stopwatch" /> Кулдаун, секунд <Tooltip text="Минимальная пауза между срабатываниями команды. 0 — без ограничения." /></label>
+            <label><Icon name="stopwatch" /> Кулдаун, с <Tooltip text="Минимальная пауза между срабатываниями команды для всех зрителей вместе. 0 — без ограничения." /></label>
             <input type="number" min={0} max={86400} value={cmd.cooldownSec} onChange={(e) => setCmd({ ...cmd, cooldownSec: Math.max(0, parseInt(e.target.value) || 0) })} />
           </div>
+          <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+            <label><Icon name="user" /> На одного зрителя, с <Tooltip text="Пауза между вызовами одним и тем же зрителем; остальные в это время могут вызывать команду. 0 — без ограничения. Работает вместе с общим кулдауном." /></label>
+            <input type="number" min={0} max={86400} value={cmd.cooldownUserSec} onChange={(e) => setCmd({ ...cmd, cooldownUserSec: Math.max(0, parseInt(e.target.value) || 0) })} />
+          </div>
         </div>
+        <label className="toggle-label" style={{ marginTop: 10 }}>
+          <span className="toggle-switch"><input type="checkbox" checked={cmd.reply} onChange={(e) => setCmd({ ...cmd, reply: e.target.checked })} /><span className="toggle-slider"></span></span>
+          <span className="toggle-text">Отвечать реплаем на сообщение зрителя</span>
+          <Tooltip text="Текст в чат уходит как ответ на сообщение зрителя — в чате Twitch видно «в ответ @зритель». Медиа это не касается." />
+        </label>
       </div>
       <PermissionsSelector value={cmd.permissions} onChange={(permissions) => setCmd({ ...cmd, permissions })} />
       <ResponseEditor
@@ -108,7 +119,8 @@ export default function CommandsTab() {
                   <Hint text={hintReaction({ kind: "command", name: c.name }, c.response)}><span className="command-type-badge">{reactionBadge(c.response)}</span></Hint>
                   {c.aliases.length > 0 && <Hint text={hintAliases(c.name, c.aliases)}><span className="command-aliases-badge"><Icon name="lightning" /> {c.aliases.map((a) => `!${a}`).join(", ")}</span></Hint>}
                   {c.permissions.length > 0 && <Hint text={hintPermissions(c.name, c.permissions)}><span className="permissions-badge"><Icon name="lock" /> {c.permissions.length}</span></Hint>}
-                  {c.cooldownSec > 0 && <Hint text={hintCooldown(c.name, c.cooldownSec)}><span className="command-type-badge"><Icon name="stopwatch" /> {c.cooldownSec} с</span></Hint>}
+                  {(c.cooldownSec > 0 || c.cooldownUserSec > 0) && <Hint text={hintCooldown(c.name, c.cooldownSec, c.cooldownUserSec)}><span className="command-type-badge"><Icon name="stopwatch" /> {[c.cooldownSec > 0 ? `${c.cooldownSec} с` : null, c.cooldownUserSec > 0 ? `${c.cooldownUserSec} с/зритель` : null].filter(Boolean).join(" · ")}</span></Hint>}
+                  {c.reply && <Hint text={hintReply(c.name)}><span className="command-type-badge"><Icon name="chat" /> реплай</span></Hint>}
                   {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="overlay-screen" /> {ov.name}</span></Hint>}
                   {!ov && c.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="broadcast" /> Все оверлеи</span></Hint>}
                 </div>

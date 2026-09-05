@@ -76,8 +76,14 @@ export function hintPermissions(name: string, perms: string[]): ReactNode {
   );
 }
 
-export function hintCooldown(name: string, sec: number): ReactNode {
-  return <>команда <Em>!{name}</Em> срабатывает не чаще раза в {formatInterval(sec)} — повторные вызовы в это время игнорируются</>;
+export function hintCooldown(name: string, sec: number, userSec = 0): ReactNode {
+  const all = sec > 0 ? <>не чаще раза в {formatInterval(sec)} для всех</> : null;
+  const per = userSec > 0 ? <>не чаще раза в {formatInterval(userSec)} для одного зрителя</> : null;
+  return <>команда <Em>!{name}</Em> срабатывает {all}{all && per ? " и " : ""}{per} — лишние вызовы в это время игнорируются</>;
+}
+
+export function hintReply(name: string): ReactNode {
+  return <>ответ на <Em>!{name}</Em> уходит реплаем на сообщение зрителя — в чате видно, кому отвечает бот</>;
 }
 
 export function hintInterval(name: string, sec: number): ReactNode {

@@ -4,7 +4,7 @@
 import Icon, { type IconName } from "../Icon";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { api, errText, type MediaFile, type MediaResponse, type Overlay, type Response } from "../../api";
+import { api, errText, type MediaFile, type MediaResponse, type Overlay } from "../../api";
 import { FONT_FAMILIES, MEDIA_ENTER_ANIMATIONS, MEDIA_EXIT_ANIMATIONS, TEXT_ANIMATIONS, defaultMedia, fileKind, formatSize, substituteSample } from "../../api/defaults";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
 import Tooltip from "../Tooltip";
@@ -173,6 +173,7 @@ function MediaPreview({ media }: { media: MediaResponse }) {
     const vol = media.volume / 100;
     if (videoRef.current) { videoRef.current.volume = vol; void videoRef.current.play(); }
     if (audioRef.current) { audioRef.current.volume = vol; void audioRef.current.play(); }
+    if (!videoRef.current && !audioRef.current) window.setTimeout(stop, (media.imageDurationSec ?? 5) * 1000);
     setPlaying(true);
   };
 
@@ -234,7 +235,7 @@ function MediaPreview({ media }: { media: MediaResponse }) {
 
 // ------------------------------------------------------------------ редактор
 
-export default function MediaEditor({ value, onChange, overlays, fullResponse }: { value: MediaResponse; onChange: (m: MediaResponse) => void; overlays: Overlay[]; fullResponse?: Response }) {
+export default function MediaEditor({ value, onChange, overlays }: { value: MediaResponse; onChange: (m: MediaResponse) => void; overlays: Overlay[] }) {
   const { showNotification } = useNotification();
   const { files, reload } = useMediaFiles();
   const m = { ...defaultMedia(), ...value };
@@ -243,7 +244,8 @@ export default function MediaEditor({ value, onChange, overlays, fullResponse }:
   const primaryKind = fileKind(m.file);
   const secondaryKind = secondaryKindFor(primaryKind);
   const showAnimations = primaryKind === "video" || primaryKind === "image" || (primaryKind === "audio" && !!m.secondaryFile);
-  const showDuration = primaryKind === "image" || (primaryKind === "audio" && !!m.secondaryFile);
+  const textOnly = !m.file && m.text.enabled && !!m.text.content.trim();
+  const showDuration = (primaryKind === "image" || (primaryKind === "audio" && !!m.secondaryFile)) || textOnly;
 
   const probe = async (name: string) => {
     try {
@@ -267,12 +269,6 @@ export default function MediaEditor({ value, onChange, overlays, fullResponse }:
       if (m.secondaryFile === name) patch.secondaryFile = "";
       if (Object.keys(patch).length) set(patch);
       await reload();
-    } catch (e) { showNotification(`${errText(e)}`, NOTIFICATION_TYPES.ERROR); }
-  };
-  const testOnOverlay = async () => {
-    try {
-      const sent = await api.mediaTest({ chat: { enabled: false, components: [] }, media: { ...m, enabled: true }, ...(fullResponse ? {} : {}) });
-      showNotification(sent ? "Отправлено на оверлей" : "Оверлей не подключён — медиа в очереди", sent ? NOTIFICATION_TYPES.SUCCESS : NOTIFICATION_TYPES.WARNING, 2500);
     } catch (e) { showNotification(`${errText(e)}`, NOTIFICATION_TYPES.ERROR); }
   };
 
@@ -339,7 +335,7 @@ export default function MediaEditor({ value, onChange, overlays, fullResponse }:
 
       {showDuration && (
         <div className="media-settings">
-          <label><Icon name="stopwatch" /> Длительность показа картинки <Tooltip text="Секунды. Пусто — из общих настроек оверлея. Картинка со звуком показывается не меньше длины звука." /></label>
+          <label><Icon name="stopwatch" /> {textOnly ? "Длительность показа текста" : "Длительность показа картинки"} <Tooltip text="Секунды. Пусто — из общих настроек оверлея. Картинка со звуком показывается не меньше длины звука." /></label>
           <div className="volume-control">
             <input type="number" min={1} max={600} step={0.5} value={m.imageDurationSec ?? ""} placeholder="по умолчанию" onChange={(e) => set({ imageDurationSec: e.target.value === "" ? null : Math.max(0.5, parseFloat(e.target.value) || 0) })} style={{ width: 140 }} />
             <span className="volume-value">сек</span>
@@ -456,15 +452,8 @@ export default function MediaEditor({ value, onChange, overlays, fullResponse }:
         )}
       </div>
 
-      {!m.file && <p className="media-no-file-hint">Выберите медиафайл — появятся предпросмотр и «Тест на оверлее». Без файла реакция на оверлей не отправляется.</p>}
-      {m.file && (
-        <>
-          <MediaPreview media={m} />
-          <div className="preview-controls" style={{ marginTop: 8 }}>
-            <button onClick={testOnOverlay} className="preview-play-btn" title="Отправить это медиа на оверлей прямо сейчас"><Icon name="play"  /> Тест на оверлее</button>
-          </div>
-        </>
-      )}
+      {!m.file && !textOnly && <p className="media-no-file-hint">Выберите медиафайл — или включите «Текст» ниже: алерт может быть и без файла, одним текстом на заданное время. Проверить, как это выглядит на оверлее, можно кнопкой «Тест» в шапке окна.</p>}
+      {(m.file || textOnly) && <MediaPreview media={m} />}
     </div>
   );
 }

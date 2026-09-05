@@ -1,4 +1,5 @@
 import Icon from "../Icon";
+import TestButton from "../Common/TestButton";
 import { Hint, hintFireOnStart, hintInterval, hintNext, hintOffset, hintOverlay, hintOverlayAll, hintReaction, hintStatus } from "../Common/hints";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, errText, type PeriodicEvent, type TimerStatus } from "../../api";
@@ -123,6 +124,7 @@ function PeriodicEditor({ initial, isNew, onSave }: { initial: PeriodicEvent; is
   return (
     <div className="periodic-editor">
       <ModalActions>
+        <TestButton response={e.response} />
         <button onClick={() => onSave({ ...e, name: e.name.trim(), intervalSec: iv, offsetSec: off })} className="save-periodic-btn primary" disabled={empty}>{isNew ? <><Icon name="add"  /> Создать событие</> : <><Icon name="save"  /> Сохранить</>}</button>
       </ModalActions>
       <div className="periodic-editor-header">

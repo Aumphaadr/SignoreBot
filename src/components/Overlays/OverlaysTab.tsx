@@ -1,4 +1,5 @@
 import Icon from "../Icon";
+import TestButton from "../Common/TestButton";
 import { copyText } from "../../api/clipboard";
 import { useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -24,6 +25,7 @@ function FallbackEditor({ overlay, overlays, onSave }: { overlay: Overlay; overl
   return (
     <div className="reward-editor">
       <ModalActions>
+        <TestButton response={fb} vars={{ user: "TestUser", reaction: "!тест", overlay: overlay.name }} />
         <button onClick={() => onSave(fb, enabled)} className="primary"><Icon name="save" /> Сохранить</button>
       </ModalActions>
       <div className="reward-refund-block">
@@ -115,6 +117,9 @@ export default function OverlaysTab() {
         <h2><Icon name="overlay-screen" /> Оверлеи</h2>
         <p className="overlays-description">Оверлеи — веб-страницы, которые вы добавляете как Browser Source в OBS. У каждого свой URL с ключом доступа; медиа можно направлять на конкретный оверлей.</p>
         {status?.server.error && <div className="error-message"><Icon name="error-badge" /> Сервер оверлеев не запущен: {status.server.error}. Измените порт в «Настройках».</div>}
+        {!config.network.allowLan && (
+          <p className="form-hint" style={{ marginTop: 10 }}><Icon name="lock" /> Сервер оверлеев слушает только этот компьютер. Если OBS работает на другом компьютере, включите «Доступ из локальной сети» в «Настройки → Сеть».</p>
+        )}
         {config.network.allowLan && (
           <label className="toggle-label" style={{ marginTop: 12 }}>
             <span className="toggle-switch"><input type="checkbox" checked={config.network.preferLocalhostUrls} onChange={(e) => setSection("network", { ...config.network, preferLocalhostUrls: e.target.checked })} /><span className="toggle-slider"></span></span>

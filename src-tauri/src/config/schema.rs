@@ -98,7 +98,7 @@ pub struct NetworkSettings {
 
 impl Default for NetworkSettings {
     fn default() -> Self {
-        Self { http_port: 3001, allow_lan: true, overlay_key: String::new(), prefer_localhost_urls: true }
+        Self { http_port: 3001, allow_lan: false, overlay_key: String::new(), prefer_localhost_urls: true }
     }
 }
 
@@ -130,6 +130,13 @@ pub struct AppSettings {
     /// Уведомления не исчезают сами — только по крестику.
     #[serde(default)]
     pub notifications_sticky: bool,
+    /// Масштаб панели, % (100 — как есть). Крупнее текст и значки для слабого зрения.
+    #[serde(default = "default_ui_zoom")]
+    pub ui_zoom: u32,
+}
+
+fn default_ui_zoom() -> u32 {
+    100
 }
 
 fn default_notification_seconds() -> f64 {
@@ -138,7 +145,7 @@ fn default_notification_seconds() -> f64 {
 
 impl Default for AppSettings {
     fn default() -> Self {
-        Self { close_to_tray: true, notification_seconds: 6.0, notifications_sticky: false }
+        Self { close_to_tray: true, notification_seconds: 6.0, notifications_sticky: false, ui_zoom: 100 }
     }
 }
 
@@ -377,6 +384,12 @@ pub struct Command {
     pub permissions: Vec<String>,
     /// Кулдаун между срабатываниями, с (0 — нет).
     pub cooldown_sec: u32,
+    /// Кулдаун на одного зрителя, с (0 — нет).
+    #[serde(default)]
+    pub cooldown_user_sec: u32,
+    /// Отвечать реплаем на сообщение зрителя, а не обычным сообщением.
+    #[serde(default)]
+    pub reply: bool,
     pub response: Response,
 }
 
@@ -388,7 +401,7 @@ impl Default for Command {
             name: String::new(),
             aliases: vec![],
             permissions: vec![],
-            cooldown_sec: 0,
+            cooldown_sec: 0, cooldown_user_sec: 0, reply: false,
             response: Response::default(),
         }
     }

@@ -82,17 +82,41 @@ pub struct ChannelReward {
 }
 
 /// Параметры новой награды (управляемой копии).
-#[derive(Debug, Clone, serde::Serialize)]
+/// Параметры награды для Create/Update Custom Reward (те же поля, что в панели Twitch).
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "api.ts")]
 pub struct NewReward {
     pub title: String,
+    #[ts(type = "number")]
     pub cost: u64,
     pub prompt: String,
     pub is_user_input_required: bool,
     pub is_enabled: bool,
     pub background_color: String,
+    #[ts(type = "number | null")]
     pub cooldown_seconds: Option<u64>,
+    #[ts(type = "number | null")]
     pub max_per_stream: Option<u64>,
+    #[ts(type = "number | null")]
     pub max_per_user_per_stream: Option<u64>,
+    /// Погашения мимо очереди запросов: закрываются сразу, вернуть баллы нельзя.
+    #[serde(default)]
+    pub skip_queue: bool,
+}
+
+impl NewReward {
+    fn body(&self) -> serde_json::Value {
+        serde_json::json!({
+            "title": self.title, "cost": self.cost, "prompt": self.prompt,
+            "is_user_input_required": self.is_user_input_required, "is_enabled": self.is_enabled,
+            "background_color": if self.background_color.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(self.background_color.clone()) },
+            "is_global_cooldown_enabled": self.cooldown_seconds.is_some(), "global_cooldown_seconds": self.cooldown_seconds.unwrap_or(0),
+            "is_max_per_stream_enabled": self.max_per_stream.is_some(), "max_per_stream": self.max_per_stream.unwrap_or(0),
+            "is_max_per_user_per_stream_enabled": self.max_per_user_per_stream.is_some(), "max_per_user_per_stream": self.max_per_user_per_stream.unwrap_or(0),
+            "should_redemptions_skip_request_queue": self.skip_queue,
+        })
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -322,19 +346,22 @@ impl Helix {
 
     /// Создать награду от имени стримера (нужно `channel:manage:redemptions`).
     pub async fn create_custom_reward(&self, kind: AccountKind, broadcaster_id: &str, r: &NewReward) -> Result<ChannelReward, HelixError> {
-        let body = serde_json::json!({
-            "title": r.title, "cost": r.cost, "prompt": r.prompt,
-            "is_user_input_required": r.is_user_input_required, "is_enabled": r.is_enabled,
-            "background_color": if r.background_color.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(r.background_color.clone()) },
-            "is_global_cooldown_enabled": r.cooldown_seconds.is_some(), "global_cooldown_seconds": r.cooldown_seconds.unwrap_or(0),
-            "is_max_per_stream_enabled": r.max_per_stream.is_some(), "max_per_stream": r.max_per_stream.unwrap_or(0),
-            "is_max_per_user_per_stream_enabled": r.max_per_user_per_stream.is_some(), "max_per_user_per_stream": r.max_per_user_per_stream.unwrap_or(0),
-            "should_redemptions_skip_request_queue": false,
-        });
+        let body = r.body();
         let resp = self.request(kind, reqwest::Method::POST, &format!("{HELIX}/channel_points/custom_rewards"), &[("broadcaster_id", broadcaster_id)], Body::Json(&body)).await?;
         let env: Envelope<RawReward> = resp.json().await?;
         let mut managed = std::collections::HashSet::new();
         let raw = env.data.into_iter().next().ok_or(HelixError::Http { status: 0, message: "пустой ответ".into(), retry_after: None })?;
+        managed.insert(raw.id.clone());
+        Ok(raw_to_reward(raw, &managed))
+    }
+
+    /// Изменить параметры награды, созданной нашим приложением; возвращает награду как она теперь на канале.
+    pub async fn update_custom_reward(&self, kind: AccountKind, broadcaster_id: &str, reward_id: &str, r: &NewReward) -> Result<ChannelReward, HelixError> {
+        let body = r.body();
+        let resp = self.request(kind, reqwest::Method::PATCH, &format!("{HELIX}/channel_points/custom_rewards"), &[("broadcaster_id", broadcaster_id), ("id", reward_id)], Body::Json(&body)).await?;
+        let env: Envelope<RawReward> = resp.json().await?;
+        let raw = env.data.into_iter().next().ok_or(HelixError::Http { status: 0, message: "пустой ответ".into(), retry_after: None })?;
+        let mut managed = std::collections::HashSet::new();
         managed.insert(raw.id.clone());
         Ok(raw_to_reward(raw, &managed))
     }

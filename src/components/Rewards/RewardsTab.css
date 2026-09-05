@@ -252,3 +252,13 @@
 .redemption-time { color: var(--text-muted); margin-left: 10px; font-size: 14px; }
 .redemption-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .managed-copy-steps ol { margin: 10px 0 14px 20px; line-height: 1.6; }
+
+/* Две кнопки внизу вкладки, форма параметров награды */
+.add-reward-section { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.add-reward-main-btn.secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); }
+.add-reward-main-btn.secondary:hover { background: var(--bg-hover); }
+.add-reward-main-btn:disabled { opacity: .55; cursor: not-allowed; }
+.reward-params-block { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 10px 14px; margin-bottom: 14px; }
+.reward-params-block summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.reward-params-body { margin-top: 12px; }
+.reward-params-form .form-row { gap: 14px; }

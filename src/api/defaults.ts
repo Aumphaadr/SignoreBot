@@ -28,6 +28,8 @@ export const defaultCommand = (): Command => ({
   aliases: [],
   permissions: [],
   cooldownSec: 0,
+  cooldownUserSec: 0,
+  reply: false,
   response: defaultResponse(),
 });
 

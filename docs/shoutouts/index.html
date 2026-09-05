@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Автошатауты · SignoreBot</title>
+<meta name="description" content="Что такое шатаут, как бот делает его сам зрителям из списка и рейдерам, и какие ограничения Twitch стоит знать.">
+<link rel="icon" href="../logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body class="lesson" data-root="../">
+
+<header class="top"><div class="wrap">
+  <a class="brand" href="../"><img src="../logo.svg" alt=""> SignoreBot</a>
+  <nav>
+    <a href="../">Главная</a>
+    <a href="../start/">Уроки</a>
+    <a href="../#download">Скачать</a>
+    <a href="https://github.com/Aumphaadr/SignoreBot">GitHub</a>
+  </nav>
+</div></header>
+
+<div class="page wrap" id="page">
+<aside class="lessons-aside"><div class="aside-title">Уроки</div><ol class="lesson-list">
+<li><a href="../start/"><span class="n">1</span> Установка и первый запуск</a></li>
+<li><a href="../auth/"><span class="n">2</span> Авторизация</a></li>
+<li><a href="../commands/"><span class="n">3</span> Первая команда</a></li>
+<li><a href="../overlays/"><span class="n">4</span> Оверлеи и OBS</a></li>
+<li><a href="../rewards-events/"><span class="n">5</span> Баллы канала и события</a></li>
+<li><a href="../periodic/"><span class="n">6</span> Периодические события</a></li>
+<li class="active"><a href="../shoutouts/"><span class="n">7</span> Автошатауты</a></li>
+<li><a href="../variables/"><span class="n">8</span> Переменные</a></li>
+<li><a href="../tips/"><span class="n">9</span> Полезные мелочи</a></li>
+</ol></aside>
+<main id="main">
+<p class="lesson-kicker">Урок 7 из 9</p>
+<h1>Автошатауты</h1>
+<p class="lead">Когда на стрим заходит знакомый стример, принято его «прошатаутить» — назвать в чате и предложить зрителям заглянуть к нему. SignoreBot умеет делать это сам, и здесь важнее не кнопки, а правила Twitch, о которых стоит знать.</p>
+
+<h2>Что такое шатаут</h2>
+<p><dfn>Шатаут</dfn> (shoutout, «выкрик») — команда Twitch <code>/shoutout ник</code>. Она показывает в чате карточку канала с кнопкой «подписаться», а зрителям в приложении Twitch приходит уведомление. Делать её вручную каждый раз, когда в чат заходит друг, утомительно, поэтому бот берёт это на себя.</p>
+
+<h2>Список и рейды</h2>
+<p>Вкладка <span class="ui">Шатауты</span>. Главная часть — <b>список для авто-шатаута</b>: добавьте туда логины (без <code>@</code>). Когда человек из списка впервые за стрим напишет в чат, бот сделает шатаут. Один раз за сессию: на второе сообщение он уже не отреагирует.</p>
+<p>Отдельно — <b>рейды</b>: заход в ваш чат целой аудиторией другого стримера. Выберите, кому из рейдеров положен шатаут: никому, только тем, кто в списке, только тем, кого в списке нет, или всем.</p>
+<figure class="shot"><img src="../img/shoutouts-tab.png" alt="Вкладка «Шатауты»: режим для рейдов, список авто-шатаута с одним логином, поле для ручного шатаута и блок статуса с очередью" loading="lazy"><figcaption>Список, режим для рейдов и статус: сколько выполнено, что в очереди, сколько осталось до конца кулдауна.</figcaption></figure>
+<p>Кнопка <span class="ui">Шатаутнуть</span> у логина — то же самое вручную; отдельное поле ниже делает шатаут любому, кого в списке нет.</p>
+
+<h2>Правила Twitch, которые объясняют очередь</h2>
+<p>Twitch ограничивает шатауты, и бот эти ограничения не обходит — он их соблюдает за вас:</p>
+<ul>
+  <li><b>Не чаще одного раза в две минуты.</b> Отсюда <dfn>кулдаун</dfn> — пауза между шатаутами. Если в чат зашли трое из списка разом, они встанут в <b>очередь</b> и получат шатауты по одному.</li>
+  <li><b>Одному каналу — не чаще раза в час.</b> Если модератор уже прошатаутил гостя вручную, бот заметит ответ Twitch и уберёт его из очереди как выполненного, а не будет ломиться повторно.</li>
+  <li><b>Только на живом стриме.</b> Офлайн Twitch их не принимает, и бот напишет об этом в логе.</li>
+</ul>
+<div class="callout info"><p>Шатаут уходит от имени канала, а не бота: право на него есть только у аккаунта стримера. Список выполненных сбрасывается при перезапуске бота или кнопкой «Сбросить выполненные», если стрим был длинный и гость заходил дважды.</p></div>
+
+<nav class="prevnext" aria-label="Соседние уроки">
+  <a class="prev" href="../periodic/"><small>Назад</small>Периодические события</a>
+  <a class="next" href="../variables/"><small>Дальше</small>Переменные</a>
+</nav>
+</main>
+</div>
+
+<footer><div class="wrap">
+  <span>SignoreBot · <a href="https://github.com/Aumphaadr/SignoreBot">исходный код на GitHub</a> · <a href="https://github.com/Aumphaadr/SignoreBot/blob/main/CHANGELOG.md">история версий</a> · <a href="https://github.com/Aumphaadr/SignoreBot/blob/main/LICENSE">лицензия MIT</a></span>
+  <span>Не аффилирован с Twitch и OBS.</span>
+</div></footer>
+
+<div class="lightbox" id="lightbox"><img alt=""></div>
+<script src="../app.js"></script>
+</body>
+</html>

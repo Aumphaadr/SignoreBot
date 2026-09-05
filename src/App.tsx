@@ -16,6 +16,7 @@ import NotesTab from "./components/Notes/NotesTab";
 import LogsTab from "./components/Logs/LogsTab";
 import SettingsTab from "./components/Settings/SettingsTab";
 import { NotificationProvider, setNotificationDefaults } from "./components/Notification";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { AppStateProvider, useAppState } from "./state/AppState";
 import "./components/Layout/MainContent.css";
 import "./styles/App.css";
@@ -65,5 +66,7 @@ export default function App() {
 function NotificationSettingsSync() {
   const { config } = useAppState();
   useEffect(() => setNotificationDefaults(config.app.notificationSeconds, config.app.notificationsSticky), [config.app.notificationSeconds, config.app.notificationsSticky]);
+  // масштаб панели — как Ctrl+плюс в браузере: текст, значки и отступы растут вместе
+  useEffect(() => { getCurrentWebview().setZoom((config.app.uiZoom || 100) / 100).catch(() => {}); }, [config.app.uiZoom]);
   return null;
 }

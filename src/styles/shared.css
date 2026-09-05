@@ -352,3 +352,7 @@
   border-color: var(--warning);
   color: var(--warning);
 }
+
+/* Кнопка «Тест» в шапке редактора */
+.modal-test-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--success); border: 1px solid var(--success); background: transparent; }
+.modal-test-btn:hover { background: var(--success-light); }

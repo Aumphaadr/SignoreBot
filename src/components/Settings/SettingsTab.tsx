@@ -171,6 +171,18 @@ export default function SettingsTab() {
         </div>
       </div>
 
+      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="eye" /> Масштаб панели</h3></div></div>
+        <div style={{ padding: 20 }}>
+          <div className="form-group">
+            <label>Размер текста и значков <Tooltip text="Как Ctrl+плюс в браузере: крупнее становится всё сразу — текст, значки, поля. На маленьком окне часть карточек может переноситься на две строки." /></label>
+            <select value={String(app.uiZoom || 100)} onChange={(e) => setSection("app", { ...app, uiZoom: parseInt(e.target.value) || 100 })} style={{ maxWidth: 240 }}>
+              {[90, 100, 110, 125, 150].map((z) => <option key={z} value={z}>{z === 100 ? "100% — как есть" : `${z}%`}</option>)}
+            </select>
+          </div>
+          <div className="form-hint">Применяется сразу и запоминается.</div>
+        </div>
+      </div>
+
       <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="folder-open" /> Папка данных</h3></div></div>
         <div style={{ padding: 20 }}>
           <div className="form-group">

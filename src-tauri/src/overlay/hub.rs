@@ -136,6 +136,24 @@ impl OverlayHub {
         inner.clients.values().filter(|c| c.tx.try_send(message.to_string()).is_ok()).count()
     }
 
+    /// Выбросить отложенные сообщения оверлея («Стоп» у неподключённого).
+    pub fn clear_pending(&self, path: &str) -> usize {
+        let n = self.inner.lock().pending.remove(path).map(|q| q.len()).unwrap_or(0);
+        if n > 0 {
+            let _ = self.changed.send(());
+        }
+        n
+    }
+
+    /// Выбросить отложенные сообщения всех оверлеев.
+    pub fn clear_all_pending(&self) -> usize {
+        let n: usize = self.inner.lock().pending.drain().map(|(_, q)| q.len()).sum();
+        if n > 0 {
+            let _ = self.changed.send(());
+        }
+        n
+    }
+
     pub fn pending_count(&self, path: &str) -> usize {
         self.inner.lock().pending.get(path).map(|q| q.len()).unwrap_or(0)
     }
