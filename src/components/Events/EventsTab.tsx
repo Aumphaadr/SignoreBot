@@ -43,7 +43,6 @@ export default function EventsTab() {
               <div className="event-card-header">
                 <div className="event-title">
                   <span className="event-name"><Icon name={meta.icon} /> {meta.label}</span>
-                  <Hint text={hintStatus({ kind: "event", name: plain }, e.enabled)}><span className={`event-status-badge ${e.enabled ? "enabled" : "disabled"}`}>{e.enabled ? "Вкл" : "Выкл"}</span></Hint>
                   <Hint text={hintReaction({ kind: "event", name: plain }, e.response)}><span className="event-type-badge">{reactionBadge(e.response)}</span></Hint>
                   {t === "subscribe" && e.skipGifted && <Hint text={hintSkipGifted()}><span className="event-type-badge"><Icon name="gift" /> без подарочных</span></Hint>}
                   {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="overlay-screen" /> {ov.name}</span></Hint>}
@@ -51,7 +50,7 @@ export default function EventsTab() {
                 </div>
                 <div className="event-actions">
                   <button onClick={() => void test(t)} className="test-btn" title="Тест"><Icon name="play"  /> Тест</button>
-                  <button onClick={() => { put(t, { ...e, enabled: !e.enabled }); showNotification(`Событие «${meta.label}» ${!e.enabled ? "включено" : "выключено"}`, NOTIFICATION_TYPES.INFO, 1500); }} className={`status-toggle-btn ${e.enabled ? "on" : "off"}`}><Icon name="power"  /></button>
+                  <Hint text={hintStatus({ kind: "event", name: plain }, e.enabled)}><button onClick={() => { put(t, { ...e, enabled: !e.enabled }); showNotification(`Событие «${meta.label}» ${!e.enabled ? "включено" : "выключено"}`, NOTIFICATION_TYPES.INFO, 1500); }} className={`status-toggle-btn ${e.enabled ? "on" : "off"}`}><Icon name="power"  /></button></Hint>
                   <button onClick={() => setEditing(t)} className="edit-btn" title="Редактировать"><Icon name="edit"  /></button>
                 </div>
               </div>

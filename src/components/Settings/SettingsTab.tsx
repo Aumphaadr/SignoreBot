@@ -121,7 +121,7 @@ export default function SettingsTab() {
         </div>
       </div>
 
-      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3>🆕 Обновления</h3></div></div>
+      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="new-item" /> Обновления</h3></div></div>
         <div style={{ padding: 20 }}>
           <div className="form-group">
             <label>Репозиторий с релизами <Tooltip text="GitHub-репозиторий, где публикуются версии. Авторы форков могут указать свой — или прямую ссылку на JSON в формате страницы «последний релиз» GitHub, если релизы лежат на своём сервере." /></label>
@@ -155,6 +155,19 @@ export default function SettingsTab() {
             <Tooltip text="Выключите — и закрытие окна полностью завершит приложение вместе с ботом. Выйти из трея можно и через его меню." />
           </label>
           <div className="form-hint">{app.closeToTray ? "Сейчас: окно прячется в трей; выход — через меню иконки в трее." : "Сейчас: закрытие окна останавливает бота и завершает приложение."}</div>
+        </div>
+      </div>
+
+      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="info" /> Уведомления</h3></div></div>
+        <div style={{ padding: 20 }}>
+          <div className="form-row">
+            <div className="form-group"><label>Сколько держать на экране, с <Tooltip text="Нижняя планка: короткие сообщения («сохранено», «скопировано») живут столько; ошибки и предупреждения — дольше, если им так задано." /></label><input type="number" min={1} max={120} step={1} style={{ maxWidth: 200 }} value={app.notificationSeconds} disabled={app.notificationsSticky} onChange={(e) => setSection("app", { ...app, notificationSeconds: Math.min(120, Math.max(1, parseFloat(e.target.value) || 6)) })} /></div>
+          </div>
+          <label className="toggle-label" style={{ marginTop: 8 }}>
+            <span className="toggle-switch"><input type="checkbox" checked={app.notificationsSticky} onChange={(e) => setSection("app", { ...app, notificationsSticky: e.target.checked })} /><span className="toggle-slider"></span></span>
+            <span className="toggle-text">Не исчезать сами — только по крестику</span>
+          </label>
+          <div className="form-hint">{app.notificationsSticky ? "Сейчас: уведомления висят, пока не закроете; на экране одновременно не больше шести, старые вытесняются." : `Сейчас: уведомление видно не меньше ${app.notificationSeconds} с, затем исчезает само.`}</div>
         </div>
       </div>
 

@@ -18,14 +18,12 @@
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
   pointer-events: auto;
   animation: notifSlideIn 0.3s ease;
   overflow: hidden;
 }
 
 .notification:hover {
-  transform: translateX(-5px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
@@ -64,7 +62,10 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
+  min-width: 30px;
+  min-height: 30px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;

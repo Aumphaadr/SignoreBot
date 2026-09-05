@@ -124,11 +124,21 @@ impl Default for UpdateSettings {
 pub struct AppSettings {
     /// Закрытие окна прячет его в трей (бот работает дальше); иначе — выход.
     pub close_to_tray: bool,
+    /// Сколько секунд висит уведомление в панели (нижняя планка).
+    #[serde(default = "default_notification_seconds")]
+    pub notification_seconds: f64,
+    /// Уведомления не исчезают сами — только по крестику.
+    #[serde(default)]
+    pub notifications_sticky: bool,
+}
+
+fn default_notification_seconds() -> f64 {
+    6.0
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
-        Self { close_to_tray: true }
+        Self { close_to_tray: true, notification_seconds: 6.0, notifications_sticky: false }
     }
 }
 

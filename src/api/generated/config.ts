@@ -18,7 +18,15 @@ export type AppSettings = {
 /**
  * Закрытие окна прячет его в трей (бот работает дальше); иначе — выход.
  */
-closeToTray: boolean, };
+closeToTray: boolean, 
+/**
+ * Сколько секунд висит уведомление в панели (нижняя планка).
+ */
+notificationSeconds: number, 
+/**
+ * Уведомления не исчезают сами — только по крестику.
+ */
+notificationsSticky: boolean, };
 
 export type BanWord = { word: string, kind: BanWordKind, 
 /**

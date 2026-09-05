@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./components/Layout/Sidebar";
 import StatusTab from "./components/Status/StatusTab";
 import OverlayAlert from "./components/Status/OverlayAlert";
@@ -15,8 +15,8 @@ import MediaTab from "./components/Media/MediaTab";
 import NotesTab from "./components/Notes/NotesTab";
 import LogsTab from "./components/Logs/LogsTab";
 import SettingsTab from "./components/Settings/SettingsTab";
-import { NotificationProvider } from "./components/Notification";
-import { AppStateProvider } from "./state/AppState";
+import { NotificationProvider, setNotificationDefaults } from "./components/Notification";
+import { AppStateProvider, useAppState } from "./state/AppState";
 import "./components/Layout/MainContent.css";
 import "./styles/App.css";
 
@@ -54,8 +54,16 @@ export default function App() {
   return (
     <NotificationProvider>
       <AppStateProvider>
+      <NotificationSettingsSync />
         <Shell />
       </AppStateProvider>
     </NotificationProvider>
   );
+}
+
+/** Передаёт «Настройки → Уведомления» провайдеру тостов, который живёт выше состояния. */
+function NotificationSettingsSync() {
+  const { config } = useAppState();
+  useEffect(() => setNotificationDefaults(config.app.notificationSeconds, config.app.notificationsSticky), [config.app.notificationSeconds, config.app.notificationsSticky]);
+  return null;
 }
