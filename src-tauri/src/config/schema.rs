@@ -34,6 +34,9 @@ pub struct Config {
     pub shoutout: ShoutoutSettings,
     pub banwords: BanwordSettings,
     pub overlays: Vec<Overlay>,
+    /// Наборы медиа: реакция может показывать случайный файл из набора.
+    #[serde(default)]
+    pub media_sets: Vec<MediaSet>,
     pub obs: ObsSettings,
     pub notes: Vec<Note>,
     pub updates: UpdateSettings,
@@ -55,6 +58,7 @@ impl Default for Config {
             shoutout: ShoutoutSettings::default(),
             banwords: BanwordSettings::default(),
             overlays: vec![],
+            media_sets: vec![],
             obs: ObsSettings::default(),
             notes: vec![],
             updates: UpdateSettings::default(),
@@ -147,6 +151,17 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self { close_to_tray: true, notification_seconds: 6.0, notifications_sticky: false, ui_zoom: 100 }
     }
+}
+
+/// Набор медиафайлов для реакций «случайный файл из набора».
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Default)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export, export_to = "config.ts")]
+pub struct MediaSet {
+    pub id: String,
+    pub name: String,
+    /// Имена файлов из папки медиа.
+    pub files: Vec<String>,
 }
 
 /// Несекретная информация об авторизованных аккаунтах.
@@ -260,6 +275,9 @@ pub struct MediaResponse {
     pub file: String,
     /// Вторичный файл: звук к картинке или картинка к звуку.
     pub secondary_file: String,
+    /// Id набора: показывать случайный файл из набора вместо `file`.
+    #[serde(default)]
+    pub set: Option<String>,
     /// 0..=100
     pub volume: u8,
     /// id оверлея; `None` — все оверлеи.
@@ -279,6 +297,7 @@ impl Default for MediaResponse {
             enabled: false,
             file: String::new(),
             secondary_file: String::new(),
+            set: None,
             volume: 100,
             overlay: None,
             queue_mode: QueueMode::Queue,

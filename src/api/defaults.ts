@@ -10,6 +10,7 @@ export const defaultMedia = (): MediaResponse => ({
   enabled: false,
   file: "",
   secondaryFile: "",
+  set: null,
   volume: 100,
   overlay: null,
   queueMode: "queue",
@@ -135,4 +136,13 @@ export function formatInterval(seconds: number): string {
   if (m > 0) parts.push(`${m} мин`);
   if (s > 0 && h === 0) parts.push(`${s} сек`);
   return parts.join(" ");
+}
+
+/** Тип набора по его файлам: «видео · 3», «смешанный · 5», «пусто». */
+export function setKindLabel(files: string[]): { label: string; mixed: boolean; empty: boolean; kinds: string[] } {
+  const kinds = Array.from(new Set(files.map((f) => fileKind(f))));
+  const ru: Record<string, string> = { video: "видео", audio: "звук", image: "картинки", unknown: "прочее" };
+  if (files.length === 0) return { label: "пусто", mixed: false, empty: true, kinds };
+  if (kinds.length === 1) return { label: `${ru[kinds[0]]} · ${files.length}`, mixed: false, empty: false, kinds };
+  return { label: `смешанный · ${files.length}`, mixed: true, empty: false, kinds };
 }

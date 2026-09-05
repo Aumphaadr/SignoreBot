@@ -80,7 +80,11 @@ reply: boolean, response: Response, };
  */
 export type Component = { "type": "static", value: string, } | { "type": "author" } | { "type": "target" } | { "type": "randomViewer" } | { "type": "random", min: number, max: number, } | { "type": "phrase", phrases: Array<string>, } | { "type": "space" } | { "type": "variable", name: string, };
 
-export type Config = { version: number, twitch: TwitchSettings, network: NetworkSettings, accounts: Accounts, overlaySettings: OverlaySettings, commands: Array<Command>, rewards: Array<Reward>, events: { [key in string]?: EventReaction }, periodicEvents: Array<PeriodicEvent>, shoutout: ShoutoutSettings, banwords: BanwordSettings, overlays: Array<Overlay>, obs: ObsSettings, notes: Array<Note>, updates: UpdateSettings, app: AppSettings, };
+export type Config = { version: number, twitch: TwitchSettings, network: NetworkSettings, accounts: Accounts, overlaySettings: OverlaySettings, commands: Array<Command>, rewards: Array<Reward>, events: { [key in string]?: EventReaction }, periodicEvents: Array<PeriodicEvent>, shoutout: ShoutoutSettings, banwords: BanwordSettings, overlays: Array<Overlay>, 
+/**
+ * Наборы медиа: реакция может показывать случайный файл из набора.
+ */
+mediaSets: Array<MediaSet>, obs: ObsSettings, notes: Array<Note>, updates: UpdateSettings, app: AppSettings, };
 
 export type EventReaction = { enabled: boolean, 
 /**
@@ -110,6 +114,10 @@ file: string,
  */
 secondaryFile: string, 
 /**
+ * Id набора: показывать случайный файл из набора вместо `file`.
+ */
+set: string | null, 
+/**
  * 0..=100
  */
 volume: number, 
@@ -125,6 +133,15 @@ chromakey: string,
  * Длительность показа картинки, с; `None` — из общих настроек.
  */
 imageDurationSec: number | null, animation: MediaAnimation, text: MediaText, };
+
+/**
+ * Набор медиафайлов для реакций «случайный файл из набора».
+ */
+export type MediaSet = { id: string, name: string, 
+/**
+ * Имена файлов из папки медиа.
+ */
+files: Array<string>, };
 
 export type MediaText = { enabled: boolean, content: string, 
 /**

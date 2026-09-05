@@ -369,3 +369,14 @@
     align-items: flex-start;
   }
 }
+/* Панель управления логами: одна высота и одинаковые отступы у всех элементов */
+.logs-controls { gap: 12px; }
+.logs-controls .filter-input,
+.logs-controls .level-select,
+.logs-controls .control-btn { height: 38px; box-sizing: border-box; font-size: 14px; }
+.logs-controls .filter-input { padding-top: 0; padding-bottom: 0; }
+.logs-controls .level-select { padding-top: 0; padding-bottom: 0; }
+.logs-controls .control-buttons { display: flex; gap: 12px; align-items: center; }
+.logs-controls .control-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 12px; min-width: 38px; }
+.logs-controls .control-btn.with-text { padding: 0 14px; }
+.logs-controls .search-box { flex: 1 1 260px; max-width: 420px; }

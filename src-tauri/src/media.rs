@@ -77,7 +77,28 @@ pub fn referenced_files(cfg: &Config) -> HashSet<String> {
     cfg.rewards.iter().for_each(|r| add(&r.response));
     cfg.events.values().for_each(|e| add(&e.response));
     cfg.periodic_events.iter().for_each(|p| add(&p.response));
+    // файл в наборе — используемый, даже если набор пока никем не вызывается
+    for ms in &cfg.media_sets {
+        for f in &ms.files {
+            if !f.is_empty() {
+                set.insert(f.clone());
+            }
+        }
+    }
     set
+}
+
+/// Убрать файл из всех наборов (после удаления из папки). Возвращает, из скольких наборов убран.
+pub fn remove_from_sets(cfg: &mut Config, name: &str) -> usize {
+    let mut n = 0;
+    for ms in cfg.media_sets.iter_mut() {
+        let before = ms.files.len();
+        ms.files.retain(|f| f != name);
+        if ms.files.len() != before {
+            n += 1;
+        }
+    }
+    n
 }
 
 pub fn list(paths: &AppPaths, cfg: &Config) -> Result<Vec<MediaFile>, MediaError> {

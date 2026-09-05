@@ -34,33 +34,38 @@ self.addEventListener("fetch", (event) => {
 
       try {
         const fresh = await fetch(req);
-        cache.put(SHELL_CACHE_KEY, fresh.clone());
+        // В кэш — только настоящая страница оверлея. Ответ «неверный ключ» или
+        // «не найден» (в том числе от другого экземпляра бота на этом порту)
+        // кэшировать нельзя: иначе он будет показываться вместо оверлея.
+        if (fresh.ok) cache.put(SHELL_CACHE_KEY, fresh.clone());
         return fresh;
       } catch (err) {
         const cached = await cache.match(SHELL_CACHE_KEY);
         if (cached) return cached;
 
+        // Кэша ещё нет (бот ни разу не запускался с этим адресом): отдаём
+        // прозрачную страницу, которая сама перезагрузится, как только бот ответит.
         return new Response(
           `<!doctype html>
-<html>
+<html lang="ru">
 <head>
   <meta charset="utf-8">
-  <title>Overlay</title>
-  <style>
-    html,body{
-      margin:0;
-      background:transparent;
-      color:white;
-      font-family:sans-serif;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      height:100%;
-    }
-  </style>
+  <title>Оверлей SignoreBot — ждём бота</title>
+  <style>html,body{margin:0;background:transparent}</style>
 </head>
 <body>
-  Overlay cache is not ready yet. Start the bot once while OBS is open.
+  <!-- Кэш оверлея ещё не готов: запустите SignoreBot, страница обновится сама. -->
+  <script>
+    (function () {
+      function poll() {
+        fetch("/api/health", { cache: "no-store" })
+          .then(function (r) { if (r.ok) location.reload(); })
+          .catch(function () {});
+      }
+      setInterval(poll, 3000);
+      window.addEventListener("online", poll);
+    })();
+  </script>
 </body>
 </html>`,
           {

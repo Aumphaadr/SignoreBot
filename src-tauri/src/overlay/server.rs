@@ -65,8 +65,12 @@ fn no_cache(mut r: Response) -> Response {
 
 async fn overlay_page(State(st): State<ServerState>, Path(path): Path<String>, Query(q): Query<KeyQuery>) -> Response {
     if !key_ok(&st, &q.key) {
+        st.hub.note_page_request(&path, false);
+        tracing::warn!(target: "signorebot::overlay", "Страница оверлея «{path}» запрошена {} — отказ. В адресе источника должен быть ?key=…: скопируйте его кнопкой «Копировать URL» на вкладке «Оверлеи»", if q.key.is_empty() { "без ключа" } else { "с неверным ключом" });
         return forbidden();
     }
+    st.hub.note_page_request(&path, true);
+    tracing::debug!(target: "signorebot::overlay", "Страница оверлея «{path}» запрошена");
     if st.config.read().overlay_by_path(&path).is_none() {
         return (StatusCode::NOT_FOUND, "SignoreBot: оверлей не найден").into_response();
     }

@@ -218,7 +218,14 @@ pub fn media_import(s: State<'_, CoreState>, paths: Vec<String>) -> MediaImportR
 pub fn media_delete(s: State<'_, CoreState>, name: String) -> Res<()> {
     let c = core(&s);
     media::delete(&c.paths, &name).map_err(|e| e.to_string())?;
-    tracing::info!(target: "signorebot::media", "Удалён файл «{name}»");
+    let mut removed = 0;
+    c.update_config(|cfg| removed = media::remove_from_sets(cfg, &name))?;
+    if removed > 0 {
+        c.emit_changed("config");
+        tracing::info!(target: "signorebot::media", "Удалён файл «{name}» (убран из наборов: {removed})");
+    } else {
+        tracing::info!(target: "signorebot::media", "Удалён файл «{name}»");
+    }
     Ok(())
 }
 
@@ -398,6 +405,17 @@ fn twitch_reward_error(e: crate::twitch::helix::HelixError) -> String {
 
 /// «Новая награда на Twitch»: создать награду с нуля от имени приложения.
 /// Реакцию к ней панель настраивает следующим шагом.
+/// Панель загрузилась и отрисовалась — сторож загрузки (`lib.rs`) молчит.
+#[tauri::command]
+pub fn panel_ready(app: tauri::AppHandle) {
+    use tauri::Manager;
+    if let Some(p) = app.try_state::<crate::PanelReady>() {
+        if !p.0.swap(true, std::sync::atomic::Ordering::SeqCst) {
+            tracing::info!(target: "signorebot::core", "Панель загружена");
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn reward_create_twitch(s: State<'_, CoreState>, spec: crate::twitch::helix::NewReward) -> Res<crate::twitch::helix::ChannelReward> {
     let c = core(&s);
@@ -440,6 +458,23 @@ pub async fn reward_update_twitch(s: State<'_, CoreState>, reward_id: String, sp
     tracing::info!(target: "signorebot::rewards", "Награда «{}» изменена через бота{}", title, if renamed { " (в том числе название)" } else { "" });
     c.emit_changed("rewards");
     Ok(updated)
+}
+
+/// Удалить награду на Twitch (только созданную через бота) вместе с реакцией.
+#[tauri::command]
+pub async fn reward_delete_twitch(s: State<'_, CoreState>, id: String) -> Res<String> {
+    let c = core(&s);
+    let ids = c.engine.ids().ok_or("Стример не авторизован")?;
+    if !c.auth.has_scope(AccountKind::Broadcaster, "channel:manage:redemptions") {
+        return Err("Нужно право «channel:manage:redemptions»: авторизуйте стримера заново на вкладке «Авторизация»".into());
+    }
+    let reward = c.config.read().rewards.iter().find(|r| r.id == id).cloned().ok_or("реакция не найдена")?;
+    c.helix.delete_custom_reward(AccountKind::Broadcaster, &ids.broadcaster_id, &reward.reward_id).await
+        .map_err(|e| format!("Twitch не удалил награду ({e}). Удалять через бота можно только награды, созданные через бота"))?;
+    c.update_config(|cfg| cfg.rewards.retain(|r| r.id != id))?;
+    tracing::info!(target: "signorebot::rewards", "Награда «{}» удалена на Twitch через бота, реакция убрана", reward.reward_title);
+    c.emit_changed("rewards");
+    Ok(reward.reward_title)
 }
 
 /// Убрать пометку «(бот)» из названия копии — после того как оригинал удалён.

@@ -87,7 +87,7 @@ export default function SettingsTab() {
             <div className="form-group">
               <label>Доступ из локальной сети <Tooltip text="Нужно, если OBS работает на другом компьютере. Иначе сервер слушает только 127.0.0.1." /></label>
               <label className="toggle-label field-height">
-                <span className="toggle-switch"><input type="checkbox" checked={net.allowLan} onChange={(e) => setSection("network", { ...net, allowLan: e.target.checked })} /><span className="toggle-slider"></span></span>
+                <span className="toggle-switch"><input type="checkbox" checked={net.allowLan} onChange={(e) => { setSection("network", { ...net, allowLan: e.target.checked }); showNotification(e.target.checked ? "Доступ из сети включён: в адресах оверлеев появится IP компьютера. Источники в OBS с адресами 127.0.0.1 продолжат работать." : "Доступ из сети выключен: адреса с IP компьютера больше не работают. Если Browser Source в OBS настроены на такой адрес — обновите их кнопкой «В OBS» на вкладке «Оверлеи», иначе оверлеи не подключатся.", NOTIFICATION_TYPES.WARNING, 9000); }} /><span className="toggle-slider"></span></span>
                 <span className="toggle-text">{net.allowLan ? `включён (IP: ${status?.server.lanIp ?? "…"})` : "выключен"}</span>
               </label>
             </div>

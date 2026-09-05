@@ -366,6 +366,12 @@ impl Helix {
         Ok(raw_to_reward(raw, &managed))
     }
 
+    /// Удалить награду, созданную нашим приложением (Twitch не даст удалить чужую).
+    pub async fn delete_custom_reward(&self, kind: AccountKind, broadcaster_id: &str, reward_id: &str) -> Result<(), HelixError> {
+        self.request(kind, reqwest::Method::DELETE, &format!("{HELIX}/channel_points/custom_rewards"), &[("broadcaster_id", broadcaster_id), ("id", reward_id)], Body::None).await?;
+        Ok(())
+    }
+
     /// Переименовать награду, созданную нашим приложением.
     pub async fn update_custom_reward_title(&self, kind: AccountKind, broadcaster_id: &str, reward_id: &str, title: &str) -> Result<(), HelixError> {
         let body = serde_json::json!({ "title": title });

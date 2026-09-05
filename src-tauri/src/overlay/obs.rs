@@ -19,7 +19,7 @@ pub struct ObsSource {
 pub enum ObsError {
     #[error("некорректный адрес OBS WebSocket: {0}")]
     BadUrl(String),
-    #[error("OBS недоступен: {0}")]
+    #[error("OBS WebSocket не отвечает ({0}): либо в OBS выключен сервер WebSocket (Сервис → Настройки сервера WebSocket), либо в настройках бота другой адрес или порт")]
     Connect(String),
     #[error("неверный пароль OBS WebSocket")]
     Auth,

@@ -987,3 +987,35 @@
 }
 .media-preview-volume input[type="range"] { flex: 1; }
 .media-preview-volume-value { min-width: 44px; text-align: right; color: var(--accent-text); font-weight: 500; font-size: 14px; }
+
+/* Наборы медиа */
+.media-mode-switch { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.media-mode-switch button { padding: 8px 14px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-secondary); border-radius: var(--border-radius-sm); display: inline-flex; align-items: center; gap: 6px; }
+.media-mode-switch button.active { background: var(--accent-light); color: var(--accent-text); border-color: var(--accent); }
+.media-mode-switch button:disabled { opacity: .5; cursor: not-allowed; }
+.media-set-select { margin-bottom: 14px; }
+.media-set-select label { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.media-sets { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 14px 18px; margin-bottom: 16px; }
+.media-sets-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.media-sets-header h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.media-sets-list { display: flex; flex-direction: column; gap: 6px; }
+.media-set-card { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); }
+.media-set-card.active { border-color: var(--accent); }
+.media-set-name { background: none; border: none; color: var(--text-primary); font-weight: 600; padding: 2px 4px; cursor: pointer; text-align: left; }
+.media-set-name:hover { color: var(--accent-text); }
+.media-set-actions { margin-left: auto; display: flex; gap: 6px; }
+.media-file-settings { width: 100%; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); }
+.media-file-settings h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+.media-file-sets { display: flex; flex-direction: column; gap: 6px; }
+.media-file-set-row { gap: 10px; }
+/* Вкладка «Медиа»: карточки шире, имя файла не схлопывается из-за капсул наборов */
+.media-tab-browser .files-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+.media-tab-browser .file-item .badge { flex-shrink: 0; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media-tab-browser .file-name { min-width: 90px; }
+/* Одна высота у поля и кнопки в блоке наборов и в окне «В набор…» */
+.media-sets-header input[type="text"], .media-sets-header .small,
+.media-sets-header .small { height: 38px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
+.media-sets-header input[type="text"] { padding-left: 12px; padding-right: 12px; }
+/* Карточка набора: поле переименования — половина ширины, капсулы не сжимаются */
+.media-set-card input[type="text"] { flex: 0 0 50%; height: 34px; box-sizing: border-box; padding: 0 10px; }
+.media-set-card .badge { white-space: nowrap; flex-shrink: 0; }
