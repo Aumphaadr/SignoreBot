@@ -67,7 +67,7 @@ function CommandEditor({ initial, isNew, all, onSave }: { initial: Command; isNe
         onChange={(response) => setCmd({ ...cmd, response })}
         overlays={config.overlays}
         variables={["user", "target", "message"]}
-        extraTab={{ label: <><Icon name="lightning" /> Алиасы</>, content: <AliasEditor value={cmd.aliases} onChange={(aliases) => setCmd({ ...cmd, aliases })} allCommands={all} currentId={cmd.id} currentName={name} /> }}
+        extraTab={{ label: <><Icon name="lightning" /> Алиасы</>, content: <AliasEditor value={cmd.aliases} onChange={(aliases) => setCmd({ ...cmd, aliases })} allCommands={all} currentId={cmd.id} currentName={name} enabled={cmd.enabled} /> }}
       />
     </div>
   );

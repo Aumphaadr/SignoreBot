@@ -91,6 +91,8 @@ export const api = {
   rewardCreateManagedCopy: (id: string) => invoke<ManagedCopyResult>("reward_create_managed_copy", { id }),
   /** «Новая награда на Twitch»: создать награду от имени приложения. */
   rewardCreateTwitch: (spec: NewReward) => invoke<ChannelReward>("reward_create_twitch", { spec }),
+  /** Удалить награду, созданную через бота, вместе с реакцией. */
+  rewardDeleteTwitch: (id: string) => invoke<string>("reward_delete_twitch", { id }),
   /** Изменить параметры награды, созданной через бота. */
   rewardUpdateTwitch: (rewardId: string, spec: NewReward) => invoke<ChannelReward>("reward_update_twitch", { rewardId, spec }),
   /** Убрать пометку «(бот)» из названия копии после удаления оригинала. */

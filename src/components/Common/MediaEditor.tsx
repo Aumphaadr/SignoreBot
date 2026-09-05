@@ -5,7 +5,8 @@ import Icon, { type IconName } from "../Icon";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { api, errText, type MediaFile, type MediaResponse, type Overlay } from "../../api";
-import { FONT_FAMILIES, MEDIA_ENTER_ANIMATIONS, MEDIA_EXIT_ANIMATIONS, TEXT_ANIMATIONS, defaultMedia, fileKind, formatSize, substituteSample } from "../../api/defaults";
+import { FONT_FAMILIES, MEDIA_ENTER_ANIMATIONS, MEDIA_EXIT_ANIMATIONS, TEXT_ANIMATIONS, defaultMedia, fileKind, formatSize, setKindLabel, substituteSample } from "../../api/defaults";
+import { useAppState } from "../../state/AppState";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
 import Tooltip from "../Tooltip";
 import { VariableBadges } from "./VariableBadge";
@@ -238,14 +239,34 @@ function MediaPreview({ media }: { media: MediaResponse }) {
 export default function MediaEditor({ value, onChange, overlays }: { value: MediaResponse; onChange: (m: MediaResponse) => void; overlays: Overlay[] }) {
   const { showNotification } = useNotification();
   const { files, reload } = useMediaFiles();
+  const { config } = useAppState();
+  const sets = config.mediaSets;
+  const setMode = value.set !== null && value.set !== undefined;
+  const currentSet = setMode ? sets.find((x) => x.id === value.set) ?? null : null;
+  // Образец для предпросмотра в режиме набора — случайный файл набора
+  const [sample, setSample] = useState("");
+  useEffect(() => {
+    const list = currentSet?.files ?? [];
+    if (!setMode || list.length === 0) { setSample(""); return; }
+    if (!list.includes(sample)) setSample(list[Math.floor(Math.random() * list.length)]);
+  }, [setMode, currentSet, sample]);
+  const reroll = () => {
+    const list = currentSet?.files ?? [];
+    if (list.length < 2) return;
+    let next = sample;
+    while (next === sample) next = list[Math.floor(Math.random() * list.length)];
+    setSample(next);
+  };
   const m = { ...defaultMedia(), ...value };
   const set = (patch: Partial<MediaResponse>) => onChange({ ...m, ...patch });
 
-  const primaryKind = fileKind(m.file);
+  const effFile = setMode ? sample : m.file;
+  const primaryKind = fileKind(effFile);
   const secondaryKind = secondaryKindFor(primaryKind);
   const showAnimations = primaryKind === "video" || primaryKind === "image" || (primaryKind === "audio" && !!m.secondaryFile);
-  const textOnly = !m.file && m.text.enabled && !!m.text.content.trim();
-  const showDuration = (primaryKind === "image" || (primaryKind === "audio" && !!m.secondaryFile)) || textOnly;
+  const textOnly = !setMode && !m.file && m.text.enabled && !!m.text.content.trim();
+  const setInfo = currentSet ? setKindLabel(currentSet.files) : null;
+  const showDuration = (primaryKind === "image" || (primaryKind === "audio" && !!m.secondaryFile)) || textOnly || !!setInfo?.kinds.includes("image");
 
   const probe = async (name: string) => {
     try {
@@ -280,6 +301,25 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
 
   return (
     <div className="media-editor">
+      <div className="media-mode-switch">
+        <button className={!setMode ? "active" : ""} onClick={() => set({ set: null })}><Icon name="clapperboard" /> Один файл</button>
+        <button className={setMode ? "active" : ""} disabled={sets.length === 0} title={sets.length === 0 ? "Сначала создайте набор на вкладке «Медиа»" : "Показывать случайный файл из набора, без повторов подряд"} onClick={() => set({ set: sets[0]?.id ?? null, secondaryFile: "" })}><Icon name="layers" /> Случайный из набора</button>
+        <Tooltip text="«Один файл» — всегда этот файл (можно добавить второй: картинка к звуку или звук к картинке). «Случайный из набора» — при каждом срабатывании один из файлов набора, все по разу, потом заново в новом порядке. Наборы собираются на вкладке «Медиа»." />
+      </div>
+      {setMode && (
+        <div className="media-set-select">
+          <label><Icon name="layers" /> Набор</label>
+          <select value={value.set ?? ""} onChange={(e) => set({ set: e.target.value })}>
+            {!currentSet && <option value={value.set ?? ""}>— набора больше нет —</option>}
+            {sets.map((x) => <option key={x.id} value={x.id}>{x.name} — {setKindLabel(x.files).label}</option>)}
+          </select>
+          {!currentSet && <div className="form-hint text-warning"><Icon name="warning" /> Набор, на который ссылается реакция, удалён — медиа не отправляется. Выберите другой.</div>}
+          {setInfo?.empty && <div className="form-hint text-warning"><Icon name="warning" /> Набор пуст — добавьте в него файлы на вкладке «Медиа», иначе реакция ничего не покажет.</div>}
+          {setInfo?.mixed && <div className="form-hint text-warning"><Icon name="warning" /> В наборе файлы разных типов ({setInfo.kinds.join(", ")}): длительность и анимации подходят не всем, предпросмотр показывает один файл. Работать будет, но лучше держать наборы однотипными.</div>}
+          <div className="form-hint">Состав и названия наборов — на вкладке «Медиа». Файлов в наборе: {currentSet?.files.length ?? 0}.</div>
+        </div>
+      )}
+      {!setMode && (<>
       <FileSelector
         label={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon name="clapperboard" /> Медиа файл <Tooltip text="Видео, аудио или картинка. Тип определяется по содержимому файла при добавлении." /></span>}
         selected={m.file} accept={null} files={files}
@@ -295,6 +335,7 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
           />
         </div>
       )}
+      </>)}
 
       <div className="overlay-selector">
         <label><Icon name="overlay-screen" /> Целевой оверлей <Tooltip text="Конкретный оверлей или все сразу (тогда медиа сыграет на каждом подключённом оверлее)." /></label>
@@ -452,8 +493,14 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
         )}
       </div>
 
-      {!m.file && !textOnly && <p className="media-no-file-hint">Выберите медиафайл — или включите «Текст» ниже: алерт может быть и без файла, одним текстом на заданное время. Проверить, как это выглядит на оверлее, можно кнопкой «Тест» в шапке окна.</p>}
-      {(m.file || textOnly) && <MediaPreview media={m} />}
+      {setMode && currentSet && currentSet.files.length > 0 && (
+        <div className="flex gap-2 items-center" style={{ marginTop: 8 }}>
+          <span className="form-hint" style={{ margin: 0 }}>Предпросмотр: <code>{sample || "…"}</code></span>
+          {currentSet.files.length > 1 && <button className="small" onClick={reroll}><Icon name="refresh" /> Другой файл</button>}
+        </div>
+      )}
+      {!setMode && !m.file && !textOnly && <p className="media-no-file-hint">Выберите медиафайл — или включите «Текст» ниже: алерт может быть и без файла, одним текстом на заданное время. Проверить, как это выглядит на оверлее, можно кнопкой «Тест» в шапке окна.</p>}
+      {(effFile || textOnly) && <MediaPreview media={setMode ? { ...m, file: sample, secondaryFile: "" } : m} />}
     </div>
   );
 }

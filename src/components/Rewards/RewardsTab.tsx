@@ -110,6 +110,13 @@ export default function RewardsTab() {
     catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 8000); }
   };
   const openRedemptions = redemptions.filter((x) => x.status === "pending" || x.status === "refunded");
+  const deleteOnTwitch = (r: Reward) => showConfirm(
+    `Удалить награду «${r.rewardTitle}» на Twitch?\n\nЗрители её больше не увидят, невыполненные погашения останутся в очереди запросов Twitch. Реакция в боте тоже будет удалена. Это действие нельзя отменить.`,
+    async () => {
+      try { const t = await api.rewardDeleteTwitch(r.id); setEditing(null); showNotification(`Награда «${t}» удалена на Twitch`, NOTIFICATION_TYPES.WARNING, 4000); void load(); }
+      catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 8000); }
+    },
+  );
 
   const es = status?.eventsub;
   const save = (r: Reward) => {
@@ -161,7 +168,7 @@ export default function RewardsTab() {
       </div>
       <div className="add-reward-section">
         <button className="add-reward-main-btn" onClick={() => setCreating(defaultParams())} disabled={!running} title={running ? "Создать награду на канале от имени бота и сразу настроить реакцию" : "Бот не запущен — награду создать нельзя"}><Icon name="channel-points" /> Новая награда для Twitch</button>
-        <button className="add-reward-main-btn secondary" onClick={() => setEditing({ reward: null, isNew: true })}><Icon name="add"  /> Добавить реакцию</button>
+        <button className="add-reward-main-btn" onClick={() => setEditing({ reward: null, isNew: true })}><Icon name="add"  /> Добавить реакцию</button>
       </div>
 
       <Modal isOpen={!!creating} onClose={() => setCreating(null)} title="Новая награда для Twitch" size="large">
@@ -231,13 +238,13 @@ export default function RewardsTab() {
         {editing && !editing.reward && (
           <RewardSelector channel={channel} existing={rewards} loading={loading} onRefresh={() => void load()} onPick={(c) => setEditing({ reward: defaultReward(c.id, c.title), isNew: true })} onCancel={() => setEditing(null)} />
         )}
-        {editing?.reward && <RewardEditor key={editing.reward.id} initial={editing.reward} isNew={editing.isNew} onSave={save} info={channel.find((c) => c.id === editing.reward!.rewardId)} onMakeCopy={(rw) => { save(rw); makeCopy(rw); }} onFinishCopy={(rw) => { save(rw); void finishCopy(rw); }} onChannelReload={() => void load()} />}
+        {editing?.reward && <RewardEditor key={editing.reward.id} initial={editing.reward} isNew={editing.isNew} onSave={save} info={channel.find((c) => c.id === editing.reward!.rewardId)} onMakeCopy={(rw) => { save(rw); makeCopy(rw); }} onFinishCopy={(rw) => { save(rw); void finishCopy(rw); }} onChannelReload={() => void load()} onDeleteTwitch={(rw) => deleteOnTwitch(rw)} />}
       </Modal>
     </div>
   );
 }
 
-function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy, onChannelReload }: { initial: Reward; isNew: boolean; onSave: (r: Reward) => void; info?: ChannelReward; onMakeCopy: (r: Reward) => void; onFinishCopy: (r: Reward) => void; onChannelReload: () => void }) {
+function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy, onChannelReload, onDeleteTwitch }: { initial: Reward; isNew: boolean; onSave: (r: Reward) => void; info?: ChannelReward; onMakeCopy: (r: Reward) => void; onFinishCopy: (r: Reward) => void; onChannelReload: () => void; onDeleteTwitch: (r: Reward) => void }) {
   const { config } = useAppState();
   const { showNotification } = useNotification();
   const [r, setR] = useState(initial);
@@ -268,6 +275,7 @@ function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy, 
             <div className="flex gap-2" style={{ marginTop: 8 }}>
               <button className="primary small" onClick={() => void applyParams()} disabled={paramsBusy || !params}><Icon name="check" /> {paramsBusy ? "Применяем…" : "Применить на Twitch"}</button>
               {params && <button className="small" onClick={() => setParams(null)}>Отменить правки</button>}
+              <button className="small danger" style={{ marginLeft: "auto" }} onClick={() => onDeleteTwitch(r)} title="Убрать награду с канала и реакцию из бота"><Icon name="delete" /> Удалить награду на Twitch</button>
             </div>
             <div className="form-hint" style={{ marginTop: 8 }}>Те же настройки можно менять и в панели Twitch — бот подхватит их сам. Картинка — только там.</div>
           </div>

@@ -8,7 +8,7 @@ use signorebot_lib::secrets::Secrets;
 use signorebot_lib::twitch::accounts::AuthManager;
 use signorebot_lib::twitch::eventsub::{ChatMessage, TwitchEvent};
 #[allow(unused_imports)]
-use signorebot_lib::config::Response;
+use signorebot_lib::config::{MediaSet, Response};
 use signorebot_lib::twitch::helix::Helix;
 use std::sync::Arc;
 
@@ -365,4 +365,76 @@ async fn text_only_alert_is_sent() {
     engine.dispatch(chat("gina", "!пусто")).await;
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     assert!(rx.try_recv().is_err(), "пустое медиа отправляться не должно");
+}
+
+/// Набор медиа: за два круга каждый файл сыграл по разу, подряд повторов нет;
+/// пустой набор ничего не отправляет.
+#[tokio::test]
+async fn media_set_plays_without_repeats() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = AppPaths::new(dir.path());
+    paths.ensure_dirs().unwrap();
+    let mut cfg = Config::default();
+    cfg.normalize();
+    cfg.overlay_settings.antispam_window_ms = 0;
+    cfg.overlays.push(overlay("o-a", "Видео", "video", None));
+    cfg.media_sets.push(MediaSet { id: "s1".into(), name: "Крики".into(), files: vec!["a.mp4".into(), "b.mp4".into(), "c.mp4".into()] });
+    cfg.media_sets.push(MediaSet { id: "s2".into(), name: "Пусто".into(), files: vec![] });
+    let mut rnd = Command { name: "rnd".into(), ..Default::default() };
+    rnd.response.media.enabled = true; rnd.response.media.set = Some("s1".into()); rnd.response.media.overlay = Some("o-a".into());
+    let mut empty = Command { name: "empty".into(), ..Default::default() };
+    empty.response.media.enabled = true; empty.response.media.set = Some("s2".into()); empty.response.media.overlay = Some("o-a".into());
+    let mut gone = Command { name: "gone".into(), ..Default::default() };
+    gone.response.media.enabled = true; gone.response.media.set = Some("nope".into()); gone.response.media.overlay = Some("o-a".into());
+    cfg.commands.push(rnd); cfg.commands.push(empty); cfg.commands.push(gone);
+    let config: SharedConfig = Arc::new(parking_lot::RwLock::new(cfg));
+    let auth = AuthManager::new("cid".into(), Secrets::file_only(&paths));
+    let helix = Arc::new(Helix::new(Arc::clone(&auth)));
+    let hub = OverlayHub::new();
+    let engine = Engine::new(config, auth, helix, hub.clone(), paths.deleted_messages_log());
+    let (_i, mut rx) = hub.connect("video", "t".into());
+    let mut played = Vec::new();
+    for _ in 0..6 {
+        engine.dispatch(chat("kim", "!rnd")).await;
+        let v: serde_json::Value = serde_json::from_str(&rx.recv().await.unwrap()).unwrap();
+        played.push(v["videoFile"].as_str().unwrap().to_string());
+        assert!(v["secondaryFile"].is_null());
+    }
+    let mut first: Vec<_> = played[..3].to_vec(); first.sort();
+    assert_eq!(first, vec!["a.mp4", "b.mp4", "c.mp4"], "первый круг — все файлы по разу: {played:?}");
+    let mut second: Vec<_> = played[3..].to_vec(); second.sort();
+    assert_eq!(second, vec!["a.mp4", "b.mp4", "c.mp4"], "второй круг — все файлы по разу: {played:?}");
+    for w in played.windows(2) { assert_ne!(w[0], w[1], "повтор подряд: {played:?}"); }
+    engine.dispatch(chat("kim", "!empty")).await;
+    engine.dispatch(chat("kim", "!gone")).await;
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    assert!(rx.try_recv().is_err(), "пустой или пропавший набор ничего не отправляет");
+}
+
+/// Антиспам для набора считается по набору, а не по выпавшему файлу.
+#[tokio::test]
+async fn media_set_antispam_is_per_set() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = AppPaths::new(dir.path());
+    paths.ensure_dirs().unwrap();
+    let mut cfg = Config::default();
+    cfg.normalize();
+    cfg.overlay_settings.antispam_window_ms = 5000;
+    cfg.overlays.push(overlay("o-a", "Видео", "video", None));
+    cfg.media_sets.push(MediaSet { id: "s1".into(), name: "Крики".into(), files: vec!["a.mp4".into(), "b.mp4".into()] });
+    let mut rnd = Command { name: "rnd".into(), ..Default::default() };
+    rnd.response.media.enabled = true; rnd.response.media.set = Some("s1".into()); rnd.response.media.overlay = Some("o-a".into());
+    cfg.commands.push(rnd);
+    let config: SharedConfig = Arc::new(parking_lot::RwLock::new(cfg));
+    let auth = AuthManager::new("cid".into(), Secrets::file_only(&paths));
+    let helix = Arc::new(Helix::new(Arc::clone(&auth)));
+    let hub = OverlayHub::new();
+    let engine = Engine::new(config, auth, helix, hub.clone(), paths.deleted_messages_log());
+    let (_i, mut rx) = hub.connect("video", "t".into());
+    engine.dispatch(chat("kim", "!rnd")).await;
+    engine.dispatch(chat("kim", "!rnd")).await; // тот же зритель сразу — антиспам, хотя файл выпал бы другой
+    engine.dispatch(chat("lee", "!rnd")).await; // другой зритель — проходит
+    let mut got = 0;
+    while rx.try_recv().is_ok() { got += 1; }
+    assert_eq!(got, 2);
 }

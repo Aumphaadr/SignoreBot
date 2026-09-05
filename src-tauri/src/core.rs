@@ -88,6 +88,13 @@ pub struct OverlayStatusItem {
     pub connected: bool,
     pub connections: usize,
     pub pending: usize,
+    /// Сколько секунд назад OBS (или браузер) запрашивал страницу; None — ни разу с запуска.
+    #[ts(type = "number | null")]
+    pub page_request_age_sec: Option<u64>,
+    /// Прошёл ли ключ в последнем запросе страницы.
+    pub page_request_ok: Option<bool>,
+    /// Что не так и что сделать — для карточки оверлея (None — подключён).
+    pub hint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, ts_rs::TS)]
@@ -107,6 +114,8 @@ pub struct CoreStatus {
     pub version: String,
     /// Бот работает, а часть оверлеев не открыта ни одним Browser Source.
     pub overlay_alert: Option<String>,
+    /// Почему не удалась перезагрузка через OBS (для блока OBS на «Оверлеях»).
+    pub obs_problem: Option<String>,
     /// Последняя проверка обновлений (при запуске, раз в 12 часов и по кнопке).
     pub update: Option<crate::updates::UpdateInfo>,
 }
@@ -316,6 +325,9 @@ impl Core {
                     connected: n > 0,
                     connections: n,
                     pending: self.hub.pending_count(&o.path),
+                    page_request_age_sec: self.hub.last_page_request(&o.path).map(|(s, _)| s),
+                    page_request_ok: self.hub.last_page_request(&o.path).map(|(_, ok)| ok),
+                    hint: if n > 0 { None } else { Some(overlay_hint(self.hub.last_page_request(&o.path), cfg.obs.enabled && cfg.obs.auto_refresh, self.obs_auto.lock().problem.as_deref())) },
                 }
             })
             .collect()
@@ -589,7 +601,7 @@ impl Core {
                         let visible = self.app.get_webview_window("main").map(|w| w.is_visible().unwrap_or(false) && w.is_focused().unwrap_or(false)).unwrap_or(false);
                         if !visible {
                             use tauri_plugin_notification::NotificationExt;
-                            let _ = self.app.notification().builder().title("SignoreBot: оверлеи не подключены").body(format!("Не подключены: {}. Обновите Browser Source в OBS.", missing.join(", "))).show();
+                            let _ = self.app.notification().builder().title("SignoreBot: оверлеи не подключены").body(alert.clone().unwrap_or_else(|| format!("Не подключены: {}.", missing.join(", ")))).show();
                         }
                     }
                 }
@@ -648,7 +660,10 @@ impl Core {
                     self.obs_auto.lock().problem = Some(problem);
                 }
                 Ok(r) => { self.obs_auto.lock().problem = None; tracing::info!(target: "signorebot::obs", "Обновлено источников: {}. Ждём подключения…", r.len()); }
-                Err(e) => tracing::warn!(target: "signorebot::obs", "{e}"),
+                Err(e) => {
+                    tracing::warn!(target: "signorebot::obs", "{e}");
+                    self.obs_auto.lock().problem = Some(e.to_string());
+                }
             }
             tokio::select! {
                 _ = cancel.cancelled() => return,
@@ -675,6 +690,7 @@ impl Core {
             migration: self.take_migration_report(),
             version: env!("CARGO_PKG_VERSION").into(),
             overlay_alert: self.overlay_alert.lock().clone(),
+            obs_problem: self.obs_auto.lock().problem.clone(),
             update: self.update.lock().clone(),
         }
     }
@@ -729,42 +745,72 @@ impl Core {
     }
 }
 
-/// Текст предупреждения для сторожа оверлеев (None — всё подключено или
-/// оверлеев нет).
+/// Короткий текст баннера сторожа: кто не подключён и одна причина. Длинные
+/// объяснения — на карточках оверлеев (`overlay_hint`).
 pub fn overlay_alert_text(st: &[OverlayStatusItem], obs_on: bool, obs_problem: Option<&str>) -> Option<String> {
     let missing: Vec<&str> = st.iter().filter(|o| !o.connected).map(|o| o.name.as_str()).collect();
     if st.is_empty() || missing.is_empty() {
         return None;
     }
-    let problem_hint;
-    let hint = if let Some(p) = obs_problem.filter(|_| obs_on) {
-        problem_hint = format!("Перезагрузить через OBS не вышло: {p}.");
-        problem_hint.as_str()
-    } else if obs_on {
-        "Бот пробовал перезагрузить Browser Source через OBS — проверьте, что OBS запущен и подключение к нему работает."
+    let bad_key: Vec<&str> = st.iter().filter(|o| !o.connected && o.page_request_ok == Some(false)).map(|o| o.name.as_str()).collect();
+    let never = st.iter().filter(|o| !o.connected).all(|o| o.page_request_age_sec.is_none());
+    let why = if !bad_key.is_empty() {
+        format!("В OBS у {} адрес без ключа.", bad_key.iter().map(|n| format!("«{n}»")).collect::<Vec<_>>().join(", "))
+    } else if obs_on && obs_problem.is_some() {
+        "Перезагрузить через OBS не вышло.".to_string()
+    } else if never {
+        "Страницы с запуска никто не запрашивал — обновите источники в OBS.".to_string()
     } else {
-        "Если OBS был запущен раньше бота — нажмите «Обновить» у Browser Source в OBS (или включите интеграцию с OBS на вкладке «Оверлеи», тогда бот будет делать это сам)."
+        "Обновите Browser Source в OBS.".to_string()
     };
-    Some(format!("Не подключены оверлеи: {}. Медиа и алерты на них не дойдут. {hint}", missing.join(", ")))
+    Some(format!("Не подключены: {}. {why}", missing.join(", ")))
+}
+
+/// Подсказка для карточки неподключённого оверлея: причина и что нажать.
+pub fn overlay_hint(req: Option<(u64, bool)>, obs_on: bool, obs_problem: Option<&str>) -> String {
+    match req {
+        Some((_, false)) => "Источник в OBS запрашивает страницу без ключа или с неверным ключом. В адресе Browser Source должен быть ?key=… — скопируйте адрес кнопкой «Копировать URL» (или нажмите «В OBS») и вставьте в свойства источника.".into(),
+        None => {
+            let mut t = String::from("С запуска бота эту страницу никто не запрашивал: источник в OBS не обновлялся или смотрит на другой адрес. Нажмите «Обновить» у источника в OBS или переключите сцену туда и обратно.");
+            if let Some(p) = obs_problem.filter(|_| obs_on) {
+                t.push_str(" Перезагрузить через OBS не вышло: ");
+                t.push_str(p);
+                t.push('.');
+            }
+            t.push_str(" Если недавно менялись порт, ключ или доступ из сети — у источника остался старый адрес.");
+            t
+        }
+        Some((age, true)) => format!("Страница запрошена {age} с назад, но соединение не установилось. Обычно страница ещё грузится или источник в OBS выключен на активной сцене («Выключать источник, когда он не виден»). Если так и висит — «Обновить» у источника в OBS."),
+    }
 }
 
 #[cfg(test)]
 mod overlay_alert_tests {
     use super::*;
     fn item(name: &str, connected: bool) -> OverlayStatusItem {
-        OverlayStatusItem { id: name.into(), name: name.into(), path: name.to_lowercase(), url: String::new(), connected, connections: connected as usize, pending: 0 }
+        item_req(name, connected, None)
+    }
+    fn item_req(name: &str, connected: bool, req: Option<(u64, bool)>) -> OverlayStatusItem {
+        OverlayStatusItem { id: name.into(), name: name.into(), path: name.to_lowercase(), url: String::new(), connected, connections: connected as usize, pending: 0, page_request_age_sec: req.map(|r| r.0), page_request_ok: req.map(|r| r.1), hint: None }
     }
     #[test]
-    fn alert_only_when_some_overlay_is_missing() {
+    fn alert_is_short_and_names_the_reason() {
         assert_eq!(overlay_alert_text(&[], false, None), None);
         assert_eq!(overlay_alert_text(&[item("Аудио", true), item("Видео", true)], false, None), None);
         let t = overlay_alert_text(&[item("Аудио", true), item("Видео", false), item("VIPS", false)], false, None).unwrap();
-        assert!(t.starts_with("Не подключены оверлеи: Видео, VIPS."), "{t}");
-        assert!(t.contains("нажмите «Обновить»"));
-        let t = overlay_alert_text(&[item("Видео", false)], true, None).unwrap();
-        assert!(t.contains("через OBS"));
-        let t = overlay_alert_text(&[item("Видео", false)], true, Some("в OBS нет источников с именами «Overlay Video»; там есть: «video»")).unwrap();
-        assert!(t.contains("Перезагрузить через OBS не вышло: в OBS нет источников с именами «Overlay Video»"), "{t}");
-        assert!(!t.contains("проверьте, что OBS запущен"), "{t}");
+        assert!(t.starts_with("Не подключены: Видео, VIPS."), "{t}");
+        assert!(t.len() < 200, "баннер должен быть коротким: {t}");
+        let t = overlay_alert_text(&[item_req("VIPS", false, Some((5, false))), item("Аудио", true)], true, None).unwrap();
+        assert!(t.contains("В OBS у «VIPS» адрес без ключа"), "{t}");
+        let t = overlay_alert_text(&[item("Видео", false)], true, Some("OBS WebSocket не отвечает")).unwrap();
+        assert!(t.contains("Перезагрузить через OBS не вышло"), "{t}");
+        let t = overlay_alert_text(&[item_req("Видео", false, Some((3, true)))], false, None).unwrap();
+        assert!(t.contains("Обновите Browser Source"), "{t}");
+    }
+    #[test]
+    fn hint_explains_each_case() {
+        assert!(overlay_hint(Some((5, false)), false, None).contains("без ключа"));
+        assert!(overlay_hint(None, true, Some("OBS WebSocket не отвечает")).contains("OBS WebSocket не отвечает"));
+        assert!(overlay_hint(Some((5, true)), false, None).contains("5 с назад"));
     }
 }

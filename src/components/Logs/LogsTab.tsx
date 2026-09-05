@@ -1,4 +1,5 @@
 import Icon from "../Icon";
+import { copyText } from "../../api/clipboard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { api, errText, type LogEntry } from "../../api";
@@ -45,6 +46,13 @@ export default function LogsTab() {
 
   useEffect(() => { if (autoScroll) endRef.current?.scrollIntoView({ behavior: "auto" }); }, [shown, autoScroll]);
 
+  const copyLogs = async () => {
+    if (!shown.length) return void showNotification("Нечего копировать", NOTIFICATION_TYPES.WARNING, 2000);
+    try {
+      await copyText(shown.map((l) => `[${new Date(l.ts).toLocaleTimeString("ru-RU")}] [${l.level}] [${l.target}] ${l.message}`).join("\n"));
+      showNotification(`Скопировано записей: ${shown.length}`, NOTIFICATION_TYPES.SUCCESS, 2000);
+    } catch (e) { showNotification(`${errText(e)}`, NOTIFICATION_TYPES.ERROR, 3000); }
+  };
   const exportLogs = async () => {
     if (!logs.length) return void showNotification("Нет логов для экспорта", NOTIFICATION_TYPES.WARNING, 2000);
     try {
@@ -64,7 +72,7 @@ export default function LogsTab() {
           <input type="text" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Поиск по логам..." className="filter-input" />
           {filter && <button className="search-clear" onClick={() => setFilter("")}><Icon name="close" /> </button>}
         </div>
-        <div className="filter-group" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div className="filter-group" style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <Icon name="filter" className="filter-icon" />
           <select value={level} onChange={(e) => setLevel(e.target.value as typeof level)} className="level-select">
             <option value="all">Все уровни</option><option value="info">Инфо</option><option value="warn">Предупреждения</option><option value="error">Ошибки</option>
@@ -77,7 +85,8 @@ export default function LogsTab() {
           <button onClick={() => setAutoScroll((a) => !a)} className={`control-btn ${autoScroll ? "active" : ""}`} title={autoScroll ? "Автоскролл вкл" : "Автоскролл выкл"}>{autoScroll ? <Icon name="play"  /> : <Icon name="pause"  />}</button>
           <button onClick={() => setPaused((p) => !p)} className={`control-btn ${paused ? "paused" : ""}`} title={paused ? "Возобновить приём" : "Пауза приёма"}>{paused ? <Icon name="play"  /> : <Icon name="pause"  />}</button>
           <button onClick={() => setLogs([])} className="control-btn" title="Очистить"><Icon name="delete"  /></button>
-          <button onClick={() => void exportLogs()} className="control-btn" title="Экспорт"><Icon name="download"  /></button>
+          <button onClick={() => void copyLogs()} className="control-btn" title="Скопировать показанные записи в буфер обмена"><Icon name="copy"  /></button>
+          <button onClick={() => void exportLogs()} className="control-btn with-text" title="Сохранить показанные логи в файл"><Icon name="download"  /> Экспорт</button>
         </div>
       </div>
       <div className="logs-container">

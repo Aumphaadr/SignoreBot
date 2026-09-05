@@ -4,7 +4,7 @@ import type { Command } from "../../api";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
 import "./ResponseEditor.css";
 
-export default function AliasEditor({ value, onChange, allCommands, currentId, currentName }: { value: string[]; onChange: (v: string[]) => void; allCommands: Command[]; currentId: string; currentName: string }) {
+export default function AliasEditor({ value, onChange, allCommands, currentId, currentName, enabled = true }: { value: string[]; onChange: (v: string[]) => void; allCommands: Command[]; currentId: string; currentName: string; enabled?: boolean }) {
   const { showNotification } = useNotification();
   const [text, setText] = useState("");
   const add = () => {
@@ -37,7 +37,8 @@ export default function AliasEditor({ value, onChange, allCommands, currentId, c
         <input type="text" value={text} onChange={(e) => setText(e.target.value.replace(/^!+/, ""))} placeholder="Название алиаса (без !)" onKeyDown={(e) => e.key === "Enter" && add()} className="alias-input" />
         <button onClick={add} className="add-alias-btn"><Icon name="add"  /> Добавить алиас</button>
       </div>
-      <div className="aliases-warning"><Icon name="warning" /> Алиас работает только если команда включена</div>
+      {!enabled && value.length > 0 && <div className="aliases-warning"><Icon name="warning" /> Команда <b>!{currentName || "…"}</b> выключена — {value.length === 1 ? "алиас" : "алиасы"} {value.map((a) => `!${a}`).join(", ")} тоже не {value.length === 1 ? "сработает" : "сработают"}, пока её не включить.</div>}
+      {!enabled && value.length === 0 && <div className="form-hint"><Icon name="info" /> Команда сейчас выключена: добавленные алиасы заработают вместе с ней.</div>}
     </div>
   );
 }

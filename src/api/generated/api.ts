@@ -41,6 +41,10 @@ running: boolean, eventsub: EventSubStatus, server: ServerStatus, overlays: Arra
  */
 overlayAlert: string | null, 
 /**
+ * Почему не удалась перезагрузка через OBS (для блока OBS на «Оверлеях»).
+ */
+obsProblem: string | null, 
+/**
  * Последняя проверка обновлений (при запуске, раз в 12 часов и по кнопке).
  */
 update: UpdateInfo | null, };
@@ -109,7 +113,19 @@ export type OverlayConnection = { path: string, remote: string,
  */
 since: number, };
 
-export type OverlayStatusItem = { id: string, name: string, path: string, url: string, connected: boolean, connections: number, pending: number, };
+export type OverlayStatusItem = { id: string, name: string, path: string, url: string, connected: boolean, connections: number, pending: number, 
+/**
+ * Сколько секунд назад OBS (или браузер) запрашивал страницу; None — ни разу с запуска.
+ */
+pageRequestAgeSec: number | null, 
+/**
+ * Прошёл ли ключ в последнем запросе страницы.
+ */
+pageRequestOk: boolean | null, 
+/**
+ * Что не так и что сделать — для карточки оверлея (None — подключён).
+ */
+hint: string | null, };
 
 export type PathSource = "default" | "pointer" | "env";
 

@@ -164,8 +164,10 @@ export default function OverlaysTab() {
                 </div>
               </div>
               <div className="overlay-card-url">
-                <span className={`badge ${st?.connected ? "badge-success" : "badge-warning"}`} title={st?.connected ? `Подключений: ${st.connections}` : "OBS не открыл эту страницу"}>{st?.connected ? <><Icon name="status-connected" /> подключён{(st.connections ?? 0) > 1 ? ` ×${st.connections}` : ""}</> : <><Icon name="status-disconnected" /> не подключён</>}</span>
+                {st && !st.connected && st.pageRequestOk !== false && st.pageRequestAgeSec !== null ? <Hint text={st.hint ?? ""}><span className={`badge ${st?.connected ? "badge-success" : "badge-warning"}`}>{st?.connected ? <><Icon name="status-connected" /> подключён{(st.connections ?? 0) > 1 ? ` ×${st.connections}` : ""}</> : <><Icon name="status-disconnected" /> не подключён</>}</span></Hint> : <Hint text={st?.connected ? <>подключений: {st.connections}</> : "оверлей не подключён"}><span className={`badge ${st?.connected ? "badge-success" : "badge-warning"}`}>{st?.connected ? <><Icon name="status-connected" /> подключён{(st.connections ?? 0) > 1 ? ` ×${st.connections}` : ""}</> : <><Icon name="status-disconnected" /> не подключён</>}</span></Hint>}
                 {st && st.pending > 0 && <span className="badge badge-info">в очереди: {st.pending}</span>}
+                {st && !st.connected && st.pageRequestOk === false && <Hint text={st.hint ?? ""}><span className="badge badge-warning">адрес в OBS без ключа</span></Hint>}
+                {st && !st.connected && st.pageRequestAgeSec === null && <Hint text={st.hint ?? ""}><span className="badge badge-warning">страницу не запрашивали</span></Hint>}
                 <span className="overlay-url">{st?.url ?? `…/overlay/${o.path}`}</span>
               </div>
               <div className="overlay-card-actions">
@@ -228,6 +230,7 @@ export default function OverlaysTab() {
             </div>
             {sources && (
               <div className="obs-meta-list" style={{ marginTop: 12 }}>
+                {status?.obsProblem && <div className="form-hint text-warning"><Icon name="warning" /> {status.obsProblem}</div>}
                 <div className="obs-meta-item"><span className="obs-meta-label">Browser Source в OBS:</span>{browserSources.length === 0 && <span>нет</span>}<button className="small" style={{ marginLeft: "auto" }} onClick={() => void matchSources()} title="Найти в OBS источники, чьи адреса ведут на оверлеи бота, и записать их имена в привязки"><Icon name="lightning" /> Подобрать по адресам</button></div>
                 {browserSources.map((s) => (
                   <div key={s.inputName} className="obs-meta-item"><code>{s.inputName}</code><span className="text-muted" style={{ fontSize: 12 }}>{s.url ?? "—"}</span></div>

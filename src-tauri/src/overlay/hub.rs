@@ -34,6 +34,9 @@ struct Client {
 struct Inner {
     clients: HashMap<u64, Client>,
     pending: HashMap<String, VecDeque<(Instant, String)>>,
+    /// Последний запрос страницы оверлея: когда и прошёл ли ключ. Нужно,
+    /// чтобы сторож мог сказать «OBS запросил страницу без ключа».
+    page_requests: HashMap<String, (Instant, bool)>,
 }
 
 #[derive(Clone)]
@@ -152,6 +155,17 @@ impl OverlayHub {
             let _ = self.changed.send(());
         }
         n
+    }
+
+    /// Страница оверлея запрошена (`ok` — ключ верный).
+    pub fn note_page_request(&self, path: &str, ok: bool) {
+        self.inner.lock().page_requests.insert(path.to_string(), (Instant::now(), ok));
+        let _ = self.changed.send(());
+    }
+
+    /// Сколько секунд назад страницу запрашивали и прошёл ли ключ.
+    pub fn last_page_request(&self, path: &str) -> Option<(u64, bool)> {
+        self.inner.lock().page_requests.get(path).map(|(t, ok)| (t.elapsed().as_secs(), *ok))
     }
 
     pub fn pending_count(&self, path: &str) -> usize {

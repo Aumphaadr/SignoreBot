@@ -3,7 +3,7 @@
 // чтобы подсказка не расходилась с состоянием. Имена выделяются <Em>.
 
 import type { ReactNode } from "react";
-import type { Overlay, Response } from "../../api";
+import type { Overlay, Response, MediaSet } from "../../api";
 import { formatInterval } from "../../api/defaults";
 import Tooltip from "../Tooltip";
 
@@ -27,9 +27,22 @@ export function subj(s: Subject, acc = false): ReactNode {
 }
 
 /** Что делает реакция: «команда !x отправляет текст в чат…». Для событий и наград — «на событие … бот отправляет». */
+let hintSets: MediaSet[] = [];
+/** Наборы медиа для подсказок карточек (App подкладывает их из конфига). */
+export function setMediaSetsForHints(sets: MediaSet[]) { hintSets = sets; }
+
+function mediaWhat(r: Response): ReactNode {
+  const id = r.media.set;
+  if (!id) return "медиа на оверлей";
+  const set = hintSets.find((x) => x.id === id);
+  if (!set) return <>медиа из набора, которого <Em>больше нет</Em></>;
+  if (set.files.length === 0) return <>медиа из набора <Em>«{set.name}»</Em>, а он пуст</>;
+  return <>случайный файл из набора <Em>«{set.name}»</Em> ({set.files.length}) на оверлей</>;
+}
+
 export function hintReaction(s: Subject, r: Response): ReactNode {
   const c = r.chat.enabled, m = r.media.enabled;
-  const what = c && m ? "текст в чат и медиа на оверлей" : c ? "текст в чат" : m ? "медиа на оверлей" : null;
+  const what: ReactNode = c && m ? <>текст в чат и {mediaWhat(r)}</> : c ? "текст в чат" : m ? mediaWhat(r) : null;
   const lead: ReactNode = s.kind === "event" ? <>на {subj(s, true)} бот</> : s.kind === "reward" ? <>за {subj(s, true)} бот</> : subj(s);
   if (!what) return <>{lead} пока ничего не делает — реакция не настроена</>;
   return <>{lead} отправляет {what}</>;

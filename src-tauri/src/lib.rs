@@ -13,6 +13,70 @@ pub mod updates;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, WindowEvent};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::Arc;
+
+/// Панель сообщила, что загрузилась (`panel_ready`). Если через несколько
+/// секунд после старта сигнала нет — окно показывает ошибку WebView вместо
+/// интерфейса (обычно «Connection refused» на белом фоне), и надо объяснить.
+pub struct PanelReady(pub Arc<AtomicBool>, pub Arc<AtomicU8>);
+
+const PANEL_LOAD_TIMEOUT_SECS: u64 = 8;
+
+fn panel_watchdog(app: tauri::AppHandle, ready: Arc<AtomicBool>, attempts: Arc<AtomicU8>) {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(PANEL_LOAD_TIMEOUT_SECS)).await;
+        if ready.load(Ordering::SeqCst) {
+            return;
+        }
+        let Some(win) = app.get_webview_window("main") else { return };
+        if !win.is_visible().unwrap_or(true) {
+            return; // окно спрятано в трей — панели и не должно быть
+        }
+        let url = win.url().map(|u| u.to_string()).unwrap_or_else(|_| "?".into());
+        let attempt = attempts.fetch_add(1, Ordering::SeqCst) + 1;
+        tracing::warn!(target: "signorebot::core", "Панель не загрузилась за {PANEL_LOAD_TIMEOUT_SECS} с (попытка {attempt}, адрес окна: {url})");
+        let logs = app.try_state::<commands::CoreState>().map(|c| c.0.paths.logs_dir().display().to_string()).unwrap_or_default();
+        let why = if cfg!(debug_assertions) {
+            "Это отладочная сборка: панель берётся с dev-сервера Vite на порту 1420, а он не запущен. Запустите `npm run dev` или используйте собранное приложение.".to_string()
+        } else {
+            format!(
+                "Бот при этом работает: чат, награды и оверлеи живут в фоне, страдает только окно.\n\n\
+                 Обычные причины:\n\
+                 • VPN или прокси, который перехватывает и локальные адреса (у панели адрес {url}). Выключите его или добавьте исключение для localhost.\n\
+                 • Антивирус или брандмауэр блокирует встроенный браузер (WebView2 на Windows).\n\
+                 • Повреждён WebView2 Runtime — переустановите его с сайта Microsoft.\n\n\
+                 Логи: {logs}"
+            )
+        };
+        let text = if attempt == 1 {
+            format!("Окно панели не загрузилось: встроенный браузер показал ошибку вместо интерфейса.\n\n{why}")
+        } else {
+            format!("Панель всё ещё не загружается.\n\n{why}\n\nМожно продолжить: бот работает из трея, окно попробуйте открыть позже через меню трея.")
+        };
+        let ready2 = Arc::clone(&ready);
+        let attempts2 = Arc::clone(&attempts);
+        let app2 = app.clone();
+        app.dialog()
+            .message(text)
+            .title("SignoreBot: панель не загрузилась")
+            .kind(MessageDialogKind::Warning)
+            .buttons(MessageDialogButtons::OkCancelCustom("Перезагрузить панель".into(), "Продолжить".into()))
+            .show(move |reload| {
+                if !reload {
+                    return;
+                }
+                if let Some(w) = app2.get_webview_window("main") {
+                    tracing::info!(target: "signorebot::core", "Перезагрузка панели по запросу пользователя");
+                    let _ = w.reload();
+                }
+                if attempts2.load(Ordering::SeqCst) < 3 {
+                    panel_watchdog(app2.clone(), ready2, attempts2);
+                }
+            });
+    });
+}
 
 fn show_main(app: &tauri::AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
@@ -106,6 +170,10 @@ pub fn run() {
             tracing::info!(target: "signorebot::core", "SignoreBot {} · данные: {}", env!("CARGO_PKG_VERSION"), paths.root.display());
             let core = core::Core::start(handle, paths)?;
             app.manage(commands::CoreState(core));
+            let ready = Arc::new(AtomicBool::new(false));
+            let attempts = Arc::new(AtomicU8::new(0));
+            app.manage(PanelReady(Arc::clone(&ready), Arc::clone(&attempts)));
+            panel_watchdog(app.handle().clone(), ready, attempts);
             match setup_tray(app) {
                 Ok(()) => app.manage(TrayReady(true)),
                 Err(e) => {
@@ -127,6 +195,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            commands::panel_ready,
             commands::status_get,
             commands::migration_dismiss,
             commands::log_history,
@@ -159,6 +228,7 @@ pub fn run() {
             commands::reward_finish_managed_copy,
             commands::reward_create_twitch,
             commands::reward_update_twitch,
+            commands::reward_delete_twitch,
             commands::redemptions_list,
             commands::redemption_dismiss,
             commands::redemption_refund,

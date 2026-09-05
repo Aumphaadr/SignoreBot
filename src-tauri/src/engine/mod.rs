@@ -113,7 +113,40 @@ struct RewardDedup {
 
 /// Есть что показать на оверлее: файл или хотя бы текст (алерт без файла).
 fn media_has_payload(m: &crate::config::MediaResponse) -> bool {
-    !m.file.is_empty() || (m.text.enabled && !m.text.content.trim().is_empty())
+    m.set.is_some() || !m.file.is_empty() || (m.text.enabled && !m.text.content.trim().is_empty())
+}
+
+/// «Колода» набора: файлы в случайном порядке, без повторов, пока набор не
+/// сыгран целиком; следующая колода не начинается с последнего сыгранного.
+#[derive(Default)]
+struct SetDeck {
+    snapshot: Vec<String>,
+    queue: std::collections::VecDeque<String>,
+    last: Option<String>,
+}
+
+impl SetDeck {
+    fn next(&mut self, files: &[String]) -> Option<String> {
+        use rand::seq::SliceRandom;
+        if files.is_empty() {
+            return None;
+        }
+        if self.snapshot != files {
+            self.snapshot = files.to_vec();
+            self.queue.clear();
+        }
+        if self.queue.is_empty() {
+            let mut order = files.to_vec();
+            order.shuffle(&mut rand::thread_rng());
+            if order.len() > 1 && self.last.as_deref() == Some(order[0].as_str()) {
+                order.swap(0, 1);
+            }
+            self.queue.extend(order);
+        }
+        let f = self.queue.pop_front()?;
+        self.last = Some(f.clone());
+        Some(f)
+    }
 }
 
 /// Итог выполнения реакции на награду — для учёта погашения.
@@ -170,6 +203,8 @@ pub struct Engine {
     /// Кулдаун на зрителя: «id команды:логин» → последнее срабатывание.
     user_cooldowns: Mutex<HashMap<String, Instant>>,
     antispam: Mutex<HashMap<(String, String), Instant>>,
+    /// Колоды наборов медиа: id набора → порядок показа.
+    set_decks: Mutex<HashMap<String, SetDeck>>,
     eventsub: Mutex<EventSubStatus>,
     changed_tx: broadcast::Sender<Changed>,
     /// Идентификаторы сообщений, отправленных ботом (последние 64): по ним
@@ -203,6 +238,7 @@ impl Engine {
             cooldowns: Mutex::new(HashMap::new()),
             user_cooldowns: Mutex::new(HashMap::new()),
             antispam: Mutex::new(HashMap::new()),
+            set_decks: Mutex::new(HashMap::new()),
             sent_ids: Mutex::new(std::collections::VecDeque::with_capacity(64)),
             in_flight: std::sync::atomic::AtomicUsize::new(0),
             redemptions: Mutex::new(load_redemptions(&redemptions_file)),
@@ -443,15 +479,44 @@ impl Engine {
     /// Отправить медиа на целевые оверлеи. Если у оверлея задана резервная
     /// реакция, сообщение ему не ставится в отложенную очередь — вместо
     /// этого возвращается реакция для исполнения (`allow_fallback`).
-    fn send_media(&self, response: &Response, ctx: &ActionCtx, allow_fallback: bool, queue: bool) -> MediaSend {
-        let m = &response.media;
-        let cfg = self.config.read();
+    /// Случайный файл из набора (см. `SetDeck`). Ошибка — словами для лога.
+    fn pick_from_set(&self, cfg: &crate::config::Config, set_id: &str) -> Result<String, String> {
+        let Some(set) = cfg.media_sets.iter().find(|s| s.id == set_id) else {
+            return Err("набора больше нет — выберите другой в редакторе реакции".into());
+        };
+        if set.files.is_empty() {
+            return Err(format!("набор «{}» пуст — добавьте в него файлы на вкладке «Медиа»", set.name));
+        }
+        let mut decks = self.set_decks.lock();
+        decks.entry(set_id.to_string()).or_default().next(&set.files).ok_or_else(|| "набор пуст".into())
+    }
 
-        // Антиспам: тот же файл от того же пользователя в узком окне.
+    fn send_media(&self, response: &Response, ctx: &ActionCtx, allow_fallback: bool, queue: bool) -> MediaSend {
+        let cfg = self.config.read();
+        // Набор: выбираем конкретный файл здесь; дальше всё как с одним файлом.
+        let mut picked;
+        let m: &crate::config::MediaResponse = if let Some(set_id) = &response.media.set {
+            match self.pick_from_set(&cfg, set_id) {
+                Ok(f) => {
+                    picked = response.media.clone();
+                    picked.file = f;
+                    picked.secondary_file.clear();
+                    &picked
+                }
+                Err(why) => {
+                    tracing::warn!(target: "signorebot::media", "Медиа «{}»: {why}", ctx.label);
+                    return MediaSend::default();
+                }
+            }
+        } else {
+            &response.media
+        };
+
+        // Антиспам: тот же файл (или набор) от того же пользователя в узком окне.
         let window = cfg.overlay_settings.antispam_window_ms;
         if window > 0 {
             if let Some(user) = &ctx.antispam_user {
-                let key = (user.to_lowercase(), m.file.clone());
+                let key = (user.to_lowercase(), m.set.as_ref().map(|s| format!("set:{s}")).unwrap_or_else(|| m.file.clone()));
                 let mut map = self.antispam.lock();
                 let now = Instant::now();
                 map.retain(|_, t| now.duration_since(*t) < Duration::from_secs(60));
