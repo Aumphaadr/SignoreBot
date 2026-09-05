@@ -63,7 +63,7 @@
   color: var(--text-muted);
   padding: 0 10px;
   font-size: 14px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   background: var(--bg-tertiary);
   border-right: 1px solid var(--border-color);
   white-space: nowrap;
@@ -112,7 +112,7 @@
   white-space: nowrap;
   color: var(--info);
   font-size: 14px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   padding: 6px 10px;
   background: var(--bg-tertiary);
   border-radius: var(--border-radius-sm);
@@ -309,7 +309,7 @@
 
 .obs-meta-item code {
   color: var(--info);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .obs-hint {
@@ -324,7 +324,7 @@
 
 .obs-hint code {
   color: var(--info);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 @media (max-width: 768px) {

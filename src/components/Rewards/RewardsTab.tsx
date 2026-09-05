@@ -125,7 +125,7 @@ export default function RewardsTab() {
         <h2><Icon name="gift" /> Награды за баллы канала</h2>
         <p className="rewards-description">Реакции бота на активацию наград. Переменные: <VariableBadges className="inline-variable-list" variables={VARS} descriptions={DESCR} /></p>
         <div className="eventsub-status-bar">
-          <div className={`eventsub-indicator ${es?.connected ? "connected" : "disconnected"}`}>{es?.connected ? <><Icon name="status-connected" /> EventSub подключен</> : <><Icon name="status-disconnected" /> EventSub отключен</>}</div>
+          <div className={`eventsub-indicator ${es?.connected ? "connected" : running ? "connecting" : "disconnected"}`}>{es?.connected ? <><Icon name="status-connected" /> EventSub подключен</> : running ? <><Icon name="refresh" className="spinning" /> EventSub подключается…</> : <><Icon name="status-disconnected" /> EventSub отключен</>}</div>
           {es?.connected && <span className="eventsub-subs-count"><Icon name="broadcast" /> Подписок: {es.subscriptions}</span>}
         </div>
       </div>

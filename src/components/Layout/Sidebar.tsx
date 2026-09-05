@@ -30,7 +30,7 @@ export default function Sidebar({ active, onChange }: { active: string; onChange
     <aside className="sidebar">
       <div className="sidebar-header">
         <h1><img src={logo} alt="" className="sidebar-logo" /> SignoreBot</h1>
-        <p className="sidebar-subtitle"><span className={`sidebar-dot ${ok ? "ok" : warn ? "bad" : "warn"}`} /> {ok ? "в работе" : warn ? "остановлен" : "подключение…"}</p>
+        <p className="sidebar-subtitle"><span className={`sidebar-dot ${ok ? "ok" : warn ? "bad" : "warn"}`} /> {ok ? "в работе" : warn ? "остановлен" : <><Icon name="refresh" className="spinning" /> подключение…</>}</p>
         {upd?.isNewer && upd.url && (
           <Hint text={<>вышла версия <b>{upd.latest}</b>, у вас {upd.current}; кнопка открывает страницу релиза со ссылками на файлы</>}>
             <button className="sidebar-update-btn" onClick={() => void openUrl(upd.url!)}><Icon name="download" /> Обновить до {upd.latest}</button>

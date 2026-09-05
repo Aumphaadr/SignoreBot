@@ -170,6 +170,7 @@ pub fn run() {
             commands::obs_test,
             commands::obs_refresh,
             commands::obs_set_url,
+            commands::obs_match_sources,
             commands::overlay_key_regenerate,
             commands::app_open_data_dir,
             commands::updates_check,

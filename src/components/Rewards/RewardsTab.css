@@ -205,7 +205,7 @@
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 14px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--info);
 }
 
@@ -262,3 +262,4 @@
 .reward-params-block summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .reward-params-body { margin-top: 12px; }
 .reward-params-form .form-row { gap: 14px; }
+.eventsub-indicator.connecting { color: var(--warning); }

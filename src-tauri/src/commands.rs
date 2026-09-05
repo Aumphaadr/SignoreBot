@@ -615,9 +615,38 @@ pub async fn obs_set_url(s: State<'_, CoreState>, input_name: String, overlay_pa
     let c = core(&s);
     let settings = c.config.read().obs.clone();
     let url = c.overlay_status().into_iter().find(|o| o.path == overlay_path).map(|o| o.url).ok_or("оверлей не найден")?;
-    obs::set_browser_source_url(&settings, &input_name, &url).await.map_err(|e| e.to_string())?;
-    tracing::info!(target: "signorebot::obs", "Источнику «{input_name}» прописан URL оверлея «{overlay_path}»");
-    Ok(url)
+    let changed = obs::set_browser_source_url(&settings, &input_name, &url).await.map_err(|e| e.to_string())?;
+    if changed {
+        tracing::info!(target: "signorebot::obs", "Источнику «{input_name}» прописан URL оверлея «{overlay_path}»");
+        Ok(format!("URL прописан в источник «{input_name}»"))
+    } else {
+        Ok(format!("У источника «{input_name}» уже этот адрес — ничего не менял"))
+    }
+}
+
+/// «Подобрать по адресам»: привязать Browser Source к оверлеям по их URL.
+#[tauri::command]
+pub async fn obs_match_sources(s: State<'_, CoreState>) -> Res<Vec<crate::config::ObsBrowserSource>> {
+    let c = core(&s);
+    let settings = c.config.read().obs.clone();
+    let paths: Vec<String> = c.config.read().overlays.iter().map(|o| o.path.clone()).collect();
+    let found = obs::match_sources(&settings, &paths).await.map_err(|e| e.to_string())?;
+    let bindings: Vec<crate::config::ObsBrowserSource> = found.into_iter().map(|(overlay_path, input_name)| crate::config::ObsBrowserSource { overlay_path, input_name }).collect();
+    if !bindings.is_empty() {
+        let b2 = bindings.clone();
+        c.update_config(|cfg| {
+            for b in &b2 {
+                if let Some(x) = cfg.obs.browser_sources.iter_mut().find(|x| x.overlay_path == b.overlay_path) {
+                    x.input_name = b.input_name.clone();
+                } else {
+                    cfg.obs.browser_sources.push(b.clone());
+                }
+            }
+        })?;
+        c.emit_changed("config");
+        tracing::info!(target: "signorebot::obs", "Browser Source подобраны по адресам: {}", b2.iter().map(|b| format!("{} → «{}»", b.overlay_path, b.input_name)).collect::<Vec<_>>().join(", "));
+    }
+    Ok(bindings)
 }
 
 #[tauri::command]

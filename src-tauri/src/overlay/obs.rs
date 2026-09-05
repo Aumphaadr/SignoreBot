@@ -84,7 +84,7 @@ pub async fn refresh_browser_sources(settings: &ObsSettings, input_names: &[Stri
             Ok(s) => s.settings,
             Err(e) => {
                 let msg = e.to_string();
-                if msg.contains("600") || msg.to_lowercase().contains("not found") {
+                if msg.contains("600") || msg.to_lowercase().replace(' ', "").contains("notfound") {
                     tracing::warn!(target: "signorebot::obs", "Источник «{name}» не найден в OBS. Проверьте имя в настройках.");
                 } else {
                     tracing::warn!(target: "signorebot::obs", "Не удалось прочитать источник «{name}»: {msg}");
@@ -117,11 +117,45 @@ pub async fn refresh_browser_sources(settings: &ObsSettings, input_names: &[Stri
     Ok(refreshed)
 }
 
-/// Установить URL источника (кнопка «Прописать URL в OBS»).
-pub async fn set_browser_source_url(settings: &ObsSettings, input_name: &str, url: &str) -> Result<(), ObsError> {
+/// Установить URL источника (кнопка «В OBS»). Если адрес уже такой —
+/// ничего не пишем (запись перезагружает страницу в OBS); `Ok(false)`.
+pub async fn set_browser_source_url(settings: &ObsSettings, input_name: &str, url: &str) -> Result<bool, ObsError> {
     let mut client = connect(settings).await?;
+    let current = client
+        .inputs()
+        .settings::<serde_json::Value>(InputId::Name(input_name))
+        .await
+        .map_err(map_err)?
+        .settings
+        .get("url")
+        .and_then(|u| u.as_str())
+        .map(String::from);
+    if current.as_deref() == Some(url) {
+        client.disconnect().await;
+        return Ok(false);
+    }
     let patch = serde_json::json!({ "url": url });
     let r = client.inputs().set_settings(SetSettings { input: InputId::Name(input_name), settings: &patch, overlay: Some(true) }).await.map_err(map_err);
     client.disconnect().await;
-    r
+    r.map(|_| true)
+}
+
+/// Имена всех Browser Source в OBS — для подсказок, когда привязка не нашлась.
+pub async fn browser_source_names(settings: &ObsSettings) -> Result<Vec<String>, ObsError> {
+    Ok(test_connection(settings).await?.into_iter().filter(|s| s.input_kind.contains("browser")).map(|s| s.input_name).collect())
+}
+
+/// Подобрать Browser Source по адресам: источник, чей URL ведёт на
+/// `/overlay/<path>`, привязывается к этому оверлею. Возвращает пары
+/// (путь оверлея, имя источника).
+pub async fn match_sources(settings: &ObsSettings, paths: &[String]) -> Result<Vec<(String, String)>, ObsError> {
+    let sources = test_connection(settings).await?;
+    let mut out = Vec::new();
+    for path in paths {
+        let needle = format!("/overlay/{path}");
+        if let Some(s) = sources.iter().find(|s| s.url.as_deref().map(|u| u.split('?').next().unwrap_or(u).trim_end_matches('/').ends_with(&needle)).unwrap_or(false)) {
+            out.push((path.clone(), s.input_name.clone()));
+        }
+    }
+    Ok(out)
 }

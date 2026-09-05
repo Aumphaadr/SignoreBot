@@ -36,6 +36,12 @@ SignoreBot распространяется по лицензии MIT (см. `LI
 Полные тексты лицензий зависимостей — в исходниках соответствующих пакетов
 (`cargo metadata`, `node_modules/*/LICENSE`).
 
+## Шрифт панели Source Code Pro
+
+Моноширинный шрифт панели (логи, переменные, адреса) — Source Code Pro,
+© Adobe, SIL Open Font License 1.1; файлы в `src/assets/fonts/`, текст
+лицензии — `SourceCodePro-OFL.txt` рядом.
+
 ## Twitch
 
 Приложение работает через публичный Twitch API и подчиняется Twitch Developer

@@ -170,7 +170,7 @@ input:checked + .tab-toggle-slider:before {
 
 .alias-name {
   color: var(--info);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
 }
 

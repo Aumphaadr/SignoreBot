@@ -38,7 +38,7 @@
   font-size: 18px;
   font-weight: 700;
   color: var(--accent-text);
-  font-family: monospace;
+  font-family: var(--font-mono);
   user-select: none;
   flex-shrink: 0;
 }
@@ -85,6 +85,6 @@
   border-radius: 20px;
   font-size: 14px;
   color: var(--accent-text);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 500;
 }

@@ -55,6 +55,34 @@
 }
 
 @font-face {
+  font-family: "Source Code Pro";
+  src: url("../assets/fonts/SourceCodePro-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  src: url("../assets/fonts/SourceCodePro-Semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  src: url("../assets/fonts/SourceCodePro-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  src: url("../assets/fonts/SourceCodePro-It.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
   font-family: "Jost";
   src: url("../assets/fonts/Jost-VariableFont_wght.ttf") format("truetype");
   font-weight: 100 900;
@@ -71,6 +99,7 @@
 
 body {
   font-family: "Jost", "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-mono: "Source Code Pro", ui-monospace, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
   font-size: 15px;
   letter-spacing: 0.01em;
   background: var(--bg-primary);

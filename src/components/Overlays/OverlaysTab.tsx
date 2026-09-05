@@ -1,7 +1,7 @@
 import Icon from "../Icon";
 import TestButton from "../Common/TestButton";
 import { copyText } from "../../api/clipboard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api, errText, type ObsSource, type Overlay, type Response } from "../../api";
 import Modal, { ModalActions } from "../Common/Modal";
@@ -106,10 +106,19 @@ export default function OverlaysTab() {
     finally { setBusy(false); }
   };
   const setUrl = async (inputName: string, path: string) => {
-    try { await api.obsSetUrl(inputName, path); showNotification(`URL прописан в источник «${inputName}»`, NOTIFICATION_TYPES.SUCCESS, 3000); }
+    try { const msg = await api.obsSetUrl(inputName, path); showNotification(msg, NOTIFICATION_TYPES.SUCCESS, 3000); }
     catch (e) { showNotification(`${errText(e)}`, NOTIFICATION_TYPES.ERROR, 5000); }
   };
   const browserSources = sources?.filter((s) => s.inputKind.includes("browser")) ?? [];
+  // список источников OBS — для подсказки в поле «Browser Source в OBS»
+  useEffect(() => { if (obs.enabled && sources === null) api.obsTest().then(setSources).catch(() => {}); }, [obs.enabled, sources]);
+  const matchSources = async () => {
+    try {
+      const found = await api.obsMatchSources();
+      if (found.length === 0) showNotification("В OBS не нашлось Browser Source с адресами этих оверлеев. Пропишите адрес кнопкой «В OBS» у оверлея или укажите имя источника вручную.", NOTIFICATION_TYPES.WARNING, 6000);
+      else showNotification(`Подобрано: ${found.map((b) => `${b.overlayPath} → «${b.inputName}»`).join(", ")}`, NOTIFICATION_TYPES.SUCCESS, 5000);
+    } catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 5000); }
+  };
 
   return (
     <div className="overlays-tab">
@@ -149,8 +158,9 @@ export default function OverlaysTab() {
                   </div>
                 </div>
                 <div className="overlay-field">
-                  <label>Browser Source в OBS <Tooltip text="Имя источника в OBS — для автоматической перезагрузки и прописывания URL." /></label>
-                  <input type="text" value={bs?.inputName ?? ""} placeholder={`Overlay ${o.name}`} onChange={(e) => setObs({ browserSources: bs ? obs.browserSources.map((b) => (b.overlayPath === o.path ? { ...b, inputName: e.target.value } : b)) : [...obs.browserSources, { overlayPath: o.path, inputName: e.target.value }] })} className="overlay-name-input" />
+                  <label>Browser Source в OBS <Tooltip text="Имя источника в OBS точно как в списке источников OBS — по нему бот перезагружает страницу и прописывает адрес. При включённой интеграции список подставляется из OBS; кнопка «Подобрать по адресам» в блоке OBS заполняет поле сама." /></label>
+                  <input type="text" list="obs-browser-sources" value={bs?.inputName ?? ""} placeholder={`Overlay ${o.name}`} onChange={(e) => setObs({ browserSources: bs ? obs.browserSources.map((b) => (b.overlayPath === o.path ? { ...b, inputName: e.target.value } : b)) : [...obs.browserSources, { overlayPath: o.path, inputName: e.target.value }] })} className="overlay-name-input" />
+                  {browserSources.length > 0 && <datalist id="obs-browser-sources">{browserSources.map((x) => <option key={x.inputName} value={x.inputName} />)}</datalist>}
                 </div>
               </div>
               <div className="overlay-card-url">
@@ -218,7 +228,7 @@ export default function OverlaysTab() {
             </div>
             {sources && (
               <div className="obs-meta-list" style={{ marginTop: 12 }}>
-                <div className="obs-meta-item"><span className="obs-meta-label">Browser Source в OBS:</span>{browserSources.length === 0 && <span>нет</span>}</div>
+                <div className="obs-meta-item"><span className="obs-meta-label">Browser Source в OBS:</span>{browserSources.length === 0 && <span>нет</span>}<button className="small" style={{ marginLeft: "auto" }} onClick={() => void matchSources()} title="Найти в OBS источники, чьи адреса ведут на оверлеи бота, и записать их имена в привязки"><Icon name="lightning" /> Подобрать по адресам</button></div>
                 {browserSources.map((s) => (
                   <div key={s.inputName} className="obs-meta-item"><code>{s.inputName}</code><span className="text-muted" style={{ fontSize: 12 }}>{s.url ?? "—"}</span></div>
                 ))}
