@@ -105,7 +105,6 @@ export default function CommandsTab() {
               <div className="command-card-header">
                 <div className="command-title">
                   <span className="command-name">!{c.name}</span>
-                  <Hint text={hintStatus({ kind: "command", name: c.name }, c.enabled)}><span className={`command-status-badge ${c.enabled ? "enabled" : "disabled"}`}>{c.enabled ? "Вкл" : "Выкл"}</span></Hint>
                   <Hint text={hintReaction({ kind: "command", name: c.name }, c.response)}><span className="command-type-badge">{reactionBadge(c.response)}</span></Hint>
                   {c.aliases.length > 0 && <Hint text={hintAliases(c.name, c.aliases)}><span className="command-aliases-badge"><Icon name="lightning" /> {c.aliases.map((a) => `!${a}`).join(", ")}</span></Hint>}
                   {c.permissions.length > 0 && <Hint text={hintPermissions(c.name, c.permissions)}><span className="permissions-badge"><Icon name="lock" /> {c.permissions.length}</span></Hint>}
@@ -114,7 +113,7 @@ export default function CommandsTab() {
                   {!ov && c.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="broadcast" /> Все оверлеи</span></Hint>}
                 </div>
                 <div className="command-actions">
-                  <button onClick={() => toggle(c)} className={`status-toggle-btn ${c.enabled ? "on" : "off"}`} title={c.enabled ? "Выключить" : "Включить"}><Icon name="power"  /></button>
+                  <Hint text={hintStatus({ kind: "command", name: c.name }, c.enabled)}><button onClick={() => toggle(c)} className={`status-toggle-btn ${c.enabled ? "on" : "off"}`}><Icon name="power"  /></button></Hint>
                   <button onClick={() => setEditing({ cmd: c, isNew: false })} className="edit-btn" title="Редактировать"><Icon name="edit"  /></button>
                   <button onClick={() => remove(c)} className="delete-btn" title="Удалить"><Icon name="delete"  /></button>
                 </div>

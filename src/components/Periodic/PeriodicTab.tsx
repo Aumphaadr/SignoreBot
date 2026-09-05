@@ -218,7 +218,6 @@ export default function PeriodicTab() {
                 <div className="periodic-title">
                   {ev.color && <span className="periodic-color-dot" style={{ backgroundColor: ev.color }} />}
                   <span className="periodic-name">{ev.name}</span>
-                  <Hint text={hintStatus({ kind: "periodic", name: ev.name }, ev.enabled)}><span className={`periodic-status-badge ${ev.enabled ? "enabled" : "disabled"}`}>{ev.enabled ? "Вкл" : "Выкл"}</span></Hint>
                   <Hint text={hintInterval(ev.name, ev.intervalSec)}><span className="periodic-interval-badge"><Icon name="stopwatch" /> {formatInterval(ev.intervalSec)}</span></Hint>
                   {ev.offsetSec > 0 && <Hint text={hintOffset(ev.name, ev.offsetSec)}><span className="periodic-offset-badge"><Icon name="fast-forward" /> +{formatInterval(ev.offsetSec)}</span></Hint>}
                   {ev.fireOnStart && <Hint text={hintFireOnStart(ev.name)}><span className="periodic-type-badge"><Icon name="launch-rocket" /> при старте</span></Hint>}
@@ -229,7 +228,7 @@ export default function PeriodicTab() {
                 </div>
                 <div className="periodic-actions">
                   <button onClick={() => void trigger(ev)} className="trigger-btn" title="Запустить сейчас"><Icon name="play"  /></button>
-                  <button onClick={() => setSection("periodicEvents", events.map((x) => (x.id === ev.id ? { ...x, enabled: !x.enabled } : x)))} className={`status-toggle-btn ${ev.enabled ? "on" : "off"}`}><Icon name="power"  /></button>
+                  <Hint text={hintStatus({ kind: "periodic", name: ev.name }, ev.enabled)}><button onClick={() => setSection("periodicEvents", events.map((x) => (x.id === ev.id ? { ...x, enabled: !x.enabled } : x)))} className={`status-toggle-btn ${ev.enabled ? "on" : "off"}`}><Icon name="power"  /></button></Hint>
                   <button onClick={() => setEditing({ ev, isNew: false })} className="edit-btn" title="Редактировать"><Icon name="edit"  /></button>
                   <button onClick={() => showConfirm(`Удалить событие «${ev.name}»?\n\nЭто действие нельзя отменить.`, () => { setSection("periodicEvents", events.filter((x) => x.id !== ev.id)); showNotification(`Событие «${ev.name}» удалено`, NOTIFICATION_TYPES.WARNING, 2000); })} className="delete-btn" title="Удалить"><Icon name="delete"  /></button>
                 </div>
