@@ -441,8 +441,16 @@
             const exitDuration = item.animation?.exitDuration || 0.5;
 
             try {
-                // Только аудио (без картинки)
-                if (item.type === 'audio' && !item.hasVisual) {
+                // Только текст (без файла)
+                if (item.type === 'text') {
+                    container.innerHTML = '';
+                    container.classList.remove('hidden');
+                    container.appendChild(createTextOnly(item));
+                    const duration = item.duration || IMAGE_DURATION;
+                    log(`📝 Текст без файла: ${duration} сек`);
+                    setTimeout(() => finishQueuedMedia(exitAnim, exitDuration, generation), duration * 1000);
+
+                } else if (item.type === 'audio' && !item.hasVisual) {
                     container.innerHTML = '';
 
                     if (item.text?.enabled && item.text?.content) {
@@ -612,7 +620,11 @@
 
             try {
                 // Только аудио (без картинки)
-                if (mediaData.type === 'audio' && !mediaData.hasVisual) {
+                if (mediaData.type === 'text') {
+                    layer.appendChild(createTextOnly(mediaData));
+                    setTimeout(cleanup, (mediaData.duration || IMAGE_DURATION) * 1000);
+
+                } else if (mediaData.type === 'audio' && !mediaData.hasVisual) {
                     if (mediaData.text?.enabled && mediaData.text?.content) {
                         const wrapper = document.createElement('div');
                         wrapper.className = 'media-wrapper';
@@ -708,6 +720,25 @@
             }
         }
 
+        // Обёртка с одним текстом — для алерта без файла (та же вёрстка, что у текста при аудио)
+        function createTextOnly(item) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'media-wrapper';
+            const enterAnim = item.animation?.enter;
+            const enterDur = item.animation?.enterDuration || 0.5;
+            if (enterAnim && enterAnim !== 'none') {
+                wrapper.classList.add(`media-enter-${enterAnim}`);
+                wrapper.style.animationDuration = `${enterDur}s`;
+            }
+            wrapper.appendChild(createAnimatedText(
+                item.text.content,
+                item.text.animation || 'none',
+                item.text.font || null,
+                item.text.animationAmplitude || 1
+            ));
+            return wrapper;
+        }
+
         function handleMediaCommand(data) {
             const mediaFile = data.videoFile;
             const secondaryFile = data.secondaryFile || null;
@@ -735,11 +766,14 @@
                 }
             }
 
+            // Алерт без файла: только текст на заданное время
+            const textOnly = !mediaFile && !!(data.text && data.text.enabled && data.text.content);
+
             const mediaItem = {
                 src: visualFile ? mediaUrl(visualFile) : null,
                 audioSrc: audioFile ? mediaUrl(audioFile) : null,
                 file: mediaFile,
-                type: visualType || (audioFile ? 'audio' : 'unknown'),
+                type: visualType || (audioFile ? 'audio' : (textOnly ? 'text' : 'unknown')),
                 hasAudio: !!audioFile,
                 hasVisual: !!visualFile,
                 volume: data.volume ?? 100,

@@ -1,8 +1,10 @@
 import Icon from "../Icon";
+import TestButton from "../Common/TestButton";
 import Tooltip from "../Tooltip";
 import { Em, Hint, hintOverlay, hintOverlayAll, hintReaction, hintRewardMissing, hintStatus } from "../Common/hints";
 import { useCallback, useEffect, useState } from "react";
-import { api, errText, type ChannelReward, type ManagedCopyResult, type PendingRedemption, type Reward } from "../../api";
+import { api, errText, type ChannelReward, type ManagedCopyResult, type NewReward, type PendingRedemption, type Reward } from "../../api";
+import RewardParamsForm, { defaultParams, paramsFromChannel, paramsProblem } from "./RewardParamsForm";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { defaultReward } from "../../api/defaults";
 import { useAppState } from "../../state/AppState";
@@ -66,6 +68,22 @@ export default function RewardsTab() {
   const [editing, setEditing] = useState<{ reward: Reward | null; isNew: boolean } | null>(null);
   const [redemptions, setRedemptions] = useState<PendingRedemption[]>([]);
   const [copyInfo, setCopyInfo] = useState<{ reward: Reward; result: ManagedCopyResult } | null>(null);
+  const [creating, setCreating] = useState<NewReward | null>(null);
+  const [creatingBusy, setCreatingBusy] = useState(false);
+  const createOnTwitch = async () => {
+    if (!creating) return;
+    const problem = paramsProblem(creating);
+    if (problem) { showNotification(problem, NOTIFICATION_TYPES.WARNING, 3000); return; }
+    setCreatingBusy(true);
+    try {
+      const created = await api.rewardCreateTwitch(creating);
+      setCreating(null);
+      showNotification(`Награда «${created.title}» создана на Twitch. Картинку ей можно загрузить в панели Twitch — приложениям Twitch этого не даёт.`, NOTIFICATION_TYPES.SUCCESS, 8000);
+      void load();
+      setEditing({ reward: { ...defaultReward(created.id, created.title), managed: true }, isNew: true });
+    } catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 8000); }
+    finally { setCreatingBusy(false); }
+  };
   const loadRedemptions = useCallback(() => { api.redemptionsList().then(setRedemptions).catch(() => {}); }, []);
   useEffect(() => { loadRedemptions(); }, [loadRedemptions]);
 
@@ -142,8 +160,21 @@ export default function RewardsTab() {
         })}
       </div>
       <div className="add-reward-section">
-        <button className="add-reward-main-btn" onClick={() => setEditing({ reward: null, isNew: true })}><Icon name="add"  /> Добавить реакцию на награду</button>
+        <button className="add-reward-main-btn" onClick={() => setCreating(defaultParams())} disabled={!running} title={running ? "Создать награду на канале от имени бота и сразу настроить реакцию" : "Бот не запущен — награду создать нельзя"}><Icon name="channel-points" /> Новая награда для Twitch</button>
+        <button className="add-reward-main-btn secondary" onClick={() => setEditing({ reward: null, isNew: true })}><Icon name="add"  /> Добавить реакцию</button>
       </div>
+
+      <Modal isOpen={!!creating} onClose={() => setCreating(null)} title="Новая награда для Twitch" size="large">
+        {creating && (
+          <div>
+            <ModalActions>
+              <button className="primary" onClick={() => void createOnTwitch()} disabled={creatingBusy}><Icon name="channel-points" /> {creatingBusy ? "Создаём…" : "Создать на Twitch"}</button>
+            </ModalActions>
+            <p className="form-hint" style={{ marginBottom: 14 }}>Награда появится на канале сразу и будет создана через бота: ему доступны возврат баллов при недоступном оверлее и правка параметров отсюда. Картинку награде задают только в панели Twitch. Следующим шагом откроется редактор реакции.</p>
+            <RewardParamsForm value={creating} onChange={setCreating} />
+          </div>
+        )}
+      </Modal>
 
       <div className="redemptions-section">
         <div className="redemptions-header">
@@ -200,18 +231,48 @@ export default function RewardsTab() {
         {editing && !editing.reward && (
           <RewardSelector channel={channel} existing={rewards} loading={loading} onRefresh={() => void load()} onPick={(c) => setEditing({ reward: defaultReward(c.id, c.title), isNew: true })} onCancel={() => setEditing(null)} />
         )}
-        {editing?.reward && <RewardEditor key={editing.reward.id} initial={editing.reward} isNew={editing.isNew} onSave={save} info={channel.find((c) => c.id === editing.reward!.rewardId)} onMakeCopy={(rw) => { save(rw); makeCopy(rw); }} onFinishCopy={(rw) => { save(rw); void finishCopy(rw); }} />}
+        {editing?.reward && <RewardEditor key={editing.reward.id} initial={editing.reward} isNew={editing.isNew} onSave={save} info={channel.find((c) => c.id === editing.reward!.rewardId)} onMakeCopy={(rw) => { save(rw); makeCopy(rw); }} onFinishCopy={(rw) => { save(rw); void finishCopy(rw); }} onChannelReload={() => void load()} />}
       </Modal>
     </div>
   );
 }
 
-function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy }: { initial: Reward; isNew: boolean; onSave: (r: Reward) => void; info?: ChannelReward; onMakeCopy: (r: Reward) => void; onFinishCopy: (r: Reward) => void }) {
+function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy, onChannelReload }: { initial: Reward; isNew: boolean; onSave: (r: Reward) => void; info?: ChannelReward; onMakeCopy: (r: Reward) => void; onFinishCopy: (r: Reward) => void; onChannelReload: () => void }) {
   const { config } = useAppState();
+  const { showNotification } = useNotification();
   const [r, setR] = useState(initial);
   const managed = !!info?.isManaged;
+  const [params, setParams] = useState<NewReward | null>(null);
+  const [paramsBusy, setParamsBusy] = useState(false);
+  const applyParams = async () => {
+    if (!params) return;
+    const problem = paramsProblem(params);
+    if (problem) { showNotification(problem, NOTIFICATION_TYPES.WARNING, 3000); return; }
+    setParamsBusy(true);
+    try {
+      const updated = await api.rewardUpdateTwitch(r.rewardId, params);
+      setR({ ...r, rewardTitle: updated.title });
+      setParams(paramsFromChannel(updated));
+      showNotification(`Награда «${updated.title}» на Twitch обновлена`, NOTIFICATION_TYPES.SUCCESS, 3000);
+      onChannelReload();
+    } catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 8000); }
+    finally { setParamsBusy(false); }
+  };
   return (
     <div className="reward-editor">
+      {managed && info && (
+        <details className="reward-params-block" open={isNew}>
+          <summary><Icon name="channel-points" /> Параметры награды на Twitch <span className="form-hint" style={{ display: "inline", marginLeft: 8 }}>{info.cost} баллов{info.cooldownSeconds ? ` · кулдаун ${info.cooldownSeconds} с` : ""}{info.isEnabled ? "" : " · выключена"}</span></summary>
+          <div className="reward-params-body">
+            <RewardParamsForm value={params ?? paramsFromChannel(info)} onChange={setParams} />
+            <div className="flex gap-2" style={{ marginTop: 8 }}>
+              <button className="primary small" onClick={() => void applyParams()} disabled={paramsBusy || !params}><Icon name="check" /> {paramsBusy ? "Применяем…" : "Применить на Twitch"}</button>
+              {params && <button className="small" onClick={() => setParams(null)}>Отменить правки</button>}
+            </div>
+            <div className="form-hint" style={{ marginTop: 8 }}>Те же настройки можно менять и в панели Twitch — бот подхватит их сам. Картинка — только там.</div>
+          </div>
+        </details>
+      )}
       <div className="reward-refund-block">
         <label className={`toggle-label ${managed ? "" : "disabled"}`}>
           <span className="toggle-switch"><input type="checkbox" checked={r.refundIfUnavailable} disabled={!managed} onChange={(e) => setR({ ...r, refundIfUnavailable: e.target.checked })} /><span className="toggle-slider"></span></span>
@@ -229,6 +290,7 @@ function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy }
         {!info && <div className="form-hint">Список наград канала недоступен (бот не запущен) — управление возвратом появится, когда бот подключится.</div>}
       </div>
       <ModalActions>
+        <TestButton response={r.response} vars={{ user: "TestUser", message: "тест" }} />
         <button onClick={() => onSave(r)} className="save-reward-btn primary">{isNew ? <><Icon name="add"  /> Создать реакцию</> : <><Icon name="save"  /> Сохранить</>}</button>
       </ModalActions>
       <div className="reward-editor-header">

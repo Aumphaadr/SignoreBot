@@ -1,4 +1,5 @@
 import Icon from "../Icon";
+import TestButton from "../Common/TestButton";
 import { useState } from "react";
 import { api, errText, type EventReaction } from "../../api";
 import { EVENT_TYPES, defaultResponse } from "../../api/defaults";
@@ -71,7 +72,7 @@ function EventEditor({ type, initial, onSave }: { type: string; initial: EventRe
   const meta = EVENT_TYPES[type];
   return (
     <div className="event-editor">
-      <ModalActions><button onClick={() => onSave(e)} className="save-event-btn primary"><Icon name="save"  /> Сохранить</button></ModalActions>
+      <ModalActions><TestButton response={e.response} eventType={type} /><button onClick={() => onSave(e)} className="save-event-btn primary"><Icon name="save"  /> Сохранить</button></ModalActions>
       <div className="event-editor-header">
         <div className="event-meta">
           <h2><Icon name={meta.icon} /> {meta.label}</h2>

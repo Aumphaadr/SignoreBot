@@ -87,6 +87,16 @@ used: boolean, };
 
 export type MediaImportResult = { files: Array<MediaFile>, errors: Array<string>, };
 
+/**
+ * Параметры новой награды (управляемой копии).
+ * Параметры награды для Create/Update Custom Reward (те же поля, что в панели Twitch).
+ */
+export type NewReward = { title: string, cost: number, prompt: string, isUserInputRequired: boolean, isEnabled: boolean, backgroundColor: string, cooldownSeconds: number | null, maxPerStream: number | null, maxPerUserPerStream: number | null, 
+/**
+ * Погашения мимо очереди запросов: закрываются сразу, вернуть баллы нельзя.
+ */
+skipQueue: boolean, };
+
 export type ObsSource = { inputName: string, inputKind: string, 
 /**
  * Текущий URL (если это browser source).
@@ -130,6 +140,11 @@ export type ShoutoutStatus = { queue: Array<QueueItem>, done: Array<DoneItem>,
  * Осталось до конца кулдауна, мс.
  */
 cooldownRemainingMs: number, processing: boolean, currentId: number, };
+
+/**
+ * Тестовая отправка медиа на оверлей.
+ */
+export type TestOutcome = { chatEnabled: boolean, mediaEnabled: boolean, chatSent: boolean, mediaSent: boolean, mediaUnavailable: boolean, running: boolean, };
 
 export type TimerStatus = { id: string, name: string, 
 /**

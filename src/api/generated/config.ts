@@ -26,7 +26,11 @@ notificationSeconds: number,
 /**
  * Уведомления не исчезают сами — только по крестику.
  */
-notificationsSticky: boolean, };
+notificationsSticky: boolean, 
+/**
+ * Масштаб панели, % (100 — как есть). Крупнее текст и значки для слабого зрения.
+ */
+uiZoom: number, };
 
 export type BanWord = { word: string, kind: BanWordKind, 
 /**
@@ -61,7 +65,15 @@ permissions: Array<string>,
 /**
  * Кулдаун между срабатываниями, с (0 — нет).
  */
-cooldownSec: number, response: Response, };
+cooldownSec: number, 
+/**
+ * Кулдаун на одного зрителя, с (0 — нет).
+ */
+cooldownUserSec: number, 
+/**
+ * Отвечать реплаем на сообщение зрителя, а не обычным сообщением.
+ */
+reply: boolean, response: Response, };
 
 /**
  * Элемент чат-сообщения. Сообщение = конкатенация без разделителей.

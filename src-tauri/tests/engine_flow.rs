@@ -261,3 +261,108 @@ async fn refund_reward_does_not_queue_media() {
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     assert!(rx.try_recv().is_err(), "медиа награды с возвратом не должно быть в очереди");
 }
+
+/// Чат опередил EventSub: реакция выполнена по чату, но учёт погашения
+/// (список невыполненных) всё равно происходит по событию EventSub.
+#[tokio::test]
+async fn chat_first_redemption_still_recorded() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = AppPaths::new(dir.path());
+    paths.ensure_dirs().unwrap();
+    let mut cfg = Config::default();
+    cfg.normalize();
+    cfg.overlays.push(overlay("o-a", "Видео", "video", None));
+    let mut rw = Reward { reward_id: "rw-1".into(), reward_title: "Скажи".into(), ..Default::default() };
+    rw.response.media.enabled = true; rw.response.media.file = "say.mp4".into(); rw.response.media.overlay = Some("o-a".into());
+    cfg.rewards.push(rw);
+    let config: SharedConfig = Arc::new(parking_lot::RwLock::new(cfg));
+    let auth = AuthManager::new("cid".into(), Secrets::file_only(&paths));
+    let helix = Arc::new(Helix::new(Arc::clone(&auth)));
+    let hub = OverlayHub::new();
+    let engine = Engine::new(config, auth, helix, hub.clone(), paths.deleted_messages_log());
+    // сообщение чата с признаком награды пришло первым
+    let mut m = chat("frank", "привет всем");
+    if let TwitchEvent::Chat(ref mut c) = m { c.reward_id = Some("rw-1".into()); }
+    engine.dispatch(m).await;
+    assert!(engine.redemptions().is_empty(), "по чату id погашения нет — записи быть не должно");
+    // следом — событие погашения с тем же зрителем и текстом
+    engine.dispatch(TwitchEvent::Redemption { redemption_id: "red-9".into(), reward_id: "rw-1".into(), reward_title: "Скажи".into(), user_name: "frank".into(), user_input: "привет всем".into() }).await;
+    let list = engine.redemptions();
+    assert_eq!(list.len(), 1, "учёт погашения должен довершиться по EventSub");
+    assert_eq!(list[0].redemption_id, "red-9");
+    assert_eq!(list[0].status, "pending");
+    // и медиа при этом отправлено один раз (лежит в очереди одно сообщение)
+    assert_eq!(hub.pending_count("video"), 1);
+}
+
+/// Кулдаун на зрителя: тот же зритель ждёт, другой — проходит.
+#[tokio::test]
+async fn per_user_cooldown() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = AppPaths::new(dir.path());
+    paths.ensure_dirs().unwrap();
+    let mut cfg = Config::default();
+    cfg.normalize();
+    cfg.overlay_settings.antispam_window_ms = 0;
+    cfg.overlays.push(overlay("o-a", "Аудио", "audio", None));
+    let mut cmd = Command { name: "дзынь".into(), cooldown_user_sec: 60, ..Default::default() };
+    cmd.response.media.enabled = true; cmd.response.media.file = "ding.mp3".into(); cmd.response.media.overlay = Some("o-a".into());
+    cfg.commands.push(cmd);
+    let config: SharedConfig = Arc::new(parking_lot::RwLock::new(cfg));
+    let auth = AuthManager::new("cid".into(), Secrets::file_only(&paths));
+    let helix = Arc::new(Helix::new(Arc::clone(&auth)));
+    let hub = OverlayHub::new();
+    let engine = Engine::new(config, auth, helix, hub.clone(), paths.deleted_messages_log());
+    let (_i, mut rx) = hub.connect("audio", "t".into());
+    engine.dispatch(chat("alice", "!дзынь")).await;
+    engine.dispatch(chat("alice", "!дзынь")).await; // кулдаун — игнор
+    engine.dispatch(chat("bob", "!дзынь")).await;   // другой зритель — проходит
+    let mut got = 0;
+    while rx.try_recv().is_ok() { got += 1; }
+    assert_eq!(got, 2);
+}
+
+/// «Стоп» у неподключённого оверлея выбрасывает отложенную очередь.
+#[test]
+fn clear_pending_drops_queue() {
+    let hub = OverlayHub::new();
+    assert!(!hub.send_to_path("audio", "{\"a\":1}"));
+    assert!(!hub.send_to_path("audio", "{\"a\":2}"));
+    assert_eq!(hub.pending_count("audio"), 2);
+    assert_eq!(hub.clear_pending("audio"), 2);
+    assert_eq!(hub.pending_count("audio"), 0);
+}
+
+/// Алерт без файла: включённый текст уходит на оверлей и без медиафайла.
+#[tokio::test]
+async fn text_only_alert_is_sent() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = AppPaths::new(dir.path());
+    paths.ensure_dirs().unwrap();
+    let mut cfg = Config::default();
+    cfg.normalize();
+    cfg.overlays.push(overlay("o-a", "Видео", "video", None));
+    let mut cmd = Command { name: "привет".into(), ..Default::default() };
+    cmd.response.media.enabled = true;
+    cmd.response.media.overlay = Some("o-a".into());
+    cmd.response.media.text.enabled = true;
+    cmd.response.media.text.content = "Привет, {user}!".into();
+    cmd.response.media.image_duration_sec = Some(3.0);
+    let mut empty = Command { name: "пусто".into(), ..Default::default() };
+    empty.response.media.enabled = true; // ни файла, ни текста — на оверлей ничего не идёт
+    cfg.commands.push(cmd); cfg.commands.push(empty);
+    let config: SharedConfig = Arc::new(parking_lot::RwLock::new(cfg));
+    let auth = AuthManager::new("cid".into(), Secrets::file_only(&paths));
+    let helix = Arc::new(Helix::new(Arc::clone(&auth)));
+    let hub = OverlayHub::new();
+    let engine = Engine::new(config, auth, helix, hub.clone(), paths.deleted_messages_log());
+    let (_i, mut rx) = hub.connect("video", "t".into());
+    engine.dispatch(chat("gina", "!привет")).await;
+    let v: serde_json::Value = serde_json::from_str(&rx.recv().await.unwrap()).unwrap();
+    assert_eq!(v["videoFile"], "");
+    assert_eq!(v["text"]["content"], "Привет, gina!");
+    assert_eq!(v["duration"], 3.0);
+    engine.dispatch(chat("gina", "!пусто")).await;
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    assert!(rx.try_recv().is_err(), "пустое медиа отправляться не должно");
+}

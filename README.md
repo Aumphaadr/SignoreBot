@@ -125,6 +125,8 @@ SIGNOREBOT_DATA_DIR=/tmp/sb npm run tauri dev   # отдельные данны�
 npm run test:rust                               # тесты ядра; полный прогон генерирует src/api/generated/*.ts
 npm run icons                                   # пересобрать src/components/Icon/icons.ts из src/assets/icons/*.svg
 npm run fonts                                   # пересобрать встроенные шрифты оверлея из src-tauri/fonts/manifest.json
+npm run site                                    # собрать сайт из site/ в docs/ (GitHub Pages)
+npm run site:serve                              # посмотреть собранный сайт: http://127.0.0.1:8765/
 npm run build:linux                             # deb + AppImage (с tools/fix-appimage.sh)
 npm run build:windows                           # portable .exe кросс-компиляцией с Linux (cargo-xwin)
 npm run tauri build -- --bundles nsis           # на Windows: установщик
@@ -171,7 +173,8 @@ src-tauri/overlay/  overlay.html, overlay.css, overlay-sw.js — встраив�
                     тот же CSS импортирует панель, поэтому предпросмотр совпадает с OBS
 src-tauri/tests/    ломатели, интеграционные тесты, фикстура конфига v1
 src/                панель: api/ (IPC + сгенерированные типы), state/, components/<Вкладка>/
-docs/               сайт (GitHub Pages)
+site/               исходники сайта: уроки (pages/), каркас, стили, маршрутизатор
+docs/               собранный сайт (GitHub Pages): npm run site; картинки и шрифты лежат здесь
 ```
 
 Протокол оверлея: `http://<host>:<port>/overlay/<path>?key=<ключ>` — страница,

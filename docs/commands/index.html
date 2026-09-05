@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Первая команда и слово «реакция» · SignoreBot</title>
+<meta name="description" content="Создаём команду !тест, которая отвечает в чате от имени бота, и знакомимся с термином «реакция» — так в SignoreBot называется всё, что бот делает в ответ.">
+<link rel="icon" href="../logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body class="lesson" data-root="../">
+
+<header class="top"><div class="wrap">
+  <a class="brand" href="../"><img src="../logo.svg" alt=""> SignoreBot</a>
+  <nav>
+    <a href="../">Главная</a>
+    <a href="../start/">Уроки</a>
+    <a href="../#download">Скачать</a>
+    <a href="https://github.com/Aumphaadr/SignoreBot">GitHub</a>
+  </nav>
+</div></header>
+
+<div class="page wrap" id="page">
+<aside class="lessons-aside"><div class="aside-title">Уроки</div><ol class="lesson-list">
+<li><a href="../start/"><span class="n">1</span> Установка и первый запуск</a></li>
+<li><a href="../auth/"><span class="n">2</span> Авторизация</a></li>
+<li class="active"><a href="../commands/"><span class="n">3</span> Первая команда</a></li>
+<li><a href="../overlays/"><span class="n">4</span> Оверлеи и OBS</a></li>
+<li><a href="../rewards-events/"><span class="n">5</span> Баллы канала и события</a></li>
+<li><a href="../periodic/"><span class="n">6</span> Периодические события</a></li>
+<li><a href="../shoutouts/"><span class="n">7</span> Автошатауты</a></li>
+<li><a href="../variables/"><span class="n">8</span> Переменные</a></li>
+<li><a href="../tips/"><span class="n">9</span> Полезные мелочи</a></li>
+</ol></aside>
+<main id="main">
+<p class="lesson-kicker">Урок 3 из 9</p>
+<h1>Первая команда и слово «реакция»</h1>
+<p class="lead">Самое простое, что умеет любой чат-бот: зритель пишет <code>!тест</code>, бот отвечает. Сделаем такую команду за минуту и заодно разберёмся с главным словом SignoreBot.</p>
+
+<h2>Что такое реакция</h2>
+<p>Бот ничего не делает сам по себе. Всё, что он умеет, — это отвечать на <b>поводы</b>: кто-то написал команду, кто-то потратил баллы канала, кто-то зафолловил, прошло десять минут. Ответ на повод в SignoreBot называется <dfn>реакция</dfn>. У любой реакции ровно две возможные части: <b>текст в чат</b> и <b>медиа на оверлей</b> (картинка, звук или видео поверх стрима). Можно включить одну, другую или обе.</p>
+<div class="callout term"><p>Это слово встретится дальше на каждой странице. Команда, награда, событие и таймер — разные поводы, а реакция у них устроена одинаково: тот же редактор, те же две вкладки. Так что команда, сделанная сейчас, заодно объясняет и всё остальное.</p></div>
+
+<h2>Создаём команду</h2>
+<p>Откройте вкладку <span class="ui">Команды</span> и нажмите <span class="ui">Создать команду</span>. Название пишется без восклицательного знака: <code>тест</code>. Сам знак <code>!</code> — это <dfn>префикс</dfn>, метка «это команда, а не просто слово в чате»; бот добавит его сам и покажет рядом, как команда будет выглядеть.</p>
+<figure class="shot"><img src="../img/commands-editor.png" alt="Редактор команды: название «тест», ниже «Кто может вызывать» и вкладка «Текст в чат» с блоками Автор и Текст" loading="lazy"><figcaption>Редактор команды. Название, права, а ниже — реакция: вкладки «Текст в чат» и «Медиа на оверлей» с тумблерами.</figcaption></figure>
+<p>Теперь сама реакция. На вкладке <span class="ui">Текст в чат</span> включите тумблер и соберите сообщение из блоков: нажмите <span class="ui">Автор</span>, затем <span class="ui">Текст</span> и впишите продолжение фразы: <code>, бот на связи!</code> Запятая в начале не опечатка, блоки склеиваются без пробелов между ними. Блок «Автор» подставит имя того, кто написал команду, и ответ получится личным. Предпросмотр внизу сразу показывает, как это прочитает зритель.</p>
+<figure class="shot"><img src="../img/commands-preview.png" alt="Конструктор текста: блоки «Автор» и «Текст», кнопки добавления блоков и предпросмотр «@TestUser, бот на связи!»" loading="lazy"><figcaption>Предпросмотр собирает строку целиком и подставляет пробное имя TestUser, так что результат видно до отправки в чат.</figcaption></figure>
+<p>Нажмите <span class="ui">Создать команду</span>. Карточка команды появится в списке; капсулы на ней рассказывают, что она делает, а при наведении объясняют подробнее.</p>
+<figure class="shot"><img src="../img/commands-list.png" alt="Список команд с карточкой !тест: капсула «Текст», кнопки включения, редактирования и удаления" loading="lazy"><figcaption>Карточка команды. Капсула «Текст» значит, что реакция пишет в чат; кнопка питания выключает команду, не удаляя её.</figcaption></figure>
+
+<h2>Проверяем в чате</h2>
+<p>Напишите <code>!тест</code> в чате своего канала — с любого аккаунта, хоть с основного. Бот ответит от имени аккаунта-бота. Стрим для этого запускать не нужно: чат канала работает и офлайн.</p>
+<figure class="shot narrow"><img src="../img/commands-chat.png" alt="Чат Twitch: сообщение !тест от стримера и ответ бота с обращением к автору" loading="lazy"><figcaption>Так это выглядит в чате: команда и ответ бота с именем автора.</figcaption></figure>
+
+<h2>Что ещё есть у команды</h2>
+<p>Прямо сейчас это не нужно, но пригодится потом:</p>
+<ul>
+  <li><b>Кто может вызывать</b> — все, только стример, модераторы, VIP, подписчики или конкретные ники. Удобно для служебных команд.</li>
+  <li><b>Кулдаун</b> — пауза между срабатываниями в секундах, чтобы командой не спамили.</li>
+  <li><b>Алиасы</b> — дополнительные имена той же команды: <code>!test</code> латиницей, <code>!т</code> покороче.</li>
+</ul>
+<p>Пока команда умеет только писать в чат. Вторая половина реакции лежит в той же карточке, на соседней вкладке <span class="ui">Медиа на оверлей</span>: она включается таким же тумблером, но сначала боту нужно место на экране, куда эти картинки и звуки отправлять.</p>
+
+<nav class="prevnext" aria-label="Соседние уроки">
+  <a class="prev" href="../auth/"><small>Назад</small>Авторизация: стример и бот</a>
+  <a class="next" href="../overlays/"><small>Дальше</small>Оверлеи: картинки, звук и видео в OBS</a>
+</nav>
+</main>
+</div>
+
+<footer><div class="wrap">
+  <span>SignoreBot · <a href="https://github.com/Aumphaadr/SignoreBot">исходный код на GitHub</a> · <a href="https://github.com/Aumphaadr/SignoreBot/blob/main/CHANGELOG.md">история версий</a> · <a href="https://github.com/Aumphaadr/SignoreBot/blob/main/LICENSE">лицензия MIT</a></span>
+  <span>Не аффилирован с Twitch и OBS.</span>
+</div></footer>
+
+<div class="lightbox" id="lightbox"><img alt=""></div>
+<script src="../app.js"></script>
+</body>
+</html>

@@ -101,7 +101,7 @@ impl Scheduler {
     /// Выполнить событие вручную (кнопка запуска в UI).
     pub async fn trigger(engine: &Engine, ev: &PeriodicEvent) {
         let author = engine.auth.info(crate::secrets::AccountKind::Bot).map(|i| i.display_name).unwrap_or_default();
-        let ctx = ActionCtx { author, target: None, vars: BTreeMap::new(), label: format!("Таймер: {}", ev.name), antispam_user: None };
+        let ctx = ActionCtx { author, target: None, vars: BTreeMap::new(), label: format!("Таймер: {}", ev.name), antispam_user: None, reply_to: None };
         engine.execute(&ev.response, &ctx).await;
     }
 

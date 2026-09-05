@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Скачать, установить, запустить · SignoreBot</title>
+<meta name="description" content="Как скачать SignoreBot, что ответить SmartScreen и брандмауэру, что вы увидите после первого запуска и куда девается окно при закрытии.">
+<link rel="icon" href="../logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body class="lesson" data-root="../">
+
+<header class="top"><div class="wrap">
+  <a class="brand" href="../"><img src="../logo.svg" alt=""> SignoreBot</a>
+  <nav>
+    <a href="../">Главная</a>
+    <a href="../start/">Уроки</a>
+    <a href="../#download">Скачать</a>
+    <a href="https://github.com/Aumphaadr/SignoreBot">GitHub</a>
+  </nav>
+</div></header>
+
+<div class="page wrap" id="page">
+<aside class="lessons-aside"><div class="aside-title">Уроки</div><ol class="lesson-list">
+<li class="active"><a href="../start/"><span class="n">1</span> Установка и первый запуск</a></li>
+<li><a href="../auth/"><span class="n">2</span> Авторизация</a></li>
+<li><a href="../commands/"><span class="n">3</span> Первая команда</a></li>
+<li><a href="../overlays/"><span class="n">4</span> Оверлеи и OBS</a></li>
+<li><a href="../rewards-events/"><span class="n">5</span> Баллы канала и события</a></li>
+<li><a href="../periodic/"><span class="n">6</span> Периодические события</a></li>
+<li><a href="../shoutouts/"><span class="n">7</span> Автошатауты</a></li>
+<li><a href="../variables/"><span class="n">8</span> Переменные</a></li>
+<li><a href="../tips/"><span class="n">9</span> Полезные мелочи</a></li>
+</ol></aside>
+<main id="main">
+<p class="lesson-kicker">Урок 1 из 9</p>
+<h1>Скачать, установить, запустить</h1>
+<p class="lead">SignoreBot — обычная программа: скачали, поставили, открыли. В этом уроке — что скачать, что ответить Windows и что вы увидите в первую минуту.</p>
+
+<h2>Скачать</h2>
+<p>Сборки лежат в <a href="../#download">разделе «Скачать»</a> на главной. Для Windows их две: <b>установщик</b> и <b>portable</b>. Установщик добавит программу в меню «Пуск» и на рабочий стол; portable — это один файл <code>.exe</code>, который можно положить куда угодно и запускать оттуда. Для первого знакомства берите установщик. Настройки обеих сборок хранятся в одном и том же месте, так что переехать с одной на другую можно в любой момент.</p>
+<p>На Linux — пакет <code>.deb</code> для Debian и Ubuntu или <dfn>AppImage</dfn>: это тоже «программа в одном файле», которую достаточно сделать исполняемой и запустить.</p>
+
+<h2>Что скажет Windows</h2>
+<p>При первом запуске Windows покажет синее окно <dfn>SmartScreen</dfn>: «Система защитила ваш компьютер». Так Windows встречает любую программу, за которую не заплатили сертификатом издателя. Сама программа тут ни при чём. Нажмите «Подробнее», затем «Выполнить в любом случае». Окно появится один раз.</p>
+<p>Ещё Windows может спросить, разрешить ли программе доступ к сети. SignoreBot запускает внутри себя маленький <dfn>сервер</dfn> — программу, которая отдаёт другим программам страницы по адресу. Он нужен, чтобы OBS показывал ваши картинки и звуки. Если OBS стоит на этом же компьютере, ответ не важен: внутри одного компьютера брандмауэр ничего не блокирует. Если OBS на другом компьютере, разрешите доступ в частных сетях.</p>
+
+<h2>Первый запуск</h2>
+<p>Откроется окно с колонкой разделов слева. Это <dfn>панель</dfn>: здесь настраивается всё. Первый раздел, <span class="ui">Состояние</span>, показывает четыре плитки. Сейчас три из них красные, и это нормально:</p>
+<figure class="shot"><img src="../img/start-status.png" alt="Вкладка «Состояние» сразу после установки: стример и бот не авторизованы, ядро остановлено, сервер оверлеев работает" loading="lazy"><figcaption>Так выглядит «Состояние» сразу после установки. Зелёная только плитка сервера: он запускается сам. Остальное оживёт после авторизации.</figcaption></figure>
+<ul>
+  <li><b>Стример</b> и <b>Бот</b> — два аккаунта Twitch, которые нужно подключить.</li>
+  <li><b>Ядро</b> — та часть программы, которая читает чат и слушает события Twitch. Оно запустится само, как только оба аккаунта будут готовы.</li>
+  <li><b>Сервер оверлеев</b> — тот самый маленький сервер для OBS. Он уже работает.</li>
+</ul>
+
+<h2>Закрыть — не значит выключить</h2>
+<p>Крестик в углу окна не останавливает бота: окно прячется в <dfn>трей</dfn>, область у часов в панели задач, а бот продолжает работать. Это удобно на стриме: панель не мешает, а команды и алерты живут. Чтобы вернуть окно, кликните по иконке в трее; чтобы выключить бота совсем, выберите там «Выход». Если вам привычнее, чтобы крестик закрывал программу, это меняется в <span class="ui">Настройки → Окно и трей</span>.</p>
+
+<div class="callout info"><p>Программа сама проверяет, не вышла ли новая версия, и показывает плашку со ссылкой. Обновление — это просто скачать новую сборку и запустить: настройки, картинки и звуки останутся на месте.</p></div>
+
+<nav class="prevnext" aria-label="Соседние уроки">
+  <span></span>
+  <a class="next" href="../auth/"><small>Дальше</small>Авторизация: стример и бот</a>
+</nav>
+</main>
+</div>
+
+<footer><div class="wrap">
+  <span>SignoreBot · <a href="https://github.com/Aumphaadr/SignoreBot">исходный код на GitHub</a> · <a href="https://github.com/Aumphaadr/SignoreBot/blob/main/CHANGELOG.md">история версий</a> · <a href="https://github.com/Aumphaadr/SignoreBot/blob/main/LICENSE">лицензия MIT</a></span>
+  <span>Не аффилирован с Twitch и OBS.</span>
+</div></footer>
+
+<div class="lightbox" id="lightbox"><img alt=""></div>
+<script src="../app.js"></script>
+</body>
+</html>

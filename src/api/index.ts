@@ -6,6 +6,8 @@ import type { Config, MigrationReport, Response } from "./generated/config";
 import type {
   ChannelReward,
   ManagedCopyResult,
+  NewReward,
+  TestOutcome,
   PendingRedemption,
   CoreStatus,
   DataDirInfo,
@@ -72,7 +74,8 @@ export const api = {
   mediaDeleteUnused: () => invoke<number>("media_delete_unused"),
   mediaProbe: (name: string) => invoke<ProbeResult>("media_probe", { name }),
   mediaUrl: (name: string) => invoke<string>("media_url", { name }),
-  mediaTest: (response: Response) => invoke<boolean>("media_test", { response }),
+  /** Кнопка «Тест» в редакторе: выполнить реакцию как есть. */
+  responseTest: (response: Response, vars: Record<string, string> = {}, eventType: string | null = null) => invoke<TestOutcome>("response_test", { response, vars, eventType }),
 
   // действия
   eventTest: (eventType: string, extra?: Record<string, string>) =>
@@ -86,6 +89,10 @@ export const api = {
   rewardsChannel: () => invoke<ChannelReward[]>("rewards_channel"),
   /** Создать через бота копию награды с теми же параметрами и перевести реакцию на неё. */
   rewardCreateManagedCopy: (id: string) => invoke<ManagedCopyResult>("reward_create_managed_copy", { id }),
+  /** «Новая награда на Twitch»: создать награду от имени приложения. */
+  rewardCreateTwitch: (spec: NewReward) => invoke<ChannelReward>("reward_create_twitch", { spec }),
+  /** Изменить параметры награды, созданной через бота. */
+  rewardUpdateTwitch: (rewardId: string, spec: NewReward) => invoke<ChannelReward>("reward_update_twitch", { rewardId, spec }),
   /** Убрать пометку «(бот)» из названия копии после удаления оригинала. */
   rewardFinishManagedCopy: (id: string) => invoke<string>("reward_finish_managed_copy", { id }),
   redemptionsList: () => invoke<PendingRedemption[]>("redemptions_list"),

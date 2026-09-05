@@ -106,7 +106,31 @@ pub enum RewardSource {
 #[derive(Default)]
 struct RewardDedup {
     by_event: HashMap<String, Instant>,
-    by_fingerprint: HashMap<String, (Instant, HashSet<RewardSource>)>,
+    /// Отпечаток «награда + зритель + текст» → когда, через какие источники,
+    /// чем закончилось выполнение (нужно, если чат опередил EventSub).
+    by_fingerprint: HashMap<String, (Instant, HashSet<RewardSource>, Option<RewardOutcome>)>,
+}
+
+/// Есть что показать на оверлее: файл или хотя бы текст (алерт без файла).
+fn media_has_payload(m: &crate::config::MediaResponse) -> bool {
+    !m.file.is_empty() || (m.text.enabled && !m.text.content.trim().is_empty())
+}
+
+/// Итог выполнения реакции на награду — для учёта погашения.
+#[derive(Debug, Clone)]
+struct RewardOutcome {
+    media_unavailable: bool,
+    unavailable_overlays: Vec<String>,
+    media_sent: bool,
+}
+
+/// Результат проверки на дубликат награды.
+enum RewardDup {
+    No,
+    /// Тот же id погашения уже обработан.
+    SameEvent,
+    /// Та же награда уже пришла через другой источник; исход — если известен.
+    CrossSource { via: &'static str, outcome: Option<RewardOutcome> },
 }
 
 #[derive(Default)]
@@ -127,6 +151,8 @@ pub struct ActionCtx {
     pub label: String,
     /// Логин для антиспама медиа (None — не применять).
     pub antispam_user: Option<String>,
+    /// Id сообщения чата, на которое отвечать реплаем (None — обычное сообщение).
+    pub reply_to: Option<String>,
 }
 
 pub struct Engine {
@@ -141,6 +167,8 @@ pub struct Engine {
     rewards: Mutex<RewardDedup>,
     viewers: Mutex<Viewers>,
     cooldowns: Mutex<HashMap<String, Instant>>,
+    /// Кулдаун на зрителя: «id команды:логин» → последнее срабатывание.
+    user_cooldowns: Mutex<HashMap<String, Instant>>,
     antispam: Mutex<HashMap<(String, String), Instant>>,
     eventsub: Mutex<EventSubStatus>,
     changed_tx: broadcast::Sender<Changed>,
@@ -173,6 +201,7 @@ impl Engine {
             rewards: Mutex::new(RewardDedup::default()),
             viewers: Mutex::new(Viewers::default()),
             cooldowns: Mutex::new(HashMap::new()),
+            user_cooldowns: Mutex::new(HashMap::new()),
             antispam: Mutex::new(HashMap::new()),
             sent_ids: Mutex::new(std::collections::VecDeque::with_capacity(64)),
             in_flight: std::sync::atomic::AtomicUsize::new(0),
@@ -317,12 +346,17 @@ impl Engine {
 
     /// Отправить текст в чат от имени бота.
     pub async fn say(&self, text: &str) -> bool {
+        self.say_to(text, None).await
+    }
+
+    /// Отправить текст в чат; `reply_to` — id сообщения, на которое отвечаем реплаем.
+    pub async fn say_to(&self, text: &str, reply_to: Option<&str>) -> bool {
         let Some(ids) = self.ids() else {
             tracing::warn!(target: "signorebot::chat", "Чат недоступен (аккаунты не готовы), сообщение не отправлено");
             return false;
         };
         self.in_flight.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        let result = self.helix.send_chat_message(AccountKind::Bot, &ids.broadcaster_id, &ids.bot_id, text, None).await;
+        let result = self.helix.send_chat_message(AccountKind::Bot, &ids.broadcaster_id, &ids.bot_id, text, reply_to).await;
         if let Ok(r) = &result {
             self.remember_sent(&r.message_id);
         }
@@ -371,11 +405,11 @@ impl Engine {
             let rctx = RenderCtx { author: ctx.author.clone(), target: ctx.target.clone(), vars: ctx.vars.clone(), random_viewer };
             let text = render(&response.chat.components, &rctx);
             if !text.is_empty() {
-                chat_sent = self.say(&text).await;
+                chat_sent = self.say_to(&text, ctx.reply_to.as_deref()).await;
             }
         }
 
-        if response.media.enabled && !response.media.file.is_empty() {
+        if response.media.enabled && media_has_payload(&response.media) {
             let r = self.send_media(response, ctx, true, queue);
             media_sent = r.sent;
             out.media_unavailable = !r.sent && !r.no_target;
@@ -395,7 +429,7 @@ impl Engine {
                         self.say(&text).await;
                     }
                 }
-                if fb.media.enabled && !fb.media.file.is_empty() {
+                if fb.media.enabled && media_has_payload(&fb.media) {
                     // без повторного фолбэка — чтобы не зациклиться
                     let _ = self.send_media(&fb, &fctx, false, true);
                 }
@@ -724,6 +758,21 @@ impl Engine {
             }
             cd.insert(cmd.id.clone(), now);
         }
+        if cmd.cooldown_user_sec > 0 {
+            let mut cd = self.user_cooldowns.lock();
+            let now = Instant::now();
+            let ttl = Duration::from_secs(cmd.cooldown_user_sec as u64);
+            cd.retain(|_, t| now.duration_since(*t) < ttl.max(Duration::from_secs(3600)));
+            let key = format!("{}:{}", cmd.id, msg.user_login);
+            if let Some(t) = cd.get(&key) {
+                let left = ttl.saturating_sub(now.duration_since(*t));
+                if !left.is_zero() {
+                    tracing::info!(target: "signorebot::commands", "!{}: кулдаун для {}, ещё {} с", cmd.name, msg.user_name, left.as_secs());
+                    return;
+                }
+            }
+            cd.insert(key, now);
+        }
         tracing::info!(target: "signorebot::commands", "!{} от {}{}", cmd.name, msg.user_name,
             if args.is_empty() { String::new() } else { format!(": {}", args.join(" ")) });
 
@@ -737,6 +786,7 @@ impl Engine {
             vars,
             label: format!("!{}", cmd.name),
             antispam_user: Some(msg.user_login.clone()),
+            reply_to: if cmd.reply { Some(msg.message_id.clone()) } else { None },
         };
         self.execute(&cmd.response, &ctx).await;
     }
@@ -745,33 +795,66 @@ impl Engine {
     // Награды
     // ------------------------------------------------------------------
 
-    fn reward_is_duplicate(&self, reward_id: &str, user: &str, input: &str, source: RewardSource, event_id: Option<&str>) -> Option<String> {
+    fn reward_fingerprint(reward_id: &str, user: &str, input: &str) -> String {
+        let norm = |s: &str| s.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+        format!("{reward_id}:{}:{}", norm(user), norm(input))
+    }
+
+    fn reward_is_duplicate(&self, reward_id: &str, user: &str, input: &str, source: RewardSource, event_id: Option<&str>) -> RewardDup {
         let mut d = self.rewards.lock();
         let now = Instant::now();
         d.by_event.retain(|_, t| now.duration_since(*t) < REWARD_EVENT_TTL);
-        d.by_fingerprint.retain(|_, (t, _)| now.duration_since(*t) < REWARD_EVENT_TTL);
+        d.by_fingerprint.retain(|_, (t, _, _)| now.duration_since(*t) < REWARD_EVENT_TTL);
         if let Some(id) = event_id {
             if d.by_event.contains_key(id) {
-                return Some("redemption id уже обработан".into());
+                return RewardDup::SameEvent;
             }
             d.by_event.insert(id.to_string(), now);
         }
-        let norm = |s: &str| s.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
-        let fp = format!("{reward_id}:{}:{}", norm(user), norm(input));
-        if let Some((t, sources)) = d.by_fingerprint.get_mut(&fp) {
+        let fp = Self::reward_fingerprint(reward_id, user, input);
+        if let Some((t, sources, outcome)) = d.by_fingerprint.get_mut(&fp) {
             if now.duration_since(*t) < REWARD_CROSS_SOURCE_TTL && !sources.contains(&source) {
                 sources.insert(source);
-                return Some(format!("уже обработано через {}", if source == RewardSource::Chat { "EventSub" } else { "чат" }));
+                return RewardDup::CrossSource { via: if source == RewardSource::Chat { "EventSub" } else { "чат" }, outcome: outcome.clone() };
             }
         }
-        d.by_fingerprint.insert(fp, (now, HashSet::from([source])));
-        None
+        d.by_fingerprint.insert(fp, (now, HashSet::from([source]), None));
+        RewardDup::No
+    }
+
+    fn store_reward_outcome(&self, reward_id: &str, user: &str, input: &str, outcome: &RewardOutcome) {
+        let fp = Self::reward_fingerprint(reward_id, user, input);
+        if let Some(e) = self.rewards.lock().by_fingerprint.get_mut(&fp) {
+            e.2 = Some(outcome.clone());
+        }
     }
 
     pub async fn handle_reward(&self, reward_id: &str, user: &str, input: &str, source: RewardSource, event_id: Option<&str>) {
-        if let Some(why) = self.reward_is_duplicate(reward_id, user, input, source, event_id) {
-            tracing::debug!(target: "signorebot::rewards", "Награда {reward_id} от {user} — дубликат ({why})");
-            return;
+        match self.reward_is_duplicate(reward_id, user, input, source, event_id) {
+            RewardDup::No => {}
+            RewardDup::SameEvent => {
+                tracing::debug!(target: "signorebot::rewards", "Награда {reward_id} от {user} — дубликат (redemption id уже обработан)");
+                return;
+            }
+            RewardDup::CrossSource { via, outcome } => {
+                // Чат опередил EventSub: реакция уже выполнена, но учёт погашения
+                // (список невыполненных, возврат баллов, закрытие) возможен только
+                // с id погашения — довершаем его здесь.
+                if let (RewardSource::EventSub, Some(id)) = (source, event_id) {
+                    let reward = self.config.read().rewards.iter().find(|r| r.reward_id == reward_id).cloned();
+                    match (reward, outcome) {
+                        (Some(reward), Some(out)) => {
+                            tracing::debug!(target: "signorebot::rewards", "Награда «{}» от {user}: реакция уже выполнена по чату, довершаем учёт погашения", reward.reward_title);
+                            self.finish_redemption(&reward, reward_id, id, user, &out).await;
+                        }
+                        (Some(reward), None) => tracing::warn!(target: "signorebot::rewards", "Награда «{}» от {user}: погашение без итога реакции — учёт пропущен", reward.reward_title),
+                        (None, _) => {}
+                    }
+                } else {
+                    tracing::debug!(target: "signorebot::rewards", "Награда {reward_id} от {user} — дубликат (уже обработано через {via})");
+                }
+                return;
+            }
         }
         let reward = self.config.read().rewards.iter().find(|r| r.reward_id == reward_id).cloned();
         let Some(reward) = reward else {
@@ -793,12 +876,23 @@ impl Engine {
             vars,
             label: format!("Награда: {}", reward.reward_title),
             antispam_user: Some(user.to_lowercase()),
+            reply_to: None,
         };
         // Награда с возвратом: медиа для выключенного оверлея не откладываем —
-        // иначе зритель получит и баллы назад, и медиа через полминуты.
-        let manages = reward.managed && reward.refund_if_unavailable && event_id.is_some();
+        // иначе зритель получит и баллы назад, и медиа через полминуты. Это
+        // верно и для чат-пути: id погашения принесёт EventSub следом.
+        let manages = reward.managed && reward.refund_if_unavailable;
         let out = self.execute_full_opt(&reward.response, &ctx, !manages).await;
+        let outcome = RewardOutcome { media_unavailable: out.media_unavailable, unavailable_overlays: out.unavailable_overlays.clone(), media_sent: out.media_sent };
+        self.store_reward_outcome(reward_id, user, input, &outcome);
         let Some(redemption_id) = event_id else { return }; // чат-путь: id погашения нет
+        self.finish_redemption(&reward, reward_id, redemption_id, user, &outcome).await;
+    }
+
+    /// Учёт погашения после выполнения реакции: запись в невыполненные,
+    /// возврат баллов (для наград с возвратом) или закрытие удачного погашения.
+    async fn finish_redemption(&self, reward: &crate::config::Reward, reward_id: &str, redemption_id: &str, user: &str, out: &RewardOutcome) {
+        let manages = reward.managed && reward.refund_if_unavailable;
         if out.media_unavailable {
             let reason = format!("оверлей недоступен: {}", out.unavailable_overlays.join(", "));
             let mut entry = PendingRedemption {
@@ -870,6 +964,7 @@ impl Engine {
             vars,
             label: format!("Событие: {event_type}"),
             antispam_user: None,
+            reply_to: None,
         };
         self.execute(&reaction.response, &ctx).await;
     }

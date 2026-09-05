@@ -351,6 +351,7 @@ pub async fn reward_create_managed_copy(s: State<'_, CoreState>, id: String) -> 
         title: new_title.clone(), cost: orig.cost, prompt: orig.prompt.clone(), is_user_input_required: orig.requires_input,
         is_enabled: orig.is_enabled, background_color: orig.background_color.clone(),
         cooldown_seconds: orig.cooldown_seconds, max_per_stream: orig.max_per_stream, max_per_user_per_stream: orig.max_per_user_per_stream,
+        skip_queue: false,
     };
     let created = c.helix.create_custom_reward(AccountKind::Broadcaster, &ids.broadcaster_id, &spec).await.map_err(|e| format!("Twitch не создал награду: {e}"))?;
     let (orig_id, orig_title) = (orig.id.clone(), orig.title.clone());
@@ -365,6 +366,80 @@ pub async fn reward_create_managed_copy(s: State<'_, CoreState>, id: String) -> 
     tracing::info!(target: "signorebot::rewards", "Создана управляемая копия награды «{}» → «{}»; реакция переведена на копию", orig_title, created.title);
     c.emit_changed("rewards");
     Ok(ManagedCopyResult { new_reward_id: created.id, new_title: created.title, original_reward_id: orig_id, original_title: orig_title, rewards_url: format!("https://dashboard.twitch.tv/u/{login}/viewer-rewards/channel-points/rewards") })
+}
+
+fn check_reward_spec(spec: &crate::twitch::helix::NewReward) -> Result<(), String> {
+    let t = spec.title.trim();
+    if t.is_empty() {
+        return Err("у награды должно быть название".into());
+    }
+    if t.chars().count() > 45 {
+        return Err("название награды — не длиннее 45 символов (правило Twitch)".into());
+    }
+    if spec.cost == 0 {
+        return Err("стоимость награды — не меньше 1 балла".into());
+    }
+    if spec.prompt.chars().count() > 200 {
+        return Err("подсказка зрителю — не длиннее 200 символов (правило Twitch)".into());
+    }
+    Ok(())
+}
+
+fn twitch_reward_error(e: crate::twitch::helix::HelixError) -> String {
+    let s = e.to_string();
+    if s.contains("400") && s.to_lowercase().contains("title") || s.contains("CREATE_CUSTOM_REWARD_DUPLICATE_REWARD") || s.to_lowercase().contains("duplicate") {
+        return "Twitch отказал: награда с таким названием уже есть на канале".into();
+    }
+    if s.contains("CREATE_CUSTOM_REWARD_TOO_MANY_REWARDS") || s.to_lowercase().contains("too many") {
+        return "Twitch отказал: на канале уже 50 наград — больше нельзя".into();
+    }
+    format!("Twitch отказал: {s}")
+}
+
+/// «Новая награда на Twitch»: создать награду с нуля от имени приложения.
+/// Реакцию к ней панель настраивает следующим шагом.
+#[tauri::command]
+pub async fn reward_create_twitch(s: State<'_, CoreState>, spec: crate::twitch::helix::NewReward) -> Res<crate::twitch::helix::ChannelReward> {
+    let c = core(&s);
+    let ids = c.engine.ids().ok_or("Стример не авторизован")?;
+    if !c.auth.has_scope(AccountKind::Broadcaster, "channel:manage:redemptions") {
+        return Err("Нужно право «channel:manage:redemptions»: авторизуйте стримера заново на вкладке «Авторизация»".into());
+    }
+    check_reward_spec(&spec)?;
+    let mut spec = spec;
+    spec.title = spec.title.trim().to_string();
+    let created = c.helix.create_custom_reward(AccountKind::Broadcaster, &ids.broadcaster_id, &spec).await.map_err(twitch_reward_error)?;
+    tracing::info!(target: "signorebot::rewards", "Создана награда «{}» ({} баллов) через бота", created.title, created.cost);
+    c.emit_changed("rewards");
+    Ok(created)
+}
+
+/// Изменить параметры награды, созданной через бота (стоимость, подсказка,
+/// лимиты…). Название реакции в конфиге подтягивается следом.
+#[tauri::command]
+pub async fn reward_update_twitch(s: State<'_, CoreState>, reward_id: String, spec: crate::twitch::helix::NewReward) -> Res<crate::twitch::helix::ChannelReward> {
+    let c = core(&s);
+    let ids = c.engine.ids().ok_or("Стример не авторизован")?;
+    if !c.auth.has_scope(AccountKind::Broadcaster, "channel:manage:redemptions") {
+        return Err("Нужно право «channel:manage:redemptions»: авторизуйте стримера заново на вкладке «Авторизация»".into());
+    }
+    check_reward_spec(&spec)?;
+    let mut spec = spec;
+    spec.title = spec.title.trim().to_string();
+    let updated = c.helix.update_custom_reward(AccountKind::Broadcaster, &ids.broadcaster_id, &reward_id, &spec).await.map_err(twitch_reward_error)?;
+    let title = updated.title.clone();
+    let mut renamed = false;
+    c.update_config(|cfg| {
+        if let Some(r) = cfg.rewards.iter_mut().find(|r| r.reward_id == reward_id) {
+            if r.reward_title != title {
+                r.reward_title = title.clone();
+                renamed = true;
+            }
+        }
+    })?;
+    tracing::info!(target: "signorebot::rewards", "Награда «{}» изменена через бота{}", title, if renamed { " (в том числе название)" } else { "" });
+    c.emit_changed("rewards");
+    Ok(updated)
 }
 
 /// Убрать пометку «(бот)» из названия копии — после того как оригинал удалён.
@@ -456,9 +531,15 @@ pub fn overlay_clear(s: State<'_, CoreState>, path: Option<String>, all: bool) -
     let msg = serde_json::json!({ "command": if all { "clearAll" } else { "clearQueue" } }).to_string();
     match path.filter(|p| !p.is_empty()) {
         Some(p) => {
-            c.hub.send_to_path(&p, &msg);
+            // «Стоп» — сразу: и отложенную очередь выбросить, и в неё не вставать
+            let dropped = c.hub.clear_pending(&p);
+            if dropped > 0 {
+                tracing::info!(target: "signorebot::overlay", "Оверлей «{p}»: очередь очищена, отложенных выброшено: {dropped}");
+            }
+            c.hub.send_to_path_opt(&p, &msg, false);
         }
         None => {
+            c.hub.clear_all_pending();
             c.hub.broadcast(&msg);
         }
     }
@@ -467,21 +548,49 @@ pub fn overlay_clear(s: State<'_, CoreState>, path: Option<String>, all: bool) -
 }
 
 /// Тестовая отправка медиа на оверлей.
+#[derive(serde::Serialize, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "api.ts")]
+pub struct TestOutcome {
+    pub chat_enabled: bool,
+    pub media_enabled: bool,
+    pub chat_sent: bool,
+    pub media_sent: bool,
+    pub media_unavailable: bool,
+    pub running: bool,
+}
+
+/// Кнопка «Тест» в редакторе: выполнить реакцию как есть — текст в чат и
+/// медиа на оверлей. `event_type` подставляет образцовые переменные события,
+/// `vars` — свои (TestUser по умолчанию).
 #[tauri::command]
-pub async fn media_test(s: State<'_, CoreState>, response: crate::config::Response) -> Res<bool> {
+pub async fn response_test(s: State<'_, CoreState>, response: crate::config::Response, vars: std::collections::BTreeMap<String, String>, event_type: Option<String>) -> Res<TestOutcome> {
     let c = core(&s);
+    let mut all: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
+    all.insert("user".into(), "TestUser".into());
+    all.insert("target".into(), "TestUser".into());
+    all.insert("message".into(), "тест".into());
+    if let Some(t) = &event_type {
+        all.extend(crate::engine::Engine::test_event_vars(t));
+    }
+    all.extend(vars);
     let ctx = crate::engine::ActionCtx {
-        author: "TestUser".into(),
-        target: None,
-        vars: Default::default(),
+        author: all.get("user").cloned().unwrap_or_else(|| "TestUser".into()),
+        target: all.get("target").cloned(),
+        vars: all,
         label: "Тест".into(),
         antispam_user: None,
+        reply_to: None,
     };
-    let mut r = response;
-    r.chat.enabled = false;
-    r.media.enabled = true;
-    let (_, sent) = c.engine.execute(&r, &ctx).await;
-    Ok(sent)
+    let out = c.engine.execute_full(&response, &ctx).await;
+    Ok(TestOutcome {
+        chat_enabled: response.chat.enabled && !response.chat.components.is_empty(),
+        media_enabled: response.media.enabled && (!response.media.file.is_empty() || (response.media.text.enabled && !response.media.text.content.trim().is_empty())),
+        chat_sent: out.chat_sent,
+        media_sent: out.media_sent,
+        media_unavailable: out.media_unavailable,
+        running: c.is_running(),
+    })
 }
 
 #[tauri::command]

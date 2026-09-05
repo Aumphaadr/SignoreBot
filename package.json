@@ -1,7 +1,7 @@
 {
   "name": "signorebot",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,6 +11,8 @@
     "lint": "eslint .",
     "icons": "node tools/build-icons.mjs",
     "fonts": "node tools/build-fonts.mjs",
+    "site": "node tools/build-site.mjs",
+    "site:serve": "node tools/serve-site.mjs",
     "test:rust": "cd src-tauri && cargo test",
     "build:linux": "tauri build && bash tools/fix-appimage.sh",
     "release:collect": "bash tools/collect-release.sh",

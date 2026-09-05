@@ -33,7 +33,7 @@ export default function ResponseEditor({ value, onChange, overlays, variables = 
       </div>
       <div className="response-content">
         {tab === "chat" && <ChatEditor value={value.chat} onChange={(chat) => onChange({ ...value, chat })} variables={variables} />}
-        {tab === "media" && <MediaEditor value={value.media} onChange={(media) => onChange({ ...value, media })} overlays={overlays} fullResponse={value} />}
+        {tab === "media" && <MediaEditor value={value.media} onChange={(media) => onChange({ ...value, media })} overlays={overlays} />}
         {tab === "extra" && extraTab?.content}
       </div>
     </div>

@@ -329,7 +329,6 @@ async fn handle_text(p: &SessionParams, dedup: &mut Deduper, v: &Value) {
 pub async fn run_session(p: SessionParams) {
     let mut dedup = Deduper::new();
     let mut url = EVENTSUB_URL.to_string();
-    let mut handoff = false;
 
     'outer: loop {
         if p.cancel.is_cancelled() {
@@ -345,7 +344,6 @@ pub async fn run_session(p: SessionParams) {
             Err(e) => {
                 tracing::warn!(target: "signorebot::eventsub", "EventSub недоступен: {e}. Повтор через {} с", RECONNECT_DELAY.as_secs());
                 url = EVENTSUB_URL.to_string();
-                handoff = false;
                 tokio::select! {
                     _ = p.cancel.cancelled() => break,
                     _ = tokio::time::sleep(RECONNECT_DELAY) => continue,
@@ -353,8 +351,7 @@ pub async fn run_session(p: SessionParams) {
             }
         };
         tracing::info!(target: "signorebot::eventsub", "EventSub сессия {session_id} (keepalive {} с)", keepalive.as_secs());
-        let subs = if handoff { 9 } else { subscribe_all(&p, &session_id).await };
-        handoff = false;
+        let subs = subscribe_all(&p, &session_id).await;
         let _ = p.tx.send(TwitchEvent::Session { connected: true, session_id: Some(session_id.clone()), subscriptions: subs }).await;
         for v in pending {
             handle_text(&p, &mut dedup, &v).await;

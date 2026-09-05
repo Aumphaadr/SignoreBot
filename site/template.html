@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<meta name="description" content="{{description}}">
+<link rel="icon" href="{{root}}logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="{{root}}style.css">
+</head>
+<body class="{{bodyClass}}" data-root="{{root}}">
+
+<header class="top"><div class="wrap">
+  <a class="brand" href="{{root}}"><img src="{{root}}logo.svg" alt=""> SignoreBot</a>
+  <nav>
+    <a href="{{root}}">Главная</a>
+    <a href="{{root}}start/">Уроки</a>
+    <a href="{{root}}#download">Скачать</a>
+    <a href="https://github.com/Aumphaadr/SignoreBot">GitHub</a>
+  </nav>
+</div></header>
+
+<div class="{{pageClass}}" id="page">
+{{lessonAside}}
+<main id="main">
+{{lessonHeader}}
+{{content}}
+{{prevnext}}
+</main>
+</div>
+
+<footer><div class="wrap">
+  <span>SignoreBot · <a href="https://github.com/Aumphaadr/SignoreBot">исходный код на GitHub</a> · <a href="https://github.com/Aumphaadr/SignoreBot/blob/main/CHANGELOG.md">история версий</a> · <a href="https://github.com/Aumphaadr/SignoreBot/blob/main/LICENSE">лицензия MIT</a></span>
+  <span>Не аффилирован с Twitch и OBS.</span>
+</div></footer>
+
+<div class="lightbox" id="lightbox"><img alt=""></div>
+<script src="{{root}}app.js"></script>
+</body>
+</html>
