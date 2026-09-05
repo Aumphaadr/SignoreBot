@@ -57,7 +57,7 @@ export default function StatusTab({ goTo }: { goTo: (tab: string) => void }) {
         {acc(s.bot, <><Icon name="robot" /> Бот{config.accounts.sameAccount && " (тот же аккаунт)"}</>)}
         <div className={`status-tile ${s.running ? (s.eventsub.connected ? "ok" : "warn") : "bad"}`}>
           <div className="status-tile-label"><Icon name="settings" /> Ядро</div>
-          <div className="status-tile-value">{s.running ? (s.eventsub.connected ? "работает" : "EventSub переподключается…") : "остановлено"}</div>
+          <div className="status-tile-value">{s.running ? (s.eventsub.connected ? "работает" : <><Icon name="refresh" className="spinning" /> EventSub подключается…</>) : "остановлено"}</div>
           <div className="status-tile-sub">{s.running ? `EventSub: ${s.eventsub.connected ? `${s.eventsub.subscriptions} подписок` : "нет связи"}` : "нужны оба аккаунта"}</div>
         </div>
         <div className={`status-tile ${s.server.running ? "ok" : "bad"}`}>

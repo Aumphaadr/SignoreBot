@@ -73,7 +73,7 @@
   padding: 10px 15px;
   border-radius: var(--border-radius-sm);
   font-size: 14px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .file-button-group {
@@ -531,7 +531,7 @@
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 14px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   border: 1px solid var(--accent);
 }
 
@@ -756,7 +756,7 @@
   padding: 8px 12px;
   border-radius: var(--border-radius-sm);
   font-size: 14px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .custom-font-input:focus {
@@ -808,7 +808,7 @@
   padding: 8px 12px;
   border-radius: var(--border-radius-sm);
   font-size: 14px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .media-preview-section {

@@ -2,7 +2,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { Config, MigrationReport, Response } from "./generated/config";
+import type { ObsBrowserSource, Config, MigrationReport, Response } from "./generated/config";
 import type {
   ChannelReward,
   ManagedCopyResult,
@@ -108,6 +108,8 @@ export const api = {
   obsRefresh: () => invoke<string[]>("obs_refresh"),
   obsSetUrl: (inputName: string, overlayPath: string) =>
     invoke<string>("obs_set_url", { inputName, overlayPath }),
+  /** Привязать Browser Source к оверлеям по адресам в OBS. */
+  obsMatchSources: () => invoke<ObsBrowserSource[]>("obs_match_sources"),
   overlayKeyRegenerate: () => invoke<string>("overlay_key_regenerate"),
   openDataDir: () => invoke<void>("app_open_data_dir"),
   updatesCheck: () => invoke<UpdateInfo>("updates_check"),

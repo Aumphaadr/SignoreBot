@@ -23,7 +23,7 @@
 .tooltip-text-portal .hint-em {
   color: var(--accent-text);
   font-weight: 500;
-  font-family: "Fira Code", Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
 }
 

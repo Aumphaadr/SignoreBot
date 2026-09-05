@@ -22,7 +22,8 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 
-const OVERLAY_STARTUP_CHECK: Duration = Duration::from_secs(15);
+// Раньше сторожа (15 с): перезагрузка через OBS должна успеть до предупреждения.
+const OVERLAY_STARTUP_CHECK: Duration = Duration::from_secs(10);
 const OBS_RETRY_INTERVAL: Duration = Duration::from_secs(30);
 const OBS_MAX_ATTEMPTS: u32 = 5;
 
@@ -36,6 +37,8 @@ struct ObsAuto {
     attempts: u32,
     done: bool,
     warned_missing: bool,
+    /// Что помешало перезагрузке через OBS (нет источников с такими именами и т. п.) — идёт в текст предупреждения.
+    problem: Option<String>,
 }
 
 pub struct Core {
@@ -569,7 +572,8 @@ impl Core {
             let st = self.overlay_status();
             let missing: Vec<String> = st.iter().filter(|o| !o.connected).map(|o| o.name.clone()).collect();
             let obs_on = { let o = self.config.read().obs.clone(); o.enabled && o.auto_refresh };
-            let alert = overlay_alert_text(&st, obs_on);
+            let problem = self.obs_auto.lock().problem.clone();
+            let alert = overlay_alert_text(&st, obs_on, problem.as_deref());
             let changed = *self.overlay_alert.lock() != alert;
             if changed {
                 *self.overlay_alert.lock() = alert.clone();
@@ -632,8 +636,18 @@ impl Core {
                 return;
             }
             match crate::overlay::obs::refresh_browser_sources(&obs, &names).await {
-                Ok(r) if !r.is_empty() => tracing::info!(target: "signorebot::obs", "Обновлено источников: {}. Ждём подключения…", r.len()),
-                Ok(_) => tracing::warn!(target: "signorebot::obs", "Ни один источник не обновлён"),
+                Ok(r) if r.is_empty() => {
+                    // Имена не совпали с OBS — скажем, какие источники там есть на самом деле.
+                    let have = crate::overlay::obs::browser_source_names(&obs).await.unwrap_or_default();
+                    let problem = if have.is_empty() {
+                        format!("в OBS нет источников с именами {} (Browser Source в OBS не найдено ни одного)", names.iter().map(|n| format!("«{n}»")).collect::<Vec<_>>().join(", "))
+                    } else {
+                        format!("в OBS нет источников с именами {}; там есть: {}. Проверьте поле «Browser Source в OBS» на вкладке «Оверлеи» или нажмите «Подобрать по адресам»", names.iter().map(|n| format!("«{n}»")).collect::<Vec<_>>().join(", "), have.iter().map(|n| format!("«{n}»")).collect::<Vec<_>>().join(", "))
+                    };
+                    tracing::warn!(target: "signorebot::obs", "Ни один источник не обновлён: {problem}");
+                    self.obs_auto.lock().problem = Some(problem);
+                }
+                Ok(r) => { self.obs_auto.lock().problem = None; tracing::info!(target: "signorebot::obs", "Обновлено источников: {}. Ждём подключения…", r.len()); }
                 Err(e) => tracing::warn!(target: "signorebot::obs", "{e}"),
             }
             tokio::select! {
@@ -717,12 +731,16 @@ impl Core {
 
 /// Текст предупреждения для сторожа оверлеев (None — всё подключено или
 /// оверлеев нет).
-pub fn overlay_alert_text(st: &[OverlayStatusItem], obs_on: bool) -> Option<String> {
+pub fn overlay_alert_text(st: &[OverlayStatusItem], obs_on: bool, obs_problem: Option<&str>) -> Option<String> {
     let missing: Vec<&str> = st.iter().filter(|o| !o.connected).map(|o| o.name.as_str()).collect();
     if st.is_empty() || missing.is_empty() {
         return None;
     }
-    let hint = if obs_on {
+    let problem_hint;
+    let hint = if let Some(p) = obs_problem.filter(|_| obs_on) {
+        problem_hint = format!("Перезагрузить через OBS не вышло: {p}.");
+        problem_hint.as_str()
+    } else if obs_on {
         "Бот пробовал перезагрузить Browser Source через OBS — проверьте, что OBS запущен и подключение к нему работает."
     } else {
         "Если OBS был запущен раньше бота — нажмите «Обновить» у Browser Source в OBS (или включите интеграцию с OBS на вкладке «Оверлеи», тогда бот будет делать это сам)."
@@ -738,12 +756,15 @@ mod overlay_alert_tests {
     }
     #[test]
     fn alert_only_when_some_overlay_is_missing() {
-        assert_eq!(overlay_alert_text(&[], false), None);
-        assert_eq!(overlay_alert_text(&[item("Аудио", true), item("Видео", true)], false), None);
-        let t = overlay_alert_text(&[item("Аудио", true), item("Видео", false), item("VIPS", false)], false).unwrap();
+        assert_eq!(overlay_alert_text(&[], false, None), None);
+        assert_eq!(overlay_alert_text(&[item("Аудио", true), item("Видео", true)], false, None), None);
+        let t = overlay_alert_text(&[item("Аудио", true), item("Видео", false), item("VIPS", false)], false, None).unwrap();
         assert!(t.starts_with("Не подключены оверлеи: Видео, VIPS."), "{t}");
         assert!(t.contains("нажмите «Обновить»"));
-        let t = overlay_alert_text(&[item("Видео", false)], true).unwrap();
+        let t = overlay_alert_text(&[item("Видео", false)], true, None).unwrap();
         assert!(t.contains("через OBS"));
+        let t = overlay_alert_text(&[item("Видео", false)], true, Some("в OBS нет источников с именами «Overlay Video»; там есть: «video»")).unwrap();
+        assert!(t.contains("Перезагрузить через OBS не вышло: в OBS нет источников с именами «Overlay Video»"), "{t}");
+        assert!(!t.contains("проверьте, что OBS запущен"), "{t}");
     }
 }

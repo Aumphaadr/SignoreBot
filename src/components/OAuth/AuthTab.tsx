@@ -69,7 +69,7 @@ function AccountCard({ kind, st, title, badge, hint }: { kind: AccountKind; st: 
             <div>
               <strong>Ожидание подтверждения в браузере</strong>
               <div className="oauth-scopes">Откройте <a href="#" onClick={(e) => { e.preventDefault(); void openUrl(st.device!.verificationUri); }}>{st.device.verificationUri}</a> и введите код:</div>
-              <div style={{ fontSize: 28, fontFamily: "monospace", letterSpacing: 4, margin: "8px 0", userSelect: "all" }}>{st.device.userCode}</div>
+              <div style={{ fontSize: 28, fontFamily: "var(--font-mono)", letterSpacing: 4, margin: "8px 0", userSelect: "all" }}>{st.device.userCode}</div>
               <div className="oauth-actions">
                 <button className="oauth-copy-btn" onClick={() => { void copyText(st.device!.verificationUri); showNotification("Ссылка с кодом скопирована", NOTIFICATION_TYPES.SUCCESS, 1500); }}><Icon name="copy"  /> Скопировать ссылку</button>
                 <button className="oauth-copy-btn" onClick={() => { void copyText(st.device!.userCode); showNotification("Код скопирован", NOTIFICATION_TYPES.SUCCESS, 1500); }}><Icon name="copy"  /> Код</button>

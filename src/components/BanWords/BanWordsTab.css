@@ -75,7 +75,7 @@
   font-size: 16px;
   font-weight: bold;
   color: var(--danger);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .word-type-select {
@@ -208,7 +208,7 @@
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 14px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--info);
   border: 1px solid var(--info);
 }

@@ -50,7 +50,7 @@
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 14px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   border: 1px solid var(--accent);
 }
 

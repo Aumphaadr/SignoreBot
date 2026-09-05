@@ -64,7 +64,7 @@ export default function RewardParamsForm({ value, onChange }: { value: NewReward
           <label>Цвет <Tooltip text="Цвет плитки награды у зрителя." /></label>
           <div className="form-row" style={{ alignItems: "center", gap: 10 }}>
             <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(value.backgroundColor) ? value.backgroundColor : "#7d77d4"} onChange={(e) => set({ backgroundColor: e.target.value })} style={{ width: 44, height: 36, padding: 2, flex: "0 0 auto" }} />
-            <input type="text" value={value.backgroundColor} maxLength={7} onChange={(e) => set({ backgroundColor: e.target.value })} style={{ fontFamily: "monospace", flex: 1 }} />
+            <input type="text" value={value.backgroundColor} maxLength={7} onChange={(e) => set({ backgroundColor: e.target.value })} style={{ fontFamily: "var(--font-mono)", flex: 1 }} />
           </div>
         </div>
         <div className="form-group" style={{ flex: 1 }}>

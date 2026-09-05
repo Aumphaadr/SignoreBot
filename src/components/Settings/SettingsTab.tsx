@@ -94,7 +94,7 @@ export default function SettingsTab() {
           </div>
           <div className="form-group">
             <label>Ключ доступа к оверлеям <Tooltip text="Входит в URL оверлеев. Без него страницы, медиа и WebSocket недоступны." /></label>
-            <div className="form-row"><input type="text" value={net.overlayKey} readOnly style={{ fontFamily: "monospace" }} /><button onClick={regenKey} style={{ flex: "0 0 auto" }}><Icon name="key"  /> Перевыпустить</button></div>
+            <div className="form-row"><input type="text" value={net.overlayKey} readOnly style={{ fontFamily: "var(--font-mono)" }} /><button onClick={regenKey} style={{ flex: "0 0 auto" }}><Icon name="key"  /> Перевыпустить</button></div>
           </div>
           <div className="form-hint">Текущий адрес: {status?.server.running ? `http://${status.server.address}` : "сервер не запущен"}{status?.server.error && ` — ${status.server.error}`}</div>
         </div>
@@ -115,7 +115,7 @@ export default function SettingsTab() {
         <div style={{ padding: 20 }}>
           <div className="form-group">
             <label>Client ID <Tooltip text="Публичный идентификатор приложения из dev.twitch.tv (тип «Public», Device Code Flow). Меняйте только если создали своё приложение." /></label>
-            <div className="form-row"><input type="text" value={clientId} onChange={(e) => setClientId(e.target.value)} style={{ fontFamily: "monospace" }} /><button onClick={() => { if (clientId.trim() && clientId.trim() !== config.twitch.clientId) { setSection("twitch", { clientId: clientId.trim() }); showNotification("Client ID сохранён — переавторизуйте аккаунты", NOTIFICATION_TYPES.WARNING, 4000); } }} style={{ flex: "0 0 auto" }}>Сохранить</button></div>
+            <div className="form-row"><input type="text" value={clientId} onChange={(e) => setClientId(e.target.value)} style={{ fontFamily: "var(--font-mono)" }} /><button onClick={() => { if (clientId.trim() && clientId.trim() !== config.twitch.clientId) { setSection("twitch", { clientId: clientId.trim() }); showNotification("Client ID сохранён — переавторизуйте аккаунты", NOTIFICATION_TYPES.WARNING, 4000); } }} style={{ flex: "0 0 auto" }}>Сохранить</button></div>
           </div>
           <div className="form-hint">Токены хранятся: {status?.secretsBackend === "keyring" ? "в системном хранилище (keyring)" : "в файле secrets.json (системное хранилище недоступно)"}.</div>
         </div>
@@ -126,7 +126,7 @@ export default function SettingsTab() {
           <div className="form-group">
             <label>Репозиторий с релизами <Tooltip text="GitHub-репозиторий, где публикуются версии. Авторы форков могут указать свой — или прямую ссылку на JSON в формате страницы «последний релиз» GitHub, если релизы лежат на своём сервере." /></label>
             <div className="form-row">
-              <input type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} onBlur={() => { const v = repoUrl.trim(); if (v && v !== upd.repoUrl) setSection("updates", { ...upd, repoUrl: v }); }} style={{ fontFamily: "monospace" }} />
+              <input type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} onBlur={() => { const v = repoUrl.trim(); if (v && v !== upd.repoUrl) setSection("updates", { ...upd, repoUrl: v }); }} style={{ fontFamily: "var(--font-mono)" }} />
               <button onClick={() => void checkUpdates()} disabled={checking} style={{ flex: "0 0 auto" }}><Icon name="refresh" className={checking ? "spinning" : ""} /> Проверить</button>
             </div>
           </div>
@@ -188,7 +188,7 @@ export default function SettingsTab() {
           <div className="form-group">
             <label>Текущая папка <Tooltip text="Здесь лежат config.json, медиа, резервные копии конфига и логи. Токены Twitch — в системном хранилище (или в secrets.json, если оно недоступно)." /></label>
             <div className="form-row">
-              <input type="text" value={dataDir?.current ?? "…"} readOnly style={{ fontFamily: "monospace" }} />
+              <input type="text" value={dataDir?.current ?? "…"} readOnly style={{ fontFamily: "var(--font-mono)" }} />
               <button onClick={() => void api.openDataDir()} style={{ flex: "0 0 auto" }}><Icon name="folder-open"  /> Открыть</button>
             </div>
             {dataDir?.source === "pointer" && <div className="form-hint">Нестандартная папка; указатель на неё лежит в «{dataDir.default}».</div>}
@@ -199,7 +199,7 @@ export default function SettingsTab() {
               <div className="form-group">
                 <label>Перенести в другую папку <Tooltip text="Например, на другой диск, если на системном мало места. Старая папка не удаляется — её можно убрать вручную после проверки." /></label>
                 <div className="form-row">
-                  <input type="text" value={newDir} onChange={(e) => setNewDir(e.target.value)} placeholder="Полный путь к папке (выбирайте пустую папку)" style={{ fontFamily: "monospace" }} />
+                  <input type="text" value={newDir} onChange={(e) => setNewDir(e.target.value)} placeholder="Полный путь к папке (выбирайте пустую папку)" style={{ fontFamily: "var(--font-mono)" }} />
                   <button onClick={() => void pickDir()} style={{ flex: "0 0 auto" }}><Icon name="folder-open"  /> Выбрать…</button>
                 </div>
               </div>
