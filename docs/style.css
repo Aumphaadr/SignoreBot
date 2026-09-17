@@ -191,3 +191,7 @@ html { color-scheme: dark; scrollbar-color: #3a414c var(--bg2); scrollbar-width:
 .thanks img { width: 88px; height: 88px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; transition: .15s; background: var(--bg3); }
 .thanks a:hover img { transform: scale(1.06); box-shadow: 0 0 0 4px var(--accent-light); }
 .thanks span { font-size: 15px; text-align: center; word-break: break-word; }
+
+/* Карточки чужой ОС приглушены, при наведении — обычные */
+.dl .card.other-os { opacity: .5; transition: opacity .15s; }
+.dl .card.other-os:hover { opacity: 1; }

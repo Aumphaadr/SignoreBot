@@ -7,10 +7,10 @@ import Tooltip from "../Tooltip";
 import "./ShoutoutsTab.css";
 
 const RAID_MODES: { value: RaidShoutoutMode; label: string; description: string }[] = [
-  { value: "none", label: "Никто", description: "Рейды не добавляют пользователей в очередь shoutout." },
-  { value: "listed", label: "Только из списка auto-shoutout", description: "Рейдер получит shoutout только если он есть в списке ниже." },
-  { value: "unlisted", label: "Только кроме списка auto-shoutout", description: "Рейдер получит shoutout только если его нет в списке ниже." },
-  { value: "all", label: "Все рейдеры", description: "Любой рейдер попадёт в очередь shoutout." },
+  { value: "none", label: "Ни за какие рейды", description: "За рейды бот шатаут не делает." },
+  { value: "listed", label: "Только если стример есть в списке", description: "Шатаут получит стример, который привёл рейд, — если его логин есть в списке ниже." },
+  { value: "unlisted", label: "Только если стримера нет в списке", description: "Шатаут получит стример, который привёл рейд, — если его логина нет в списке ниже." },
+  { value: "all", label: "За любой рейд", description: "Шатаут получит любой стример, который привёл рейд." },
 ];
 const SOURCE: Record<string, string> = { message: "сообщение", raid: "рейд", manual: "ручной" };
 
@@ -60,7 +60,7 @@ export default function ShoutoutsTab() {
         <div className="shoutout-list-section">
           <h3><Icon name="launch-rocket" /> Шатаут для рейдов</h3>
           <div className="raid-mode-control">
-            <label htmlFor="raid-shoutout-mode">Какие рейдеры должны получить шатаут?</label>
+            <label htmlFor="raid-shoutout-mode">За какие рейды делать шатаут? <Tooltip text="Рейд приводит другой стример: он отправляет к вам своих зрителей. Шатаут за рейд получает этот стример, один на весь рейд — пришедшие зрители в очередь не попадают, сколько бы их ни было." /></label>
             <select id="raid-shoutout-mode" value={so.raidMode} onChange={(e) => { setSection("shoutout", { ...so, raidMode: e.target.value as RaidShoutoutMode }); showNotification(`Режим shoutout для рейдов: ${RAID_MODES.find((m) => m.value === e.target.value)?.label}`, NOTIFICATION_TYPES.SUCCESS, 2000); }} className="raid-mode-select">
               {RAID_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
@@ -132,7 +132,7 @@ export default function ShoutoutsTab() {
           <h4><Icon name="book-open" /> Как это работает</h4>
           <ul>
             <li>При первом сообщении пользователя из списка за сессию бот делает /shoutout</li>
-            <li>Рейдеры обрабатываются по выбранному выше режиму</li>
+            <li>За рейд шатаут получает стример, который его привёл, — один на рейд, по режиму выше</li>
             <li>Shoutout за сообщение не мешает более позднему shoutout за рейд, но рейд блокирует последующий авто-шатаут за сообщение</li>
             <li>Кулдаун между шатаутами — 2 минуты (ограничение Twitch)</li>
             <li>Twitch ограничивает повторный shoutout одному пользователю в течение часа; лишние записи можно удалить из очереди</li>
