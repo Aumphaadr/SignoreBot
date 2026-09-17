@@ -62,7 +62,7 @@ export const EVENT_TYPES: Record<string, { label: string; icon: IconName; descri
   resubscribe: { icon: "vip-star", label: "Переподписка", description: "Продление подписки с сообщением", vars: ["user", "tier", "months", "streakMonths", "message"] },
   giftSub: { icon: "gift", label: "Подарочная подписка", description: "Кто-то дарит подписки", vars: ["user", "tier", "total", "isAnonymous"] },
   bits: { icon: "bits", label: "Bits / Cheer", description: "Кто-то отправляет Bits в чат", vars: ["user", "bits", "message", "isAnonymous"] },
-  raid: { icon: "users", label: "Рейд", description: "Входящий рейд на канал", vars: ["user", "viewers"] },
+  raid: { icon: "users", label: "Рейд", description: "Другой стример привёл к вам своих зрителей; {user} — кто привёл, {viewers} — сколько", vars: ["user", "viewers"] },
   watchStreak: { icon: "lightning", label: "Watch Streak", description: "Зритель делится серией просмотренных стримов", vars: ["user", "streakCount", "channelPointsAwarded", "systemMessage", "message"] },
 };
 

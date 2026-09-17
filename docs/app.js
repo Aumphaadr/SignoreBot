@@ -119,6 +119,24 @@
   };
   let release = null; // Promise с ответом GitHub, один на всё время жизни страницы
 
+  // Карточки скачивания: определяем ОС посетителя и приглушаем чужие.
+  function detectOs() {
+    const p = ((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "").toLowerCase();
+    const ua = navigator.userAgent.toLowerCase();
+    if (p.includes("win") || ua.includes("windows")) return "windows";
+    if (p.includes("linux") || ua.includes("linux") || ua.includes("x11")) return "linux";
+    if (p.includes("mac") || ua.includes("mac os")) return "mac";
+    return "";
+  }
+  function enhanceOsCards() {
+    const os = detectOs();
+    const cards = document.querySelectorAll(".dl .card[data-os]");
+    if (!cards.length) return;
+    cards.forEach((c) => c.classList.toggle("other-os", !!os && os !== "mac" && c.dataset.os !== os));
+    const note = document.getElementById("dl-os-note");
+    if (note) note.textContent = os === "windows" ? "Похоже, у вас Windows — подходящая карточка первая." : os === "linux" ? "Похоже, у вас Linux — подходящие карточки выделены." : "";
+  }
+
   function enhanceDownloads() {
     const status = document.getElementById("dl-status");
     if (!status) return;
@@ -148,8 +166,15 @@
     }).catch(() => { /* оставляем ссылки из HTML */ });
   }
 
+  // Иконка вкладки задана относительным путём ({{root}}logo.svg), а <head>
+  // при переходах не меняется: браузер перезапрашивал её от адреса урока и
+  // получал 404. Один раз делаем адрес абсолютным.
+  const icon = document.querySelector('link[rel="icon"]');
+  if (icon) icon.setAttribute("href", icon.href);
+
   function enhance() {
     enhanceDownloads();
+    enhanceOsCards();
   }
   enhance();
 })();
