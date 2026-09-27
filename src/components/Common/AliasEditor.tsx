@@ -20,25 +20,25 @@ export default function AliasEditor({ value, onChange, allCommands, currentId, c
   return (
     <div className="aliases-editor">
       <div className="aliases-header">
-        <h4><Icon name="lightning" /> Алиасы команды</h4>
+        <h4><Icon name="link" /> Алиасы команды</h4>
         <p className="aliases-description">Дополнительные имена той же команды. Не могут совпадать с другими командами и их алиасами.</p>
       </div>
       <div className="aliases-list">
         {value.length === 0 ? (
-          <div className="empty-aliases"><p><Icon name="inbox-empty" /> У команды нет алиасов</p><p className="hint">Добавьте алиас, чтобы команду можно было вызвать по нескольким именам</p></div>
+          <div className="empty-aliases"><p><Icon name="inbox" /> У команды нет алиасов</p><p className="hint">Добавьте алиас, чтобы команду можно было вызвать по нескольким именам</p></div>
         ) : value.map((a) => (
           <div key={a} className="alias-item">
             <span className="alias-name">!{a}</span>
-            <button onClick={() => onChange(value.filter((x) => x !== a))} className="remove-alias-btn" title="Удалить алиас"><Icon name="delete"  /></button>
+            <button onClick={() => onChange(value.filter((x) => x !== a))} className="remove-alias-btn" title="Удалить алиас"><Icon name="trash"  /></button>
           </div>
         ))}
       </div>
       <div className="add-alias-form">
         <input type="text" value={text} onChange={(e) => setText(e.target.value.replace(/^!+/, ""))} placeholder="Название алиаса (без !)" onKeyDown={(e) => e.key === "Enter" && add()} className="alias-input" />
-        <button onClick={add} className="add-alias-btn"><Icon name="add"  /> Добавить алиас</button>
+        <button onClick={add} className="add-alias-btn"><Icon name="plus"  /> Добавить алиас</button>
       </div>
-      {!enabled && value.length > 0 && <div className="aliases-warning"><Icon name="warning" /> Команда <b>!{currentName || "…"}</b> выключена — {value.length === 1 ? "алиас" : "алиасы"} {value.map((a) => `!${a}`).join(", ")} тоже не {value.length === 1 ? "сработает" : "сработают"}, пока её не включить.</div>}
-      {!enabled && value.length === 0 && <div className="form-hint"><Icon name="info" /> Команда сейчас выключена: добавленные алиасы заработают вместе с ней.</div>}
+      {!enabled && value.length > 0 && <div className="aliases-warning"><Icon name="triangle-alert" /> Команда <b>!{currentName || "…"}</b> выключена — {value.length === 1 ? "алиас" : "алиасы"} {value.map((a) => `!${a}`).join(", ")} тоже не {value.length === 1 ? "сработает" : "сработают"}, пока её не включить.</div>}
+      {!enabled && value.length === 0 && <div className="form-hint"><Icon name="circle-info" /> Команда сейчас выключена: добавленные алиасы заработают вместе с ней.</div>}
     </div>
   );
 }

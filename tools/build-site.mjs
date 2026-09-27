@@ -38,7 +38,7 @@ const icon = (name) => {
 };
 
 const render = (tpl, vars) =>
-  tpl.replace(/\{\{icon:([a-z-]+)\}\}/g, (m, n) => icon(n)).replace(/\{\{(\w+)\}\}/g, (m, k) => (k in vars ? vars[k] : m));
+  tpl.replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (m, n) => icon(n)).replace(/\{\{(\w+)\}\}/g, (m, k) => (k in vars ? vars[k] : m));
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const href = (root, p) => (p.slug ? `${root}${p.slug}/` : root);
 

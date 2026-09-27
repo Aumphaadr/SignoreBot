@@ -2,7 +2,7 @@ import Icon, { type IconName } from "../Icon";
 import { useState } from "react";
 import Tooltip from "../Tooltip";
 
-const ROLES: [string, IconName, string][] = [["broadcaster", "owner-crown", "Стример"], ["moderators", "moderator-sword", "Модераторы"], ["vips", "gem", "VIP"], ["subscribers", "vip-star", "Подписчики"]];
+const ROLES: [string, IconName, string][] = [["broadcaster", "video-camera", "Стример"], ["moderators", "sword", "Модераторы"], ["vips", "gem", "VIP"], ["subscribers", "star", "Подписчики"]];
 
 /** Кто может вызывать команду. «Все» исключает остальные; роли и «Выбранные»
  *  (ручной список логинов) сочетаются между собой. Пустой список = все. */
@@ -26,7 +26,7 @@ export default function PermissionsSelector({ value, onChange }: { value: string
       <label><Icon name="lock" /> Кто может вызывать <Tooltip text="«Все» — любой зритель. Роли и «Выбранные» (список логинов) можно сочетать: например, стример + модераторы + пара ников." /></label>
       <div className="role-buttons">
         {ROLES.map(([r, ic, l]) => <button key={r} type="button" className={`role-btn ${value.includes(r) ? "active" : ""}`} onClick={() => toggleRole(r)}><Icon name={ic} /> {l}</button>)}
-        <button type="button" className={`role-btn ${listOpen ? "active" : ""}`} onClick={toggleList}><Icon name="target" /> Выбранные{users.length > 0 ? ` (${users.length})` : ""}</button>
+        <button type="button" className={`role-btn ${listOpen ? "active" : ""}`} onClick={toggleList}><Icon name="user-plus" /> Выбранные{users.length > 0 ? ` (${users.length})` : ""}</button>
         <button type="button" className={`role-btn ${isAll ? "active" : ""}`} onClick={setAll}><Icon name="globe" /> Все</button>
       </div>
       {listOpen && (
@@ -34,13 +34,13 @@ export default function PermissionsSelector({ value, onChange }: { value: string
           {users.length > 0 && (
             <div className="users-list">
               {users.map((v) => (
-                <div key={v} className="user-tag"><Icon name="user" /> {v.slice(5)}<button onClick={() => onChange(value.filter((x) => x !== v))} className="remove-user">×</button></div>
+                <div key={v} className="user-tag"><Icon name="user" /> {v.slice(5)}<button onClick={() => onChange(value.filter((x) => x !== v))} className="remove-user" title="Убрать"><Icon name="x" /></button></div>
               ))}
             </div>
           )}
           <div className="add-user">
             <input type="text" value={user} onChange={(e) => setUser(e.target.value)} placeholder="Логин пользователя" onKeyDown={(e) => e.key === "Enter" && addUser()} />
-            <button onClick={addUser} className="add-user-btn"><Icon name="add" /> Добавить</button>
+            <button onClick={addUser} className="add-user-btn"><Icon name="plus" /> Добавить</button>
           </div>
         </div>
       )}

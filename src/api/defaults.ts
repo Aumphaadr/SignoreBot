@@ -57,13 +57,16 @@ export const defaultPeriodic = (): PeriodicEvent => ({
 });
 
 export const EVENT_TYPES: Record<string, { label: string; icon: IconName; description: string; vars: string[] }> = {
-  follow: { icon: "follower-heart", label: "Новый фолловер", description: "Кто-то подписался на канал (follow)", vars: ["user"] },
-  subscribe: { icon: "vip-star", label: "Новая подписка", description: "Новая платная подписка на канал", vars: ["user", "tier", "isGift"] },
-  resubscribe: { icon: "vip-star", label: "Переподписка", description: "Продление подписки с сообщением", vars: ["user", "tier", "months", "streakMonths", "message"] },
+  follow: { icon: "heart", label: "Новый фолловер", description: "Кто-то подписался на канал (follow)", vars: ["user"] },
+  subscribe: { icon: "star", label: "Новая подписка", description: "Новая платная подписка на канал", vars: ["user", "tier", "isGift"] },
+  resubscribe: { icon: "star-repeat", label: "Переподписка", description: "Продление подписки с сообщением", vars: ["user", "tier", "months", "streakMonths", "message"] },
   giftSub: { icon: "gift", label: "Подарочная подписка", description: "Кто-то дарит подписки", vars: ["user", "tier", "total", "isAnonymous"] },
-  bits: { icon: "bits", label: "Bits / Cheer", description: "Кто-то отправляет Bits в чат", vars: ["user", "bits", "message", "isAnonymous"] },
+  bits: { icon: "bits", label: "Bits", description: "Зритель отправил Bits (чир) в чат", vars: ["user", "bits", "message", "isAnonymous"] },
   raid: { icon: "users", label: "Рейд", description: "Другой стример привёл к вам своих зрителей; {user} — кто привёл, {viewers} — сколько", vars: ["user", "viewers"] },
-  watchStreak: { icon: "lightning", label: "Watch Streak", description: "Зритель делится серией просмотренных стримов", vars: ["user", "streakCount", "channelPointsAwarded", "systemMessage", "message"] },
+  hypeTrainBegin: { icon: "locomotive", label: "Хайповоз начался", description: "Зрители разогнали хайповоз (Hype Train) до первого уровня; {user} и {topUser} — лучший вкладчик", vars: ["user", "level", "total", "progress", "goal", "topUser", "topType", "topAmount"] },
+  hypeTrainLevel: { icon: "locomotive", label: "Хайповоз: новый уровень", description: "Хайповоз поднялся на следующий уровень (не на каждый вклад, а только на переход)", vars: ["user", "level", "total", "progress", "goal", "topUser", "topType", "topAmount"] },
+  hypeTrainEnd: { icon: "locomotive", label: "Хайповоз завершился", description: "Хайповоз закончился; {level} — достигнутый уровень, {total} — набранные очки", vars: ["user", "level", "total", "topUser", "topType", "topAmount"] },
+  watchStreak: { icon: "lightning", label: "Серия просмотров", description: "Зритель делится серией стримов, просмотренных подряд (watch streak)", vars: ["user", "streakCount", "channelPointsAwarded", "systemMessage", "message"] },
 };
 
 export { FONT_FAMILIES } from "./fonts.generated";
@@ -105,6 +108,7 @@ export const SAMPLE_VARS: Record<string, string> = {
   tier: "Tier 1", tierRaw: "1000", isGift: "false", months: "6", streakMonths: "3", total: "5",
   isAnonymous: "false", bits: "250", viewers: "42", fromUserId: "12345", userId: "12345",
   streakCount: "120", channelPointsAwarded: "450", systemMessage: "TestStreaker sparked a watch streak!",
+  level: "3", goal: "2400", progress: "700", topUser: "TestFan", topType: "bits", topAmount: "1500",
 };
 
 /** Подстановка `{var}` образцами (как в ядре — одним проходом). */

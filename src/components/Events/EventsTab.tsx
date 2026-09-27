@@ -6,7 +6,7 @@ import { EVENT_TYPES, defaultResponse } from "../../api/defaults";
 import { useAppState } from "../../state/AppState";
 import { reactionBadge } from "../Commands/CommandsTab";
 import Modal, { ModalActions } from "../Common/Modal";
-import { Hint, hintOverlay, hintOverlayAll, hintReaction, hintSkipGifted, hintStatus } from "../Common/hints";
+import { Em, Hint, hintOverlay, hintOverlayAll, hintReaction, hintSkipGifted, hintStatus } from "../Common/hints";
 import ResponseEditor from "../Common/ResponseEditor";
 import { VariableBadge, VariableBadges } from "../Common/VariableBadge";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
@@ -16,9 +16,12 @@ import "./EventsTab.css";
 const empty = (): EventReaction => ({ enabled: false, skipGifted: false, response: defaultResponse() });
 
 export default function EventsTab() {
-  const { config, setSection } = useAppState();
+  const { config, setSection, status } = useAppState();
   const { showNotification } = useNotification();
   const [editing, setEditing] = useState<string | null>(null);
+  // Хайповоз Twitch присылает только с правом channel:read:hype_train (запрашивается с 1.0.5)
+  const streamer = status?.broadcaster;
+  const hypeScopeMissing = !!streamer && streamer.state === "authorized" && !streamer.scopes.includes("channel:read:hype_train");
   const events = config.events;
   const get = (t: string) => events[t] ?? empty();
   const put = (t: string, e: EventReaction) => setSection("events", { ...events, [t]: e });
@@ -31,7 +34,7 @@ export default function EventsTab() {
   return (
     <div className="events-tab">
       <div className="events-header">
-        <h2><Icon name="event-party" /> События Twitch</h2>
+        <h2><Icon name="party-popper" /> События Twitch</h2>
         <p className="events-description">Реакции бота на события канала. В текстах доступны переменные вроде <VariableBadges className="inline-variable-list" variables={["user", "tier", "viewers", "streakCount"]} />.</p>
       </div>
       <div className="events-list">
@@ -46,13 +49,14 @@ export default function EventsTab() {
                   <span className="event-name"><Icon name={meta.icon} /> {meta.label}</span>
                   <Hint text={hintReaction({ kind: "event", name: plain }, e.response)}><span className="event-type-badge">{reactionBadge(e.response)}</span></Hint>
                   {t === "subscribe" && e.skipGifted && <Hint text={hintSkipGifted()}><span className="event-type-badge"><Icon name="gift" /> без подарочных</span></Hint>}
-                  {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="overlay-screen" /> {ov.name}</span></Hint>}
-                  {!ov && e.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="broadcast" /> Все оверлеи</span></Hint>}
+                  {t.startsWith("hypeTrain") && hypeScopeMissing && <Hint text={<>Twitch не сообщит боту о хайповозе без права <Em>channel:read:hype_train</Em>. Авторизуйте стримера заново на вкладке «Авторизация» — бот запросит это право сам.</>}><span className="event-type-badge warning-badge"><Icon name="triangle-alert" /> нужно право</span></Hint>}
+                  {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="monitor" /> {ov.name}</span></Hint>}
+                  {!ov && e.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="radio-tower" /> Все оверлеи</span></Hint>}
                 </div>
                 <div className="event-actions">
-                  <button onClick={() => void test(t)} className="test-btn" title="Тест"><Icon name="play"  /> Тест</button>
+                  <button onClick={() => void test(t)} className="test-btn" title="Тест"><Icon name="flask-conical"  /> Тест</button>
                   <Hint text={hintStatus({ kind: "event", name: plain }, e.enabled)}><button onClick={() => { put(t, { ...e, enabled: !e.enabled }); showNotification(`Событие «${meta.label}» ${!e.enabled ? "включено" : "выключено"}`, NOTIFICATION_TYPES.INFO, 1500); }} className={`status-toggle-btn ${e.enabled ? "on" : "off"}`}><Icon name="power"  /></button></Hint>
-                  <button onClick={() => setEditing(t)} className="edit-btn" title="Редактировать"><Icon name="edit"  /></button>
+                  <button onClick={() => setEditing(t)} className="edit-btn" title="Редактировать"><Icon name="pencil"  /></button>
                 </div>
               </div>
             </div>
@@ -77,7 +81,7 @@ function EventEditor({ type, initial, onSave }: { type: string; initial: EventRe
         <div className="event-meta">
           <h2><Icon name={meta.icon} /> {meta.label}</h2>
           <p className="event-description">{meta.description}</p>
-          <div className="event-vars"><span className="vars-label">Доступные переменные:</span>{meta.vars.map((v) => <VariableBadge key={v} name={v} className="var-badge" />)}</div>
+          <div className="event-vars"><span className="vars-label"><Icon name="braces" /> Доступные переменные:</span>{meta.vars.map((v) => <VariableBadge key={v} name={v} className="var-badge" />)}</div>
           {type === "subscribe" && (
             <label className="toggle-label" style={{ marginTop: 12 }}>
               <span className="toggle-switch"><input type="checkbox" checked={e.skipGifted} onChange={(ev) => setE({ ...e, skipGifted: ev.target.checked })} /><span className="toggle-slider"></span></span>

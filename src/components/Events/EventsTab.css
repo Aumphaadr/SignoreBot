@@ -60,3 +60,4 @@
     align-items: flex-start;
   }
 }
+.event-type-badge.warning-badge { color: var(--warning); border-color: var(--warning); background: var(--warning-light); }

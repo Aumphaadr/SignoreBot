@@ -475,7 +475,7 @@ impl Default for Reward {
 
 /// Известные типы событий (ключи `Config::events`).
 pub const EVENT_TYPES: &[&str] =
-    &["follow", "subscribe", "resubscribe", "giftSub", "bits", "raid", "watchStreak"];
+    &["follow", "subscribe", "resubscribe", "giftSub", "bits", "raid", "hypeTrainBegin", "hypeTrainLevel", "hypeTrainEnd", "watchStreak"];
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Default)]
 #[serde(rename_all = "camelCase", default)]

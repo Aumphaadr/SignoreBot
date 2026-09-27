@@ -16,7 +16,7 @@ export default function ResponseEditor({ value, onChange, overlays, variables = 
     <div className="response-editor">
       <div className="response-tabs">
         <button className={`response-tab ${tab === "chat" ? "active" : ""}`} onClick={() => setTab("chat")}>
-          <span className="tab-indicator chat"></span><Icon name="chat" /> Текст в чат
+          <span className="tab-indicator chat"></span><Icon name="message-dots" /> Текст в чат
           <label className="tab-toggle" onClick={(e) => e.stopPropagation()}>
             <input type="checkbox" checked={value.chat.enabled} onChange={() => onChange({ ...value, chat: { ...value.chat, enabled: !value.chat.enabled } })} />
             <span className="tab-toggle-slider"></span>

@@ -19,7 +19,10 @@ pub const BROADCASTER_SCOPES: &[&str] = &[
 
 /// Дополнительные права, которые запрашиваем у стримера, но не требуем:
 /// нужны только для наград, созданных через бота (возврат баллов).
-pub const BROADCASTER_OPTIONAL_SCOPES: &[&str] = &["channel:manage:redemptions"];
+pub const BROADCASTER_OPTIONAL_SCOPES: &[&str] = &[
+    "channel:manage:redemptions", // возврат баллов за награды, созданные ботом
+    "channel:read:hype_train",    // хайповоз: начало, уровни, финиш
+];
 
 /// Права бота (пишет в чат и удаляет сообщения как модератор).
 pub const BOT_SCOPES: &[&str] = &[

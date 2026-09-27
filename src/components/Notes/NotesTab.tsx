@@ -6,7 +6,7 @@ import { useAppState } from "../../state/AppState";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
 import "./NotesTab.css";
 
-const LABEL: Record<NoteStatus, [IconName, string]> = { active: ["pin", "В процессе"], done: ["success-badge", "Выполнено"], cancelled: ["error-badge", "Отменено"] };
+const LABEL: Record<NoteStatus, [IconName, string]> = { active: ["circle-dot", "В процессе"], done: ["circle-check", "Выполнено"], cancelled: ["circle-minus", "Отменено"] };
 
 export default function NotesTab() {
   const { config, setSection } = useAppState();
@@ -47,7 +47,7 @@ export default function NotesTab() {
       {editingId === n.id ? (
         <>
           <textarea className="note-textarea" value={editText} onChange={(e) => setEditText(e.target.value)} rows={4} autoFocus />
-          <div className="note-editor-actions"><button className="note-save-btn" onClick={saveEdit}><Icon name="save"  /> Сохранить</button><button className="note-cancel-btn" onClick={() => setEditingId(null)}><Icon name="close"  /> Отмена</button></div>
+          <div className="note-editor-actions"><button className="note-save-btn" onClick={saveEdit}><Icon name="save"  /> Сохранить</button><button className="note-cancel-btn" onClick={() => setEditingId(null)}><Icon name="x"  /> Отмена</button></div>
         </>
       ) : (
         <>
@@ -56,12 +56,12 @@ export default function NotesTab() {
             <span className="note-date">{fmt(n.updatedAt || n.createdAt)}</span>
             <div className="note-actions">
               <div className="note-status-buttons">
-                {n.status !== "active" && <button className="note-status-btn status-active" onClick={() => setStatus(n.id, "active")} title="В процессе"><Icon name="pin"  /></button>}
-                {n.status !== "done" && <button className="note-status-btn status-done" onClick={() => setStatus(n.id, "done")} title="Выполнено"><Icon name="check"  /></button>}
-                {n.status !== "cancelled" && <button className="note-status-btn status-cancelled" onClick={() => setStatus(n.id, "cancelled")} title="Отменено"><Icon name="close"  /></button>}
+                {n.status !== "active" && <button className="note-status-btn status-active" onClick={() => setStatus(n.id, "active")} title="В процессе"><Icon name="circle-dot"  /></button>}
+                {n.status !== "done" && <button className="note-status-btn status-done" onClick={() => setStatus(n.id, "done")} title="Выполнено"><Icon name="circle-check"  /></button>}
+                {n.status !== "cancelled" && <button className="note-status-btn status-cancelled" onClick={() => setStatus(n.id, "cancelled")} title="Отменено"><Icon name="circle-minus"  /></button>}
               </div>
-              {n.status === "active" && <button className="note-action-btn edit" onClick={() => { setEditingId(n.id); setEditText(n.text); setCreating(false); }} title="Редактировать"><Icon name="edit"  /></button>}
-              <button className="note-action-btn delete" onClick={() => remove(n)} title="Удалить"><Icon name="delete"  /></button>
+              {n.status === "active" && <button className="note-action-btn edit" onClick={() => { setEditingId(n.id); setEditText(n.text); setCreating(false); }} title="Редактировать"><Icon name="pencil"  /></button>}
+              <button className="note-action-btn delete" onClick={() => remove(n)} title="Удалить"><Icon name="trash"  /></button>
             </div>
           </div>
         </>
@@ -72,19 +72,19 @@ export default function NotesTab() {
 
   return (
     <div className="notes-tab">
-      <div className="notes-header"><h2><Icon name="edit" /> Заметки</h2><p className="notes-description">Быстрые записи для стрима: идеи, задачи, напоминания.</p></div>
-      {!creating && <button className="create-note-btn" onClick={() => { setCreating(true); setNewText(""); setEditingId(null); }}><Icon name="add"  /> Новая заметка</button>}
+      <div className="notes-header"><h2><Icon name="sticky-note" /> Заметки</h2><p className="notes-description">Быстрые записи для стрима: идеи, задачи, напоминания.</p></div>
+      {!creating && <button className="create-note-btn" onClick={() => { setCreating(true); setNewText(""); setEditingId(null); }}><Icon name="plus"  /> Новая заметка</button>}
       {creating && (
         <div className="note-editor-card creating">
-          <div className="note-editor-header"><h3><Icon name="edit" /> Новая заметка</h3></div>
+          <div className="note-editor-header"><h3><Icon name="sticky-note" /> Новая заметка</h3></div>
           <textarea className="note-textarea" value={newText} onChange={(e) => setNewText(e.target.value)} placeholder="Что нужно запомнить?..." rows={4} autoFocus />
-          <div className="note-editor-actions"><button className="note-save-btn" onClick={create}><Icon name="save"  /> Сохранить</button><button className="note-cancel-btn" onClick={() => setCreating(false)}><Icon name="close"  /> Отмена</button></div>
+          <div className="note-editor-actions"><button className="note-save-btn" onClick={create}><Icon name="save"  /> Сохранить</button><button className="note-cancel-btn" onClick={() => setCreating(false)}><Icon name="x"  /> Отмена</button></div>
         </div>
       )}
-      {notes.length === 0 && !creating && <div className="empty-notes"><p><Icon name="inbox-empty" /> Заметок пока нет</p><p className="hint">Нажмите «Новая заметка», чтобы создать первую</p></div>}
-      {by("active").length > 0 && <div className="notes-section"><h3 className="notes-section-title"><Icon name="pin" /> В процессе ({by("active").length})</h3><div className="notes-list">{by("active").map(card)}</div></div>}
-      {by("done").length > 0 && <div className="notes-section done-section"><div className="notes-section-header"><h3 className="notes-section-title"><Icon name="success-badge" /> Выполнено ({by("done").length})</h3><button className="bulk-delete-btn" onClick={() => removeAll("done")}><Icon name="delete"  /> Удалить все выполненные</button></div><div className="notes-list">{by("done").map(card)}</div></div>}
-      {by("cancelled").length > 0 && <div className="notes-section cancelled-section"><div className="notes-section-header"><h3 className="notes-section-title"><Icon name="error-badge" /> Отменено ({by("cancelled").length})</h3><button className="bulk-delete-btn" onClick={() => removeAll("cancelled")}><Icon name="delete"  /> Удалить все отменённые</button></div><div className="notes-list">{by("cancelled").map(card)}</div></div>}
+      {notes.length === 0 && !creating && <div className="empty-notes"><p><Icon name="inbox" /> Заметок пока нет</p><p className="hint">Нажмите «Новая заметка», чтобы создать первую</p></div>}
+      {by("active").length > 0 && <div className="notes-section"><h3 className="notes-section-title"><Icon name="circle-dot" /> В процессе ({by("active").length})</h3><div className="notes-list">{by("active").map(card)}</div></div>}
+      {by("done").length > 0 && <div className="notes-section done-section"><div className="notes-section-header"><h3 className="notes-section-title"><Icon name="circle-check" /> Выполнено ({by("done").length})</h3><button className="bulk-delete-btn" onClick={() => removeAll("done")}><Icon name="trash"  /> Удалить все выполненные</button></div><div className="notes-list">{by("done").map(card)}</div></div>}
+      {by("cancelled").length > 0 && <div className="notes-section cancelled-section"><div className="notes-section-header"><h3 className="notes-section-title"><Icon name="circle-minus" /> Отменено ({by("cancelled").length})</h3><button className="bulk-delete-btn" onClick={() => removeAll("cancelled")}><Icon name="trash"  /> Удалить все отменённые</button></div><div className="notes-list">{by("cancelled").map(card)}</div></div>}
     </div>
   );
 }

@@ -35,11 +35,11 @@ function FallbackEditor({ overlay, overlays, onSave }: { overlay: Overlay; overl
           <Tooltip text={`Пока включена: если медиа пришло, а оверлей «${overlay.name}» не подключён, бот выполняет эту реакцию, а медиа в очередь оверлея не ставит. Выключенная реакция никуда не девается — состав сохраняется.`} />
         </label>
         <div className="form-hint">
-          <Icon name="lightbulb" /> Чтобы бот замечал, что оверлей выключен при смене сцены, в OBS у Browser Source включите <b>«Выключать источник, когда он не виден»</b> (Shutdown source when not visible). Без этого страница живёт на всех сценах, и бот считает оверлей подключённым, даже если зритель его не видит. Заодно полезно включить <b>«Обновлять браузер при активации сцены»</b>.
+          <Icon name="bulb" /> Чтобы бот замечал, что оверлей выключен при смене сцены, в OBS у Browser Source включите <b>«Выключать источник, когда он не виден»</b> (Shutdown source when not visible). Без этого страница живёт на всех сценах, и бот считает оверлей подключённым, даже если зритель его не видит. Заодно полезно включить <b>«Обновлять браузер при активации сцены»</b>.
         </div>
       </div>
       <div className="reward-editor-header">
-        <p className="reward-vars-hint"><Icon name="lightbulb" /> Доступные переменные: <VariableBadges className="inline-variable-list" variables={FB_VARS} descriptions={FB_DESCR} /></p>
+        <p className="reward-vars-hint"><Icon name="braces" /> Доступные переменные: <VariableBadges className="inline-variable-list" variables={FB_VARS} descriptions={FB_DESCR} /></p>
       </div>
       <ResponseEditor value={fb} onChange={setFb} overlays={overlays.filter((x) => x.id !== overlay.id)} variables={FB_VARS} />
     </div>
@@ -123,9 +123,9 @@ export default function OverlaysTab() {
   return (
     <div className="overlays-tab">
       <div className="overlays-header">
-        <h2><Icon name="overlay-screen" /> Оверлеи</h2>
+        <h2><Icon name="monitor" /> Оверлеи</h2>
         <p className="overlays-description">Оверлеи — веб-страницы, которые вы добавляете как Browser Source в OBS. У каждого свой URL с ключом доступа; медиа можно направлять на конкретный оверлей.</p>
-        {status?.server.error && <div className="error-message"><Icon name="error-badge" /> Сервер оверлеев не запущен: {status.server.error}. Измените порт в «Настройках».</div>}
+        {status?.server.error && <div className="error-message"><Icon name="circle-x" /> Сервер оверлеев не запущен: {status.server.error}. Измените порт в «Настройках».</div>}
         {!config.network.allowLan && (
           <p className="form-hint" style={{ marginTop: 10 }}><Icon name="lock" /> Сервер оверлеев слушает только этот компьютер. Если OBS работает на другом компьютере, включите «Доступ из локальной сети» в «Настройки → Сеть».</p>
         )}
@@ -139,7 +139,7 @@ export default function OverlaysTab() {
       </div>
 
       <div className="overlays-list">
-        {overlays.length === 0 && <div className="empty-overlays"><p><Icon name="inbox-empty" /> Оверлеи не созданы</p><p className="hint">Создайте первый оверлей, чтобы начать</p></div>}
+        {overlays.length === 0 && <div className="empty-overlays"><p><Icon name="inbox" /> Оверлеи не созданы</p><p className="hint">Создайте первый оверлей, чтобы начать</p></div>}
         {overlays.map((o) => {
           const st = statusOf(o);
           const bs = obs.browserSources.find((b) => b.overlayPath === o.path);
@@ -164,7 +164,7 @@ export default function OverlaysTab() {
                 </div>
               </div>
               <div className="overlay-card-url">
-                {st && !st.connected && st.pageRequestOk !== false && st.pageRequestAgeSec !== null ? <Hint text={st.hint ?? ""}><span className={`badge ${st?.connected ? "badge-success" : "badge-warning"}`}>{st?.connected ? <><Icon name="status-connected" /> подключён{(st.connections ?? 0) > 1 ? ` ×${st.connections}` : ""}</> : <><Icon name="status-disconnected" /> не подключён</>}</span></Hint> : <Hint text={st?.connected ? <>подключений: {st.connections}</> : "оверлей не подключён"}><span className={`badge ${st?.connected ? "badge-success" : "badge-warning"}`}>{st?.connected ? <><Icon name="status-connected" /> подключён{(st.connections ?? 0) > 1 ? ` ×${st.connections}` : ""}</> : <><Icon name="status-disconnected" /> не подключён</>}</span></Hint>}
+                {st && !st.connected && st.pageRequestOk !== false && st.pageRequestAgeSec !== null ? <Hint text={st.hint ?? ""}><span className={`badge ${st?.connected ? "badge-success" : "badge-warning"}`}>{st?.connected ? <><Icon name="radio" /> подключён{(st.connections ?? 0) > 1 ? ` ×${st.connections}` : ""}</> : <><Icon name="radio-off" /> не подключён</>}</span></Hint> : <Hint text={st?.connected ? <>подключений: {st.connections}</> : "оверлей не подключён"}><span className={`badge ${st?.connected ? "badge-success" : "badge-warning"}`}>{st?.connected ? <><Icon name="radio" /> подключён{(st.connections ?? 0) > 1 ? ` ×${st.connections}` : ""}</> : <><Icon name="radio-off" /> не подключён</>}</span></Hint>}
                 {st && st.pending > 0 && <span className="badge badge-info">в очереди: {st.pending}</span>}
                 {st && !st.connected && st.pageRequestOk === false && <Hint text={st.hint ?? ""}><span className="badge badge-warning">адрес в OBS без ключа</span></Hint>}
                 {st && !st.connected && st.pageRequestAgeSec === null && <Hint text={st.hint ?? ""}><span className="badge badge-warning">страницу не запрашивали</span></Hint>}
@@ -173,10 +173,10 @@ export default function OverlaysTab() {
               <div className="overlay-card-actions">
                 <button onClick={() => st && void copy(st.url)} className="overlay-action-btn copy" disabled={!st}><Icon name="copy"  /> Копировать URL</button>
                 <button onClick={() => st && void openUrl(st.url)} className="overlay-action-btn open" disabled={!st}><Icon name="external-link"  /> Открыть</button>
-                {obs.enabled && bs?.inputName && <button onClick={() => void setUrl(bs.inputName, o.path)} className="overlay-action-btn open" title="Записать этот URL в Browser Source OBS"><Icon name="plug"  /> В OBS</button>}
+                {obs.enabled && bs?.inputName && <button onClick={() => void setUrl(bs.inputName, o.path)} className="overlay-action-btn open" title="Записать этот URL в Browser Source OBS"><Icon name="send"  /> В OBS</button>}
                 <button onClick={() => void api.overlayClear(o.path, true).then(() => showNotification("Оверлей остановлен", NOTIFICATION_TYPES.INFO, 1500))} className="overlay-action-btn copy" title="Остановить всё, что сейчас играет"><Icon name="stop"  /> Стоп</button>
-                <Hint text={hintFallback(o, overlays)}><button onClick={() => setFbEdit(o)} className={`overlay-action-btn ${o.fallbackEnabled && o.fallback ? "fallback-on" : ""}`}><Icon name="warning" /> Если недоступен</button></Hint>
-                <button onClick={() => remove(o)} className="overlay-action-btn delete"><Icon name="delete"  /> Удалить</button>
+                <Hint text={hintFallback(o, overlays)}><button onClick={() => setFbEdit(o)} className={`overlay-action-btn ${o.fallbackEnabled && o.fallback ? "fallback-on" : ""}`}><Icon name="life-buoy" /> Если недоступен</button></Hint>
+                <button onClick={() => remove(o)} className="overlay-action-btn delete"><Icon name="trash"  /> Удалить</button>
               </div>
             </div>
           );
@@ -192,14 +192,14 @@ export default function OverlaysTab() {
       </Modal>
 
       <div className="add-overlay-form">
-        <h3><Icon name="add" /> Новый оверлей</h3>
+        <h3><Icon name="plus" /> Новый оверлей</h3>
         <div className="add-overlay-fields">
           <div className="add-overlay-field"><label>Название</label><input type="text" value={newName} onChange={(e) => { setNewName(e.target.value); if (!pathEdited) setNewPath(sanitize(e.target.value)); }} placeholder="Например: Алерты" className="add-overlay-input" /></div>
           <div className="add-overlay-field">
             <label>Адрес <Tooltip text="Только латинские буквы, цифры, дефис и подчёркивание" /></label>
             <div className="overlay-path-group"><span className="path-prefix">/overlay/</span><input type="text" value={newPath} onChange={(e) => { setPathEdited(true); setNewPath(sanitize(e.target.value)); }} placeholder="alerts" className="add-overlay-path-input" /></div>
           </div>
-          <button onClick={add} className="add-overlay-btn"><Icon name="add"  /> Создать</button>
+          <button onClick={add} className="add-overlay-btn"><Icon name="plus"  /> Создать</button>
         </div>
       </div>
 
@@ -230,8 +230,8 @@ export default function OverlaysTab() {
             </div>
             {sources && (
               <div className="obs-meta-list" style={{ marginTop: 12 }}>
-                {status?.obsProblem && <div className="form-hint text-warning"><Icon name="warning" /> {status.obsProblem}</div>}
-                <div className="obs-meta-item"><span className="obs-meta-label">Browser Source в OBS:</span>{browserSources.length === 0 && <span>нет</span>}<button className="small" style={{ marginLeft: "auto" }} onClick={() => void matchSources()} title="Найти в OBS источники, чьи адреса ведут на оверлеи бота, и записать их имена в привязки"><Icon name="lightning" /> Подобрать по адресам</button></div>
+                {status?.obsProblem && <div className="form-hint text-warning"><Icon name="triangle-alert" /> {status.obsProblem}</div>}
+                <div className="obs-meta-item"><span className="obs-meta-label">Browser Source в OBS:</span>{browserSources.length === 0 && <span>нет</span>}<button className="small" style={{ marginLeft: "auto" }} onClick={() => void matchSources()} title="Найти в OBS источники, чьи адреса ведут на оверлеи бота, и записать их имена в привязки"><Icon name="magnet" /> Подобрать по адресам</button></div>
                 {browserSources.map((s) => (
                   <div key={s.inputName} className="obs-meta-item"><code>{s.inputName}</code><span className="text-muted" style={{ fontSize: 12 }}>{s.url ?? "—"}</span></div>
                 ))}

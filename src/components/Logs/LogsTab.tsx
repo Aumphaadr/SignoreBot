@@ -65,15 +65,15 @@ export default function LogsTab() {
 
   return (
     <div className="logs-tab">
-      <div className="logs-header"><div className="logs-title"><h2><Icon name="clipboard" /> Логи</h2><div className="connection-status connected"><span className="connection-dot"></span><span>Живой поток</span></div></div></div>
+      <div className="logs-header"><div className="logs-title"><h2><Icon name="file-text" /> Логи</h2><div className="connection-status connected"><span className="connection-dot"></span><span>Живой поток</span></div></div></div>
       <div className="logs-controls">
         <div className="search-box">
           <Icon name="search" className="search-icon" />
           <input type="text" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Поиск по логам..." className="filter-input" />
-          {filter && <button className="search-clear" onClick={() => setFilter("")}><Icon name="close" /> </button>}
+          {filter && <button className="search-clear" onClick={() => setFilter("")}><Icon name="x" /> </button>}
         </div>
         <div className="filter-group" style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <Icon name="filter" className="filter-icon" />
+          <Icon name="funnel" className="filter-icon" />
           <select value={level} onChange={(e) => setLevel(e.target.value as typeof level)} className="level-select">
             <option value="all">Все уровни</option><option value="info">Инфо</option><option value="warn">Предупреждения</option><option value="error">Ошибки</option>
           </select>
@@ -82,16 +82,16 @@ export default function LogsTab() {
           </select>
         </div>
         <div className="control-buttons">
-          <button onClick={() => setAutoScroll((a) => !a)} className={`control-btn ${autoScroll ? "active" : ""}`} title={autoScroll ? "Автоскролл вкл" : "Автоскролл выкл"}>{autoScroll ? <Icon name="play"  /> : <Icon name="pause"  />}</button>
+          <button onClick={() => setAutoScroll((a) => !a)} className={`control-btn ${autoScroll ? "active" : ""}`} title={autoScroll ? "Автоскролл вкл" : "Автоскролл выкл"}><Icon name="arrow-down-to-line" /></button>
           <button onClick={() => setPaused((p) => !p)} className={`control-btn ${paused ? "paused" : ""}`} title={paused ? "Возобновить приём" : "Пауза приёма"}>{paused ? <Icon name="play"  /> : <Icon name="pause"  />}</button>
-          <button onClick={() => setLogs([])} className="control-btn" title="Очистить"><Icon name="delete"  /></button>
+          <button onClick={() => setLogs([])} className="control-btn" title="Очистить"><Icon name="eraser"  /></button>
           <button onClick={() => void copyLogs()} className="control-btn" title="Скопировать показанные записи в буфер обмена"><Icon name="copy"  /></button>
           <button onClick={() => void exportLogs()} className="control-btn with-text" title="Сохранить показанные логи в файл"><Icon name="download"  /> Экспорт</button>
         </div>
       </div>
       <div className="logs-container">
         {shown.length === 0 ? (
-          <div className="logs-empty">{logs.length === 0 ? <><p><Icon name="inbox-empty" /> Логов пока нет</p><p className="empty-hint">Логи появляются по мере работы бота</p></> : <><p><Icon name="search" /> Нет логов, соответствующих фильтру</p><button onClick={() => { setFilter(""); setLevel("all"); setTarget("all"); }} className="clear-filter-btn">Сбросить фильтры</button></>}</div>
+          <div className="logs-empty">{logs.length === 0 ? <><p><Icon name="inbox" /> Логов пока нет</p><p className="empty-hint">Логи появляются по мере работы бота</p></> : <><p><Icon name="search" /> Нет логов, соответствующих фильтру</p><button onClick={() => { setFilter(""); setLevel("all"); setTarget("all"); }} className="clear-filter-btn"><Icon name="funnel-x" /> Сбросить фильтры</button></>}</div>
         ) : (
           <div className="logs-list">
             {shown.map((l, i) => (

@@ -61,9 +61,9 @@ export default function BanWordsTab() {
         <div className="stat-card"><span className="stat-value">{total}</span><span className="stat-label">Вариантов написания</span></div>
       </div>
       <div className="rules-info">
-        <div className="rule-item"><span className="badge hard"><Icon name="status-disconnected" /> Жёсткий контроль</span><span>Удаляет сообщение, если слово встречается где угодно (даже как часть другого слова)</span></div>
-        <div className="rule-item"><span className="badge soft"><Icon name="warning" /> Мягкий контроль</span><span>Удаляет только если слово стоит отдельно</span></div>
-        <div className="rule-item"><span className="badge alias"><Icon name="moderator-shield" /> Защита от обхода</span><span>Варианты замены русских букв на похожие латинские и цифры (не более {MAX} на слово)</span></div>
+        <div className="rule-item"><span className="badge hard"><Icon name="ban" /> Жёсткий контроль</span><span>Удаляет сообщение, если слово встречается где угодно (даже как часть другого слова)</span></div>
+        <div className="rule-item"><span className="badge soft"><Icon name="triangle-alert" /> Мягкий контроль</span><span>Удаляет только если слово стоит отдельно</span></div>
+        <div className="rule-item"><span className="badge alias"><Icon name="shield-star" /> Защита от обхода</span><span>Варианты замены русских букв на похожие латинские и цифры (не более {MAX} на слово)</span></div>
       </div>
       <label className="toggle-label" style={{ marginBottom: 20 }}>
         <span className="toggle-switch"><input type="checkbox" checked={bw.skipPrivileged} onChange={(e) => setSection("banwords", { ...bw, skipPrivileged: e.target.checked })} /><span className="toggle-slider"></span></span>
@@ -72,7 +72,7 @@ export default function BanWordsTab() {
       </label>
       <div className="words-list">
         {words.length === 0 ? (
-          <div className="empty-words"><p><Icon name="ban" /> Список банвордов пуст</p><p className="hint">Добавьте слова, которые нужно автоматически удалять из чата</p></div>
+          <div className="empty-words"><p><Icon name="inbox" /> Список банвордов пуст</p><p className="hint">Добавьте слова, которые нужно автоматически удалять из чата</p></div>
         ) : words.map((w, i) => (
           <div key={w.word} className="word-card">
             <div className="word-card-header">
@@ -87,7 +87,7 @@ export default function BanWordsTab() {
                 <button onClick={() => setOpen((o) => ({ ...o, [w.word]: !o[w.word] }))} className="show-aliases-btn">{open[w.word] ? <Icon name="eye-off"  /> : <Icon name="eye"  />}<span>{open[w.word] ? "Скрыть" : `${w.aliases.length}`}</span></button>
                 <button onClick={() => { void copyText(w.aliases.join(", ")); showNotification(`Варианты для «${w.word}» скопированы`, NOTIFICATION_TYPES.SUCCESS, 2000); }} className="copy-aliases-btn" title="Копировать варианты"><Icon name="copy"  /></button>
                 <button onClick={() => { const a = generateAliases(w.word); setWords(words.map((x, xi) => (xi === i ? { ...x, aliases: a } : x))); showNotification(`Варианты для «${w.word}» обновлены (${a.length})`, NOTIFICATION_TYPES.INFO, 2000); }} className="regenerate-aliases-btn" title="Перегенерировать варианты"><Icon name="refresh" /> </button>
-                <button onClick={() => showConfirm(`Удалить слово «${w.word}» из списка банвордов?`, () => { setWords(words.filter((_, xi) => xi !== i)); showNotification(`Слово «${w.word}» удалено`, NOTIFICATION_TYPES.WARNING, 2000); })} className="remove-word-btn" title="Удалить слово"><Icon name="delete"  /></button>
+                <button onClick={() => showConfirm(`Удалить слово «${w.word}» из списка банвордов?`, () => { setWords(words.filter((_, xi) => xi !== i)); showNotification(`Слово «${w.word}» удалено`, NOTIFICATION_TYPES.WARNING, 2000); })} className="remove-word-btn" title="Удалить слово"><Icon name="trash"  /></button>
               </div>
             </div>
             {open[w.word] && (
@@ -100,13 +100,13 @@ export default function BanWordsTab() {
         ))}
       </div>
       <div className="add-word-form">
-        <h3><Icon name="add" /> Добавить слово с защитой</h3>
+        <h3><Icon name="plus" /> Добавить слово с защитой</h3>
         <div className="form-row">
           <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="например, спам" onKeyDown={(e) => e.key === "Enter" && add()} />
           <select value={kind} onChange={(e) => setKind(e.target.value as BanWordKind)}><option value="hard">Жёсткий контроль</option><option value="soft">Мягкий контроль</option></select>
-          <button onClick={add} className="add-word-btn"><Icon name="add"  /> Добавить</button>
+          <button onClick={add} className="add-word-btn"><Icon name="plus"  /> Добавить</button>
         </div>
-        <div className="form-hint"><Icon name="lightning" /> Автоматически сгенерируются варианты с подменой букв: а→a, е→e, б→6, р→p, с→c и другие</div>
+        <div className="form-hint"><Icon name="shield-star" /> Автоматически сгенерируются варианты с подменой букв: а→a, е→e, б→6, р→p, с→c и другие</div>
       </div>
     </div>
   );

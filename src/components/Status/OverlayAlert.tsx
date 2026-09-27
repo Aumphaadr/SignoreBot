@@ -23,7 +23,7 @@ export default function OverlayAlert({ goTo }: { goTo: (tab: string) => void }) 
   if (!alert || dismissed === alert) return null;
   return (
     <div className="overlay-alert" role="alert">
-      <Icon name="warning" className="overlay-alert-icon" />
+      <Icon name="triangle-alert" className="overlay-alert-icon" />
       <div className="overlay-alert-text">{alert}</div>
       <div className="overlay-alert-actions">
         <button className="small" onClick={() => goTo("overlays")}>Оверлеи</button>

@@ -53,7 +53,7 @@ export default function ChatEditor({ value, onChange, variables = [] }: { value:
   };
 
   const removeBtn = (i: number) => (
-    <button onClick={() => remove(i)} className="remove-btn" title="Удалить"><Icon name="delete"  /></button>
+    <button onClick={() => remove(i)} className="remove-btn" title="Удалить"><Icon name="trash"  /></button>
   );
 
   return (
@@ -61,7 +61,7 @@ export default function ChatEditor({ value, onChange, variables = [] }: { value:
       <div className="components-list">
         {comps.length === 0 ? (
           <div className="empty-components">
-            <p><Icon name="new-item" /> Начните добавлять компоненты для создания сообщения</p>
+            <p><Icon name="inbox" /> Начните добавлять компоненты для создания сообщения</p>
             <p className="hint">Добавьте текст, переменные, случайные числа или наборы фраз</p>
           </div>
         ) : (
@@ -74,14 +74,14 @@ export default function ChatEditor({ value, onChange, variables = [] }: { value:
               <div className="component-content">
                 {c.type === "space" && (
                   <div className="component space">
-                    <span className="space-icon"><Icon name="whitespace"  /> Пробел</span>
+                    <span className="space-icon"><Icon name="space"  /> Пробел</span>
                     <Tooltip text="Вставляет пробел между соседними компонентами" />
                     {removeBtn(i)}
                   </div>
                 )}
                 {c.type === "static" && (
                   <div className="component static">
-                    <span><Icon name="edit" /> Текст:</span>
+                    <span><Icon name="text" /> Текст:</span>
                     <input type="text" value={c.value} onChange={(e) => update(i, { value: e.target.value })} placeholder="Введите текст... можно {user}, {target}" />
                     {removeBtn(i)}
                   </div>
@@ -90,7 +90,7 @@ export default function ChatEditor({ value, onChange, variables = [] }: { value:
                   <div className="component variable"><span><Icon name="user" /> Автор</span><Tooltip text="Имя пользователя, вызвавшего команду/событие" />{removeBtn(i)}</div>
                 )}
                 {c.type === "target" && (
-                  <div className="component variable"><span><Icon name="target" /> Цель</span><Tooltip text="Первый аргумент после команды; если его нет — случайный зритель" />{removeBtn(i)}</div>
+                  <div className="component variable"><span><Icon name="crosshair" /> Цель</span><Tooltip text="Первый аргумент после команды; если его нет — случайный зритель" />{removeBtn(i)}</div>
                 )}
                 {c.type === "randomViewer" && (
                   <div className="component variable"><span><Icon name="users"  /> Случайный зритель</span><Tooltip text="Подставляет случайного зрителя из чата" />{removeBtn(i)}</div>
@@ -106,7 +106,7 @@ export default function ChatEditor({ value, onChange, variables = [] }: { value:
                 )}
                 {c.type === "variable" && (
                   <div className="component random">
-                    <span><Icon name="variable" /> Переменная:</span>
+                    <span><Icon name="braces" /> Переменная:</span>
                     <select value={c.name} onChange={(e) => update(i, { name: e.target.value })} className="number-input" style={{ width: "auto" }}>
                       <option value="">—</option>
                       {variables.map((v) => <option key={v} value={v}>{`{${v}}`}</option>)}
@@ -117,9 +117,9 @@ export default function ChatEditor({ value, onChange, variables = [] }: { value:
                 {c.type === "phrase" && (
                   <div className="component phrase-set">
                     <div className="phrase-header">
-                      <span><Icon name="phrase-library" /> Набор фраз</span>
+                      <span><Icon name="books" /> Набор фраз</span>
                       <Tooltip text="Бот выберет случайную фразу из набора" />
-                      <button onClick={() => update(i, { phrases: [...c.phrases, ""] })} className="add-phrase-btn"><Icon name="add"  /></button>
+                      <button onClick={() => update(i, { phrases: [...c.phrases, ""] })} className="add-phrase-btn"><Icon name="plus"  /></button>
                     </div>
                     {c.phrases.map((p, pi) => (
                       <div key={pi} className="phrase-item">
@@ -127,7 +127,7 @@ export default function ChatEditor({ value, onChange, variables = [] }: { value:
                         <button onClick={() => {
                           const rest = c.phrases.filter((_, xi) => xi !== pi);
                           if (rest.length === 0) remove(i); else update(i, { phrases: rest });
-                        }} className="remove-phrase-btn"><Icon name="delete"  /></button>
+                        }} className="remove-phrase-btn"><Icon name="trash"  /></button>
                       </div>
                     ))}
                   </div>
@@ -139,14 +139,14 @@ export default function ChatEditor({ value, onChange, variables = [] }: { value:
       </div>
 
       <div className="add-component-buttons">
-        <button onClick={() => set([...comps, NEW.static()])} className="add-btn"><Icon name="add"  /> Текст</button>
-        <button onClick={() => set([...comps, NEW.author()])} className="add-btn"><Icon name="add"  /> Автор</button>
-        <button onClick={() => set([...comps, NEW.target()])} className="add-btn"><Icon name="add"  /> Цель</button>
+        <button onClick={() => set([...comps, NEW.static()])} className="add-btn"><Icon name="plus"  /> Текст</button>
+        <button onClick={() => set([...comps, NEW.author()])} className="add-btn"><Icon name="plus"  /> Автор</button>
+        <button onClick={() => set([...comps, NEW.target()])} className="add-btn"><Icon name="plus"  /> Цель</button>
         <button onClick={() => set([...comps, NEW.randomViewer()])} className="add-btn"><Icon name="users"  /> Случайный зритель</button>
-        <button onClick={() => set([...comps, NEW.random()])} className="add-btn"><Icon name="shuffle"  /> Случайное число</button>
-        <button onClick={() => set([...comps, NEW.phrase()])} className="add-btn"><Icon name="add"  /> Набор фраз</button>
-        {variables.length > 0 && <button onClick={() => set([...comps, NEW.variable()])} className="add-btn"><Icon name="add"  /> Переменная</button>}
-        <button onClick={() => set([...comps, NEW.space()])} className="add-btn space-btn"><Icon name="whitespace"  /> Пробел</button>
+        <button onClick={() => set([...comps, NEW.random()])} className="add-btn"><Icon name="dice"  /> Случайное число</button>
+        <button onClick={() => set([...comps, NEW.phrase()])} className="add-btn"><Icon name="plus"  /> Набор фраз</button>
+        {variables.length > 0 && <button onClick={() => set([...comps, NEW.variable()])} className="add-btn"><Icon name="plus"  /> Переменная</button>}
+        <button onClick={() => set([...comps, NEW.space()])} className="add-btn space-btn"><Icon name="space"  /> Пробел</button>
       </div>
 
       <div className="preview-section">

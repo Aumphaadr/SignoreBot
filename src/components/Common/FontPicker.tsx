@@ -22,7 +22,7 @@ export default function FontPicker({ value, onChange }: { value: string; onChang
     <div className={`font-picker ${open ? "open" : ""}`} ref={ref}>
       <button type="button" className="font-picker-current" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
         <span style={{ fontFamily: value }}>{label}</span>
-        <Icon name="arrow-down" className="font-picker-arrow" />
+        <Icon name="chevron-down" className="font-picker-arrow" />
       </button>
       {open && (
         <ul className="font-picker-list" role="listbox">

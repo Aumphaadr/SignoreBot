@@ -73,13 +73,13 @@ function Timeline({ events, onOffset }: { events: PeriodicEvent[]; onOffset: (id
   return (
     <div className="periodic-timeline">
       <div className="timeline-header">
-        <h3><Icon name="stopwatch" /> Таймлайн событий</h3>
+        <h3><Icon name="clock" /> Таймлайн событий</h3>
         <div className="timeline-window-control">
           <label>Тайм-окно:</label>
           <input type="range" min={30} max={300} step={10} value={windowMin} onChange={(e) => setWindowMin(Number(e.target.value))} />
           <span className="window-value">{label}</span>
         </div>
-        {collisions.size > 0 && <div className="collision-warning"><Icon name="warning" /> Наложения: {collisions.size}</div>}
+        {collisions.size > 0 && <div className="collision-warning"><Icon name="triangle-alert" /> Наложения: {collisions.size}</div>}
       </div>
       <div className="timeline-body">
         <div className="timeline-axis" style={{ height: 28 }}>
@@ -105,7 +105,7 @@ function Timeline({ events, onOffset }: { events: PeriodicEvent[]; onOffset: (id
           ))}
         </div>
       </div>
-      <div className="timeline-hint"><Icon name="lightbulb" /> Перетаскивайте метки для настройки смещения — все метки одного события сдвигаются вместе.{drag && <span className="timeline-dragging-info"> Смещение: {fmt(drag.cur)}</span>}</div>
+      <div className="timeline-hint"><Icon name="bulb" /> Перетаскивайте метки для настройки смещения — все метки одного события сдвигаются вместе.{drag && <span className="timeline-dragging-info"> Смещение: {fmt(drag.cur)}</span>}</div>
     </div>
   );
 }
@@ -125,7 +125,7 @@ function PeriodicEditor({ initial, isNew, onSave }: { initial: PeriodicEvent; is
     <div className="periodic-editor">
       <ModalActions>
         <TestButton response={e.response} />
-        <button onClick={() => onSave({ ...e, name: e.name.trim(), intervalSec: iv, offsetSec: off })} className="save-periodic-btn primary" disabled={empty}>{isNew ? <><Icon name="add"  /> Создать событие</> : <><Icon name="save"  /> Сохранить</>}</button>
+        <button onClick={() => onSave({ ...e, name: e.name.trim(), intervalSec: iv, offsetSec: off })} className="save-periodic-btn primary" disabled={empty}>{isNew ? <><Icon name="plus"  /> Создать событие</> : <><Icon name="save"  /> Сохранить</>}</button>
       </ModalActions>
       <div className="periodic-editor-header">
         <div className="periodic-name-row">
@@ -143,7 +143,7 @@ function PeriodicEditor({ initial, isNew, onSave }: { initial: PeriodicEvent; is
         </div>
       </div>
       <div className="interval-setting">
-        <label><Icon name="stopwatch" /> Интервал (секунды) <Tooltip text="Как часто срабатывает событие. Минимум 10 секунд." /></label>
+        <label><Icon name="repeat" /> Интервал (секунды) <Tooltip text="Как часто срабатывает событие. Минимум 10 секунд." /></label>
         <div className="interval-input-group">
           <input type="number" value={interval} onChange={(ev) => setInterval_(ev.target.value)} onBlur={() => setInterval_(String(iv))} min={10} className="interval-input" />
           <div className="interval-presets">
@@ -154,7 +154,7 @@ function PeriodicEditor({ initial, isNew, onSave }: { initial: PeriodicEvent; is
         </div>
       </div>
       <div className="offset-setting">
-        <label><Icon name="fast-forward" /> Смещение (секунды) <Tooltip text="Сдвиг сетки срабатываний относительно запуска бота. Разносит события с одинаковым интервалом. Можно двигать на таймлайне." /></label>
+        <label><Icon name="arrow-left-right" /> Смещение (секунды) <Tooltip text="Сдвиг сетки срабатываний относительно запуска бота. Разносит события с одинаковым интервалом. Можно двигать на таймлайне." /></label>
         <div className="offset-input-group">
           <input type="number" value={offset} onChange={(ev) => setOffset(ev.target.value)} onBlur={() => setOffset(String(off))} min={0} max={iv - 1} className="interval-input" />
           <span className="offset-preview">Первое срабатывание после запуска: <strong>{fmtOff(off === 0 ? iv : off)}</strong></span>
@@ -206,11 +206,11 @@ export default function PeriodicTab() {
         <h2><Icon name="clock" /> Периодические события</h2>
         <p className="periodic-description">События, срабатывающие автоматически через равные промежутки времени.{!status?.running && " Таймеры работают, когда бот запущен (оба аккаунта авторизованы)."}</p>
         <div className="periodic-header-actions">
-          <button onClick={() => setEditing({ ev: defaultPeriodic(), isNew: true })} className="create-periodic-btn"><Icon name="add"  /> Создать событие</button>
+          <button onClick={() => setEditing({ ev: defaultPeriodic(), isNew: true })} className="create-periodic-btn"><Icon name="plus"  /> Создать событие</button>
         </div>
       </div>
       <div className="periodic-list">
-        {events.length === 0 && <div className="empty-periodic"><p><Icon name="inbox-empty" /> Периодических событий нет</p><p className="hint">Нажмите «Создать событие»</p></div>}
+        {events.length === 0 && <div className="empty-periodic"><p><Icon name="inbox" /> Периодических событий нет</p><p className="hint">Нажмите «Создать событие»</p></div>}
         {events.map((ev) => {
           const ov = ev.response.media.enabled && ev.response.media.overlay ? config.overlays.find((o) => o.id === ev.response.media.overlay) : null;
           const t = timers.find((x) => x.id === ev.id);
@@ -220,19 +220,19 @@ export default function PeriodicTab() {
                 <div className="periodic-title">
                   {ev.color && <span className="periodic-color-dot" style={{ backgroundColor: ev.color }} />}
                   <span className="periodic-name">{ev.name}</span>
-                  <Hint text={hintInterval(ev.name, ev.intervalSec)}><span className="periodic-interval-badge"><Icon name="stopwatch" /> {formatInterval(ev.intervalSec)}</span></Hint>
-                  {ev.offsetSec > 0 && <Hint text={hintOffset(ev.name, ev.offsetSec)}><span className="periodic-offset-badge"><Icon name="fast-forward" /> +{formatInterval(ev.offsetSec)}</span></Hint>}
-                  {ev.fireOnStart && <Hint text={hintFireOnStart(ev.name)}><span className="periodic-type-badge"><Icon name="launch-rocket" /> при старте</span></Hint>}
+                  <Hint text={hintInterval(ev.name, ev.intervalSec)}><span className="periodic-interval-badge"><Icon name="repeat" /> {formatInterval(ev.intervalSec)}</span></Hint>
+                  {ev.offsetSec > 0 && <Hint text={hintOffset(ev.name, ev.offsetSec)}><span className="periodic-offset-badge"><Icon name="arrow-left-right" /> +{formatInterval(ev.offsetSec)}</span></Hint>}
+                  {ev.fireOnStart && <Hint text={hintFireOnStart(ev.name)}><span className="periodic-type-badge"><Icon name="rocket" /> при старте</span></Hint>}
                   <Hint text={hintReaction({ kind: "periodic", name: ev.name }, ev.response)}><span className="periodic-type-badge">{reactionBadge(ev.response)}</span></Hint>
-                  {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="overlay-screen" /> {ov.name}</span></Hint>}
-                  {!ov && ev.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="broadcast" /> Все оверлеи</span></Hint>}
+                  {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="monitor" /> {ov.name}</span></Hint>}
+                  {!ov && ev.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="radio-tower" /> Все оверлеи</span></Hint>}
                   {t && ev.enabled && status?.running && <Hint text={hintNext(ev.name, t.nextInSec)}><span className="periodic-type-badge"><Icon name="hourglass" /> {formatInterval(t.nextInSec)}</span></Hint>}
                 </div>
                 <div className="periodic-actions">
                   <button onClick={() => void trigger(ev)} className="trigger-btn" title="Запустить сейчас"><Icon name="play"  /></button>
                   <Hint text={hintStatus({ kind: "periodic", name: ev.name }, ev.enabled)}><button onClick={() => setSection("periodicEvents", events.map((x) => (x.id === ev.id ? { ...x, enabled: !x.enabled } : x)))} className={`status-toggle-btn ${ev.enabled ? "on" : "off"}`}><Icon name="power"  /></button></Hint>
-                  <button onClick={() => setEditing({ ev, isNew: false })} className="edit-btn" title="Редактировать"><Icon name="edit"  /></button>
-                  <button onClick={() => showConfirm(`Удалить событие «${ev.name}»?\n\nЭто действие нельзя отменить.`, () => { setSection("periodicEvents", events.filter((x) => x.id !== ev.id)); showNotification(`Событие «${ev.name}» удалено`, NOTIFICATION_TYPES.WARNING, 2000); })} className="delete-btn" title="Удалить"><Icon name="delete"  /></button>
+                  <button onClick={() => setEditing({ ev, isNew: false })} className="edit-btn" title="Редактировать"><Icon name="pencil"  /></button>
+                  <button onClick={() => showConfirm(`Удалить событие «${ev.name}»?\n\nЭто действие нельзя отменить.`, () => { setSection("periodicEvents", events.filter((x) => x.id !== ev.id)); showNotification(`Событие «${ev.name}» удалено`, NOTIFICATION_TYPES.WARNING, 2000); })} className="delete-btn" title="Удалить"><Icon name="trash"  /></button>
                 </div>
               </div>
             </div>

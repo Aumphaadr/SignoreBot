@@ -54,15 +54,15 @@ function FileBrowser({ files, selected, filter, onSelect, onDelete }: { files: M
   const { showConfirm } = useNotification();
   const [q, setQ] = useState("");
   const list = useMemo(() => files.filter((f) => (!filter || f.kind === filter) && f.name.toLowerCase().includes(q.toLowerCase())), [files, filter, q]);
-  const icon = (k: string): IconName => (k === "video" ? "clapperboard" : k === "audio" ? "audio-note" : k === "image" ? "image" : "document");
+  const icon = (k: string): IconName => (k === "video" ? "film" : k === "audio" ? "music" : k === "image" ? "image" : "file-text");
   return (
     <div className="file-browser">
       <div className="file-browser-header">
-        <h4><Icon name="folder-open" /> Медиа-файлы {filter && `(${filter})`}</h4>
+        <h4><Icon name="folder" /> Медиа-файлы {filter && `(${filter})`}</h4>
         <div className="file-search">
           <Icon name="search" className="search-icon" />
           <input type="text" placeholder="Поиск файлов..." value={q} onChange={(e) => setQ(e.target.value)} className="file-search-input" />
-          {q && <button className="search-clear-btn" onClick={() => setQ("")}><Icon name="close" /> </button>}
+          {q && <button className="search-clear-btn" onClick={() => setQ("")}><Icon name="x" /> </button>}
         </div>
       </div>
       {list.length === 0 ? (
@@ -74,7 +74,7 @@ function FileBrowser({ files, selected, filter, onSelect, onDelete }: { files: M
               <span className="file-icon"><Icon name={icon(f.kind)} /></span>
               <span className="file-name" title={f.name}>{f.name}</span>
               <span className="file-size">{formatSize(f.size)}</span>
-              <button className="delete-file-btn" title="Удалить" onClick={(e) => { e.stopPropagation(); showConfirm(`Удалить файл "${f.name}"?`, () => onDelete(f.name)); }}><Icon name="delete"  /></button>
+              <button className="delete-file-btn" title="Удалить" onClick={(e) => { e.stopPropagation(); showConfirm(`Удалить файл "${f.name}"?`, () => onDelete(f.name)); }}><Icon name="trash"  /></button>
             </div>
           ))}
         </div>
@@ -105,8 +105,8 @@ function FileSelector({ label, selected, accept, files, onSelect, onClear, onDel
         <input type="text" value={selected || "Файл не выбран"} readOnly className="file-name-display" />
         <div className="file-button-group">
           <button onClick={doImport} className="browse-btn" disabled={busy}><Icon name="upload"  /> {busy ? "…" : "Добавить"}</button>
-          <button onClick={() => setBrowse((b) => !b)} className="browse-btn browse-existing"><Icon name="folder-open"  /> Из папки</button>
-          {selected && <button onClick={onClear} className="browse-btn clear-file-btn" title="Убрать файл"><Icon name="close" /> </button>}
+          <button onClick={() => setBrowse((b) => !b)} className="browse-btn browse-existing"><Icon name="folder"  /> Из папки</button>
+          {selected && <button onClick={onClear} className="browse-btn clear-file-btn" title="Убрать файл"><Icon name="x" /> </button>}
         </div>
       </div>
       {browse && <FileBrowser files={files} selected={selected} filter={accept} onSelect={(f) => { onSelect(f.name); setBrowse(false); }} onDelete={onDelete} />}
@@ -217,7 +217,7 @@ function MediaPreview({ media }: { media: MediaResponse }) {
           <div ref={stageRef} className="preview-stage">
             <div style={{ position: "absolute", top: 0, left: 0, width: CANVAS_W, height: CANVAS_H, transform: `scale(${scale})`, transformOrigin: "top left" }}>
               <div ref={wrapRef} className={wrapperClass}>
-                {!mediaEl && !hasText && <div className="audio-only-placeholder"><Icon name="audio-note" /> Аудио: {media.file}</div>}
+                {!mediaEl && !hasText && <div className="audio-only-placeholder"><Icon name="music" /> Аудио: {media.file}</div>}
                 {textFirst && textEl}
                 {mediaEl}
                 {!textFirst && textEl}
@@ -302,7 +302,7 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
   return (
     <div className="media-editor">
       <div className="media-mode-switch">
-        <button className={!setMode ? "active" : ""} onClick={() => set({ set: null })}><Icon name="clapperboard" /> Один файл</button>
+        <button className={!setMode ? "active" : ""} onClick={() => set({ set: null })}><Icon name="file" /> Один файл</button>
         <button className={setMode ? "active" : ""} disabled={sets.length === 0} title={sets.length === 0 ? "Сначала создайте набор на вкладке «Медиа»" : "Показывать случайный файл из набора, без повторов подряд"} onClick={() => set({ set: sets[0]?.id ?? null, secondaryFile: "" })}><Icon name="layers" /> Случайный из набора</button>
         <Tooltip text="«Один файл» — всегда этот файл (можно добавить второй: картинка к звуку или звук к картинке). «Случайный из набора» — при каждом срабатывании один из файлов набора, все по разу, потом заново в новом порядке. Наборы собираются на вкладке «Медиа»." />
       </div>
@@ -313,22 +313,22 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
             {!currentSet && <option value={value.set ?? ""}>— набора больше нет —</option>}
             {sets.map((x) => <option key={x.id} value={x.id}>{x.name} — {setKindLabel(x.files).label}</option>)}
           </select>
-          {!currentSet && <div className="form-hint text-warning"><Icon name="warning" /> Набор, на который ссылается реакция, удалён — медиа не отправляется. Выберите другой.</div>}
-          {setInfo?.empty && <div className="form-hint text-warning"><Icon name="warning" /> Набор пуст — добавьте в него файлы на вкладке «Медиа», иначе реакция ничего не покажет.</div>}
-          {setInfo?.mixed && <div className="form-hint text-warning"><Icon name="warning" /> В наборе файлы разных типов ({setInfo.kinds.join(", ")}): длительность и анимации подходят не всем, предпросмотр показывает один файл. Работать будет, но лучше держать наборы однотипными.</div>}
+          {!currentSet && <div className="form-hint text-warning"><Icon name="triangle-alert" /> Набор, на который ссылается реакция, удалён — медиа не отправляется. Выберите другой.</div>}
+          {setInfo?.empty && <div className="form-hint text-warning"><Icon name="triangle-alert" /> Набор пуст — добавьте в него файлы на вкладке «Медиа», иначе реакция ничего не покажет.</div>}
+          {setInfo?.mixed && <div className="form-hint text-warning"><Icon name="triangle-alert" /> В наборе файлы разных типов ({setInfo.kinds.join(", ")}): длительность и анимации подходят не всем, предпросмотр показывает один файл. Работать будет, но лучше держать наборы однотипными.</div>}
           <div className="form-hint">Состав и названия наборов — на вкладке «Медиа». Файлов в наборе: {currentSet?.files.length ?? 0}.</div>
         </div>
       )}
       {!setMode && (<>
       <FileSelector
-        label={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon name="clapperboard" /> Медиа файл <Tooltip text="Видео, аудио или картинка. Тип определяется по содержимому файла при добавлении." /></span>}
+        label={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon name="file" /> Медиа файл <Tooltip text="Видео, аудио или картинка. Тип определяется по содержимому файла при добавлении." /></span>}
         selected={m.file} accept={null} files={files}
         onSelect={selectPrimary} onClear={() => set({ file: "", secondaryFile: "" })} onDelete={deleteFile} onImported={reload}
       />
       {m.file && secondaryKind && (
         <div className="secondary-file-section">
           <FileSelector
-            label={<span style={{ display: "flex", alignItems: "center", gap: 8 }}>{secondaryKind === "audio" ? <><Icon name="audio-note" /> Звук (дополнительно)</> : <><Icon name="image" /> Картинка (дополнительно)</>}
+            label={<span style={{ display: "flex", alignItems: "center", gap: 8 }}>{secondaryKind === "audio" ? <><Icon name="music" /> Звук (дополнительно)</> : <><Icon name="image" /> Картинка (дополнительно)</>}
               <Tooltip text={secondaryKind === "audio" ? "Звуковое сопровождение к картинке" : "Картинка, показываемая вместе со звуком"} /></span>}
             selected={m.secondaryFile} accept={secondaryKind} files={files}
             onSelect={(n) => { set({ secondaryFile: n }); void probe(n); }} onClear={() => set({ secondaryFile: "" })} onDelete={deleteFile} onImported={reload}
@@ -338,7 +338,7 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
       </>)}
 
       <div className="overlay-selector">
-        <label><Icon name="overlay-screen" /> Целевой оверлей <Tooltip text="Конкретный оверлей или все сразу (тогда медиа сыграет на каждом подключённом оверлее)." /></label>
+        <label><Icon name="monitor" /> Целевой оверлей <Tooltip text="Конкретный оверлей или все сразу (тогда медиа сыграет на каждом подключённом оверлее)." /></label>
         <select value={m.overlay ?? ""} onChange={(e) => set({ overlay: e.target.value || null })} className="overlay-select">
           <option value="">Все оверлеи</option>
           {overlays.map((o) => <option key={o.id} value={o.id}>{o.name} (/overlay/{o.path})</option>)}
@@ -349,25 +349,25 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
       </div>
 
       <div className="media-settings">
-        <label><Icon name="volume-on" /> Громкость <Tooltip text="Громкость воспроизведения (0–100%)" /></label>
+        <label><Icon name="volume" /> Громкость <Tooltip text="Громкость воспроизведения (0–100%)" /></label>
         <div className="volume-control">
           <input type="range" min={0} max={100} value={m.volume} onChange={(e) => set({ volume: parseInt(e.target.value) })} />
           <span className="volume-value">{m.volume}%</span>
-          <Icon name="volume-on" className="volume-icon" />
+          <Icon name="volume" className="volume-icon" />
         </div>
       </div>
 
       <div className="media-settings">
-        <label><Icon name="clapperboard" /> Режим воспроизведения <Tooltip text="«В очереди» — ждёт окончания других медиа. «Вне очереди» — играет сразу поверх всего." /></label>
+        <label><Icon name="list-ordered" /> Режим воспроизведения <Tooltip text="«В очереди» — ждёт окончания других медиа. «Вне очереди» — играет сразу поверх всего." /></label>
         <div className="position-buttons">
-          <button type="button" className={`position-btn ${m.queueMode === "queue" ? "active" : ""}`} onClick={() => set({ queueMode: "queue" })}><Icon name="clipboard" /> В очереди</button>
-          <button type="button" className={`position-btn ${m.queueMode === "immediate" ? "active" : ""}`} onClick={() => set({ queueMode: "immediate" })}><Icon name="lightning" /> Вне очереди</button>
+          <button type="button" className={`position-btn ${m.queueMode === "queue" ? "active" : ""}`} onClick={() => set({ queueMode: "queue" })}><Icon name="hourglass" /> В очереди</button>
+          <button type="button" className={`position-btn ${m.queueMode === "immediate" ? "active" : ""}`} onClick={() => set({ queueMode: "immediate" })}><Icon name="list-ordered-lightning" /> Вне очереди</button>
         </div>
       </div>
 
       {(primaryKind === "video" || primaryKind === "image") && (
         <div className="media-settings">
-          <label><Icon name="chroma-key" /> Наложение (chromakey) <Tooltip text="CSS mix-blend-mode для видео/картинки: «screen» убирает чёрный фон, «multiply» — белый. Настоящий хромакей лучше делать фильтром в OBS." /></label>
+          <label><Icon name="blend" /> Наложение (chromakey) <Tooltip text="CSS mix-blend-mode для видео/картинки: «screen» убирает чёрный фон, «multiply» — белый. Настоящий хромакей лучше делать фильтром в OBS." /></label>
           <select value={m.chromakey} onChange={(e) => set({ chromakey: e.target.value })} className="overlay-select">
             {[["none", "— Нет —"], ["screen", "screen (прозрачный чёрный)"], ["lighten", "lighten"], ["multiply", "multiply (прозрачный белый)"], ["darken", "darken"], ["difference", "difference"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
@@ -376,7 +376,7 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
 
       {showDuration && (
         <div className="media-settings">
-          <label><Icon name="stopwatch" /> {textOnly ? "Длительность показа текста" : "Длительность показа картинки"} <Tooltip text="Секунды. Пусто — из общих настроек оверлея. Картинка со звуком показывается не меньше длины звука." /></label>
+          <label><Icon name="clock" /> {textOnly ? "Длительность показа текста" : "Длительность показа картинки"} <Tooltip text="Секунды. Пусто — из общих настроек оверлея. Картинка со звуком показывается не меньше длины звука." /></label>
           <div className="volume-control">
             <input type="number" min={1} max={600} step={0.5} value={m.imageDurationSec ?? ""} placeholder="по умолчанию" onChange={(e) => set({ imageDurationSec: e.target.value === "" ? null : Math.max(0.5, parseFloat(e.target.value) || 0) })} style={{ width: 140 }} />
             <span className="volume-value">сек</span>
@@ -386,7 +386,7 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
 
       {showAnimations && (
         <div className="media-animation-section">
-          <h4><Icon name="animation-masks" /> Анимации медиа</h4>
+          <h4><Icon name="wand-sparkles" /> Анимации медиа</h4>
           <div className="animation-row">
             <div className="animation-select-group">
               <label>Появление</label>
@@ -418,14 +418,14 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
         <div className="section-header">
           <label className="toggle-label">
             <input type="checkbox" checked={m.text.enabled} onChange={(e) => setText({ enabled: e.target.checked })} className="toggle-checkbox" />
-            <span className="toggle-text"><Icon name="edit" /> Показывать текст на оверлее</span>
+            <span className="toggle-text"><Icon name="text" /> Показывать текст на оверлее</span>
             <Tooltip text="Текст поверх медиа или рядом. Переменные подставляются." />
           </label>
         </div>
         {m.text.enabled && (
           <div className="text-settings">
             <div className="text-vars-block">
-              <div className="text-vars-label"><span><Icon name="pin" /> Доступные переменные:</span></div>
+              <div className="text-vars-label"><span><Icon name="braces" /> Доступные переменные:</span></div>
               <div className="text-vars-badges"><VariableBadges variables={["user", "target", "message"]} /></div>
             </div>
             <div className="text-input-group">
@@ -435,13 +435,13 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
             <div className="position-selector">
               <label>Позиция текста</label>
               <div className="position-buttons">
-                {([["above", "arrow-up", "Сверху"], ["below", "arrow-down", "Снизу"], ["left", "arrow-left", "Слева"], ["right", "arrow-right", "Справа"], ["overlay", "target", "Поверх"]] as const).map(([p, ic, l]) => (
+                {([["above", "arrow-up", "Сверху"], ["below", "arrow-down", "Снизу"], ["left", "arrow-left", "Слева"], ["right", "arrow-right", "Справа"], ["overlay", "layers", "Поверх"]] as const).map(([p, ic, l]) => (
                   <button key={p} type="button" className={`position-btn ${m.text.position === p ? "active" : ""}`} onClick={() => setText({ position: p })}><Icon name={ic} /> {l}</button>
                 ))}
               </div>
             </div>
             <div className="text-animation-selector">
-              <label><Icon name="animation-masks" /> Анимация текста</label>
+              <label><Icon name="wand-sparkles" /> Анимация текста</label>
               <div className="animation-select-row">
                 <select value={m.text.animation} onChange={(e) => setText({ animation: e.target.value })} className="animation-select">
                   {TEXT_ANIMATIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
@@ -456,13 +456,13 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
               </div>
             </div>
             <div className="font-settings">
-              <h4><Icon name="typography" /> Настройки шрифта</h4>
+              <h4><Icon name="letter-case" /> Настройки шрифта</h4>
               <div className="font-settings-grid">
                 <div className="font-setting-item">
                   <label>Режим выбора шрифта</label>
                   <div className="font-mode-buttons">
-                    <button type="button" className={`font-mode-btn ${fontMode === "preset" ? "active" : ""}`} onClick={() => setFontMode("preset")}><Icon name="clipboard" /> Из списка</button>
-                    <button type="button" className={`font-mode-btn ${fontMode === "custom" ? "active" : ""}`} onClick={() => setFontMode("custom")}><Icon name="edit" /> Свой шрифт</button>
+                    <button type="button" className={`font-mode-btn ${fontMode === "preset" ? "active" : ""}`} onClick={() => setFontMode("preset")}><Icon name="select" /> Из списка</button>
+                    <button type="button" className={`font-mode-btn ${fontMode === "custom" ? "active" : ""}`} onClick={() => setFontMode("custom")}><Icon name="input" /> Свой шрифт</button>
                   </div>
                 </div>
                 {fontMode === "preset" ? (
@@ -496,7 +496,7 @@ export default function MediaEditor({ value, onChange, overlays }: { value: Medi
       {setMode && currentSet && currentSet.files.length > 0 && (
         <div className="flex gap-2 items-center" style={{ marginTop: 8 }}>
           <span className="form-hint" style={{ margin: 0 }}>Предпросмотр: <code>{sample || "…"}</code></span>
-          {currentSet.files.length > 1 && <button className="small" onClick={reroll}><Icon name="refresh" /> Другой файл</button>}
+          {currentSet.files.length > 1 && <button className="small" onClick={reroll}><Icon name="dice" /> Другой файл</button>}
         </div>
       )}
       {!setMode && !m.file && !textOnly && <p className="media-no-file-hint">Выберите медиафайл — или включите «Текст» ниже: алерт может быть и без файла, одним текстом на заданное время. Проверить, как это выглядит на оверлее, можно кнопкой «Тест» в шапке окна.</p>}

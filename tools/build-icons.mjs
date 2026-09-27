@@ -2,12 +2,15 @@
 // Запуск: npm run icons
 //
 // Что делает:
-//  - прогоняет svgo (чистит метаданные Inkscape, режет точность координат);
+//  - прогоняет svgo (чистит метаданные и разметку). Контуры svgo НЕ пересчитывает:
+//    значки приходят из Пантографа уже обведёнными отрезками и кривыми с
+//    точностью до сотых, а пересчёт склеивал кривые окружностей в одну
+//    приблизительную дугу (makeArcs) и сдвигал края до полпикселя в 24 px;
 //  - убирает чёрную заливку и свойство color, чтобы иконка красилась через
 //    currentColor (color="#000" внутри перебивал бы цвет темы);
-//  - расширяет viewBox на PAD с каждой стороны: исходники нарисованы впритык
-//    к краю кадра, а рядом с текстом нужно поле — иначе иконки выглядят
-//    крупнее и теснее, чем всё вокруг.
+//  - viewBox не трогает: значки из набора «точных иконок» построены на сетке 24
+//    с полем внутри кадра (окружность r 10 с линией 2 занимает 1…23), своё поле
+//    сборка больше не добавляет (PAD = 0; было 4.5 % для обведённых впритык v1/v2).
 
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -17,12 +20,13 @@ import { optimize } from "svgo";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = join(ROOT, "src/assets/icons");
 const OUT = join(ROOT, "src/components/Icon/icons.ts");
-const PAD = 0.045; // доля стороны кадра с каждой стороны (≈92% полезной площади, как у прежнего набора)
+const PAD = 0; // доля стороны кадра с каждой стороны; поле уже внутри кадра набора
 
 const svgoConfig = {
   multipass: true,
   plugins: [
-    { name: "preset-default", params: { overrides: { removeViewBox: false, convertPathData: { floatPrecision: 2 } } } },
+    // removeViewBox в svgo 4 уже не входит в preset-default — viewBox и так сохраняется.
+    { name: "preset-default", params: { overrides: { convertPathData: false } } },
     { name: "convertStyleToAttrs" },
     { name: "removeDimensions" },
   ],

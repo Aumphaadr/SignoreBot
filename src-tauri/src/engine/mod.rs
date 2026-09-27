@@ -205,6 +205,8 @@ pub struct Engine {
     antispam: Mutex<HashMap<(String, String), Instant>>,
     /// Колоды наборов медиа: id набора → порядок показа.
     set_decks: Mutex<HashMap<String, SetDeck>>,
+    /// Текущий хайповоз: (id, достигнутый уровень) — чтобы отличать новый уровень от очередного вклада.
+    hype_train: Mutex<Option<(String, u64)>>,
     eventsub: Mutex<EventSubStatus>,
     changed_tx: broadcast::Sender<Changed>,
     /// Идентификаторы сообщений, отправленных ботом (последние 64): по ним
@@ -239,6 +241,7 @@ impl Engine {
             user_cooldowns: Mutex::new(HashMap::new()),
             antispam: Mutex::new(HashMap::new()),
             set_decks: Mutex::new(HashMap::new()),
+            hype_train: Mutex::new(None),
             sent_ids: Mutex::new(std::collections::VecDeque::with_capacity(64)),
             in_flight: std::sync::atomic::AtomicUsize::new(0),
             redemptions: Mutex::new(load_redemptions(&redemptions_file)),
@@ -1036,6 +1039,20 @@ impl Engine {
 
     /// Главный диспетчер событий Twitch.
     pub async fn dispatch(&self, ev: TwitchEvent) {
+        /// Переменные хайповоза; `{user}` — лучший вкладчик (или «зрители», если Twitch его не назвал).
+        fn hype_vars(level: u64, total: u64, progress: u64, goal: u64, top_user: &str, top_type: &str, top_total: u64) -> BTreeMap<String, String> {
+            let user = if top_user.is_empty() { "зрители".to_string() } else { top_user.to_string() };
+            v(&[
+                ("user", user),
+                ("level", level.to_string()),
+                ("total", total.to_string()),
+                ("progress", progress.to_string()),
+                ("goal", goal.to_string()),
+                ("topUser", top_user.to_string()),
+                ("topType", top_type.to_string()),
+                ("topAmount", top_total.to_string()),
+            ])
+        }
         fn v(pairs: &[(&str, String)]) -> BTreeMap<String, String> {
             pairs.iter().map(|(k, val)| (k.to_string(), val.clone())).collect()
         }
@@ -1123,6 +1140,41 @@ impl Engine {
                     }
                 }
                 self.handle_event("raid", v(&[("user", from_name), ("fromUserId", from_id), ("viewers", viewers.to_string())])).await;
+            }
+            TwitchEvent::HypeTrainBegin { id, level, total, progress, goal, top_user, top_type, top_total } => {
+                tracing::info!(target: "signorebot::events", "Хайповоз начался: уровень {level}, {progress}/{goal}");
+                *self.hype_train.lock() = Some((id, level));
+                self.handle_event("hypeTrainBegin", hype_vars(level, total, progress, goal, &top_user, &top_type, top_total)).await;
+            }
+            TwitchEvent::HypeTrainProgress { id, level, total, progress, goal, top_user, top_type, top_total } => {
+                // Вкладов много, уровень растёт редко: реакция — только на новый уровень.
+                let level_up = {
+                    let mut g = self.hype_train.lock();
+                    match g.as_mut() {
+                        Some((cur_id, cur_level)) if *cur_id == id => {
+                            if level > *cur_level {
+                                *cur_level = level;
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        _ => {
+                            // бот включился посреди хайповоза — запоминаем, но не реагируем
+                            *g = Some((id, level));
+                            false
+                        }
+                    }
+                };
+                if level_up {
+                    tracing::info!(target: "signorebot::events", "Хайповоз: уровень {level} ({total} очков)");
+                    self.handle_event("hypeTrainLevel", hype_vars(level, total, progress, goal, &top_user, &top_type, top_total)).await;
+                }
+            }
+            TwitchEvent::HypeTrainEnd { id: _, level, total, top_user, top_type, top_total } => {
+                tracing::info!(target: "signorebot::events", "Хайповоз завершился на уровне {level} ({total} очков)");
+                *self.hype_train.lock() = None;
+                self.handle_event("hypeTrainEnd", hype_vars(level, total, 0, 0, &top_user, &top_type, top_total)).await;
             }
             TwitchEvent::WatchStreak { user_name, user_id, streak_count, points, system_message, message } => {
                 tracing::info!(target: "signorebot::events", "Watch streak: {user_name} — {streak_count} стримов подряд");
@@ -1249,6 +1301,9 @@ impl Engine {
             "giftSub" => &[("user", "TestGifter"), ("tier", "Tier 1"), ("total", "5"), ("isAnonymous", "false")],
             "bits" => &[("user", "TestCheerer"), ("userId", "12345"), ("bits", "250"), ("message", "Держи битсы!"), ("isAnonymous", "false")],
             "raid" => &[("user", "TestRaider"), ("fromUserId", "12345"), ("viewers", "42")],
+            "hypeTrainBegin" => &[("user", "TestFan"), ("level", "1"), ("total", "300"), ("progress", "300"), ("goal", "1600"), ("topUser", "TestFan"), ("topType", "bits"), ("topAmount", "300")],
+            "hypeTrainLevel" => &[("user", "TestFan"), ("level", "3"), ("total", "3200"), ("progress", "700"), ("goal", "2400"), ("topUser", "TestFan"), ("topType", "subscription"), ("topAmount", "1500")],
+            "hypeTrainEnd" => &[("user", "TestFan"), ("level", "4"), ("total", "6400"), ("progress", "0"), ("goal", "0"), ("topUser", "TestFan"), ("topType", "bits"), ("topAmount", "2500")],
             "watchStreak" => &[
                 ("user", "TestStreaker"),
                 ("userId", "12345"),

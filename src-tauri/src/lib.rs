@@ -214,6 +214,7 @@ pub fn run() {
             commands::media_import,
             commands::media_delete,
             commands::media_delete_unused,
+            commands::media_update,
             commands::media_probe,
             commands::media_url,
             commands::event_test,

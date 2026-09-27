@@ -14,9 +14,9 @@ export default function UpdateBanner() {
   if (!info?.isNewer || hidden === info.latest) return null;
   return (
     <div className="status-hint status-update-available mb-4">
-      <Icon name="new-item" /> Доступна новая версия <strong>{info.latest}</strong> (у вас {info.current}).
+      <Icon name="sparkle" /> Доступна новая версия <strong>{info.latest}</strong> (у вас {info.current}).
       <div className="mt-2 flex gap-2">
-        {info.url && <button className="primary small" onClick={() => void openUrl(info.url!)}><Icon name="download" /> Открыть страницу релиза</button>}
+        {info.url && <button className="primary small" onClick={() => void openUrl(info.url!)}><Icon name="external-link" /> Открыть страницу релиза</button>}
         <button className="small" onClick={() => setHidden(info.latest ?? "")}>Позже</button>
       </div>
     </div>
