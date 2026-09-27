@@ -360,10 +360,15 @@ fn media_names_are_sanitized_but_readable() {
     let dir = tempfile::tempdir().unwrap();
     let paths = AppPaths::new(dir.path().join("d"));
     paths.ensure_dirs().unwrap();
+    // с 1.0.5 имя остаётся как есть (кириллица, пробелы, скобки); расширение — по содержимому, строчными
     let src = dir.path().join("мой файл (1).PNG");
     std::fs::write(&src, [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0]).unwrap();
     let f = signorebot_lib::media::import(&paths, &src).unwrap();
-    assert_eq!(f.name, "мой_файл__1_.png");
+    assert_eq!(f.name, "мой файл (1).png");
+    // а вот запрещённые в Windows символы заменяются
+    let src3 = dir.path().join("что:это?.png");
+    std::fs::write(&src3, [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0]).unwrap();
+    assert_eq!(signorebot_lib::media::import(&paths, &src3).unwrap().name, "что_это_.png");
     // файл без расширения, но с magic bytes mp3 (ID3)
     let src2 = dir.path().join("noext");
     std::fs::write(&src2, b"ID3\x03\x00\x00\x00\x00\x00\x00rest").unwrap();

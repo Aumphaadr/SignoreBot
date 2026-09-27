@@ -26,16 +26,16 @@ function RewardSelector({ channel, existing, loading, onRefresh, onPick, onCance
     <div className="reward-selector">
       <div className="channel-rewards-info">
         <div className="info-header">
-          <span><Icon name="clipboard" /> Награды канала</span>
+          <span><Icon name="channel-points" /> Награды канала</span>
           <button onClick={onRefresh} className="refresh-btn" disabled={loading}><Icon name="refresh" className={loading ? "spinning" : ""} /> {loading ? "Загрузка..." : "Обновить"}</button>
         </div>
         {!loading && channel.length === 0 && (
           <div className="no-rewards-warning">
-            <p><Icon name="warning" /> Не удалось загрузить награды канала</p>
+            <p><Icon name="triangle-alert" /> Не удалось загрузить награды канала</p>
             <ul><li>Оба аккаунта должны быть авторизованы и бот запущен (вкладка «Состояние»)</li><li>На канале должны быть пользовательские награды</li></ul>
           </div>
         )}
-        {!loading && channel.length > 0 && available.length === 0 && <div className="no-available-rewards"><p><Icon name="success-badge" /> Все доступные награды уже настроены</p></div>}
+        {!loading && channel.length > 0 && available.length === 0 && <div className="no-available-rewards"><p><Icon name="circle-check" /> Все доступные награды уже настроены</p></div>}
         {available.length > 0 && (
           <div className="form-group">
             <label>Выберите награду</label>
@@ -47,7 +47,7 @@ function RewardSelector({ channel, existing, loading, onRefresh, onPick, onCance
         )}
         {picked?.requiresInput && (
           <div className="selected-reward-info"><div className="reward-preview">
-            <p className="reward-hint"><Icon name="edit" /> Награда требует ввод текста — переменная <VariableBadge name="message" description={DESCR.message} /> будет подставлена.</p>
+            <p className="reward-hint"><Icon name="input" /> Награда требует ввод текста — переменная <VariableBadge name="message" description={DESCR.message} /> будет подставлена.</p>
           </div></div>
         )}
       </div>
@@ -129,15 +129,15 @@ export default function RewardsTab() {
   return (
     <div className="rewards-tab">
       <div className="rewards-header">
-        <h2><Icon name="gift" /> Награды за баллы канала</h2>
+        <h2><Icon name="channel-points" /> Награды за баллы канала</h2>
         <p className="rewards-description">Реакции бота на активацию наград. Переменные: <VariableBadges className="inline-variable-list" variables={VARS} descriptions={DESCR} /></p>
         <div className="eventsub-status-bar">
-          <div className={`eventsub-indicator ${es?.connected ? "connected" : running ? "connecting" : "disconnected"}`}>{es?.connected ? <><Icon name="status-connected" /> EventSub подключен</> : running ? <><Icon name="refresh" className="spinning" /> EventSub подключается…</> : <><Icon name="status-disconnected" /> EventSub отключен</>}</div>
-          {es?.connected && <span className="eventsub-subs-count"><Icon name="broadcast" /> Подписок: {es.subscriptions}</span>}
+          <div className={`eventsub-indicator ${es?.connected ? "connected" : running ? "connecting" : "disconnected"}`}>{es?.connected ? <><Icon name="radio" /> Связь с Twitch есть</> : running ? <><Icon name="loader" className="spinning" /> Связь с Twitch устанавливается…</> : <><Icon name="radio-off" /> Связи с Twitch нет</>}</div>
+          {es?.connected && <span className="eventsub-subs-count"><Icon name="radio-tower" /> Подписок: {es.subscriptions}</span>}
         </div>
       </div>
       <div className="rewards-list">
-        {rewards.length === 0 && <div className="empty-rewards"><p><Icon name="inbox-empty" /> Реакции на награды не настроены</p><p className="hint">Нажмите «Добавить реакцию»</p></div>}
+        {rewards.length === 0 && <div className="empty-rewards"><p><Icon name="inbox" /> Реакции на награды не настроены</p><p className="hint">Нажмите «Добавить реакцию»</p></div>}
         {rewards.map((r) => {
           const info = channel.find((c) => c.id === r.rewardId);
           const ov = r.response.media.enabled && r.response.media.overlay ? config.overlays.find((o) => o.id === r.response.media.overlay) : null;
@@ -151,15 +151,15 @@ export default function RewardsTab() {
                   {channel.length > 0 && !info && <Hint text={hintRewardMissing(r.rewardTitle)}><span className="reward-status-badge disabled">нет на канале</span></Hint>}
                   {info?.isManaged && <Hint text={<>награда <Em>«{r.rewardTitle}»</Em> создана через бота: бот может менять её и возвращать баллы зрителям</>}><span className="reward-status-badge managed"><Icon name="robot" /></span></Hint>}
                   {r.managed && r.originalRewardId && <Hint text={<>копия ещё с пометкой «(бот)»: удалите оригинал в панели Twitch и нажмите «Убрать пометку» в редакторе</>}><span className="reward-status-badge warning-badge">оригинал не удалён</span></Hint>}
-                  {r.refundIfUnavailable && info?.isManaged && <Hint text={<>если оверлей выключен, бот вернёт баллы зрителю; удачные погашения бот закрывает сам</>}><span className="reward-status-badge refund"><Icon name="redo" /> возврат</span></Hint>}
+                  {r.refundIfUnavailable && info?.isManaged && <Hint text={<>если оверлей выключен, бот вернёт баллы зрителю; удачные погашения бот закрывает сам</>}><span className="reward-status-badge refund"><Icon name="undo" /> возврат</span></Hint>}
                   <Hint text={hintReaction({ kind: "reward", name: r.rewardTitle }, r.response)}><span className="reward-type-badge">{reactionBadge(r.response)}</span></Hint>
-                  {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="overlay-screen" /> {ov.name}</span></Hint>}
-                  {!ov && r.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="broadcast" /> Все оверлеи</span></Hint>}
+                  {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="monitor" /> {ov.name}</span></Hint>}
+                  {!ov && r.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="radio-tower" /> Все оверлеи</span></Hint>}
                 </div>
                 <div className="reward-actions">
                   <Hint text={hintStatus({ kind: "reward", name: r.rewardTitle }, r.enabled)}><button onClick={() => { setSection("rewards", rewards.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x))); }} className={`status-toggle-btn ${r.enabled ? "on" : "off"}`}><Icon name="power"  /></button></Hint>
-                  <button onClick={() => setEditing({ reward: r, isNew: false })} className="edit-btn" title="Редактировать"><Icon name="edit"  /></button>
-                  <button onClick={() => showConfirm(`Удалить реакцию на награду "${r.rewardTitle}"?`, () => { setSection("rewards", rewards.filter((x) => x.id !== r.id)); showNotification("Реакция удалена", NOTIFICATION_TYPES.WARNING, 2000); })} className="delete-btn" title="Удалить"><Icon name="delete"  /></button>
+                  <button onClick={() => setEditing({ reward: r, isNew: false })} className="edit-btn" title="Редактировать"><Icon name="pencil"  /></button>
+                  <button onClick={() => showConfirm(`Удалить реакцию на награду "${r.rewardTitle}"?`, () => { setSection("rewards", rewards.filter((x) => x.id !== r.id)); showNotification("Реакция удалена", NOTIFICATION_TYPES.WARNING, 2000); })} className="delete-btn" title="Удалить"><Icon name="trash"  /></button>
                 </div>
               </div>
             </div>
@@ -168,7 +168,7 @@ export default function RewardsTab() {
       </div>
       <div className="add-reward-section">
         <button className="add-reward-main-btn" onClick={() => setCreating(defaultParams())} disabled={!running} title={running ? "Создать награду на канале от имени бота и сразу настроить реакцию" : "Бот не запущен — награду создать нельзя"}><Icon name="channel-points" /> Новая награда для Twitch</button>
-        <button className="add-reward-main-btn" onClick={() => setEditing({ reward: null, isNew: true })}><Icon name="add"  /> Добавить реакцию</button>
+        <button className="add-reward-main-btn" onClick={() => setEditing({ reward: null, isNew: true })}><Icon name="plus"  /> Добавить реакцию</button>
       </div>
 
       <Modal isOpen={!!creating} onClose={() => setCreating(null)} title="Новая награда для Twitch" size="large">
@@ -204,9 +204,9 @@ export default function RewardsTab() {
                     <div className="form-hint">{x.status === "refunded" ? "баллы возвращены ботом" : x.reason}</div>
                   </div>
                   <div className="redemption-actions">
-                    {x.status === "pending" && managed && <button className="small" onClick={() => api.redemptionRefund(x.redemptionId).then(() => showNotification(`Баллы за «${x.rewardTitle}» возвращены ${x.user}`, NOTIFICATION_TYPES.SUCCESS, 3000)).catch((e) => showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 6000))}><Icon name="redo" /> Вернуть баллы</button>}
+                    {x.status === "pending" && managed && <button className="small" onClick={() => api.redemptionRefund(x.redemptionId).then(() => showNotification(`Баллы за «${x.rewardTitle}» возвращены ${x.user}`, NOTIFICATION_TYPES.SUCCESS, 3000)).catch((e) => showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 6000))}><Icon name="undo" /> Вернуть баллы</button>}
                     {x.status === "pending" && !managed && rw && <button className="small" onClick={() => void openQueue()} title="Награда создана в панели Twitch — вернуть баллы можно только там"><Icon name="external-link" /> В очереди Twitch</button>}
-                    <button className="small" onClick={() => api.redemptionDismiss(x.redemptionId).then(loadRedemptions)} title="Убрать из списка"><Icon name="close" /></button>
+                    <button className="small" onClick={() => api.redemptionDismiss(x.redemptionId).then(loadRedemptions)} title="Убрать из списка"><Icon name="x" /></button>
                   </div>
                 </div>
               );
@@ -275,7 +275,7 @@ function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy, 
             <div className="flex gap-2" style={{ marginTop: 8 }}>
               <button className="primary small" onClick={() => void applyParams()} disabled={paramsBusy || !params}><Icon name="check" /> {paramsBusy ? "Применяем…" : "Применить на Twitch"}</button>
               {params && <button className="small" onClick={() => setParams(null)}>Отменить правки</button>}
-              <button className="small danger" style={{ marginLeft: "auto" }} onClick={() => onDeleteTwitch(r)} title="Убрать награду с канала и реакцию из бота"><Icon name="delete" /> Удалить награду на Twitch</button>
+              <button className="small danger" style={{ marginLeft: "auto" }} onClick={() => onDeleteTwitch(r)} title="Убрать награду с канала и реакцию из бота"><Icon name="trash" /> Удалить награду на Twitch</button>
             </div>
             <div className="form-hint" style={{ marginTop: 8 }}>Те же настройки можно менять и в панели Twitch — бот подхватит их сам. Картинка — только там.</div>
           </div>
@@ -290,20 +290,20 @@ function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy, 
         {!managed && info && (
           <div className="form-hint">
             Награда создана в панели Twitch, а не через бота — Twitch не позволяет приложению отменять её погашения. Можно создать через бота копию с теми же параметрами и перевести реакцию на неё; бот подскажет, что удалить. Картинку награды придётся загрузить копии заново — её Twitch через приложение не принимает.
-            <div style={{ marginTop: 8 }}><button className="small" onClick={() => onMakeCopy(r)}><Icon name="copy" /> Создать управляемую копию</button></div>
+            <div style={{ marginTop: 8 }}><button className="small" onClick={() => onMakeCopy(r)}><Icon name="files" /> Создать управляемую копию</button></div>
           </div>
         )}
-        {managed && info?.skipQueue && <div className="form-hint text-warning"><Icon name="warning" /> У награды включено «пропускать очередь запросов»: такие погашения закрываются сразу, и вернуть баллы нельзя. Выключите этот пункт в настройках награды на Twitch.</div>}
-        {r.managed && r.originalRewardId && <div className="form-hint"><Icon name="warning" /> Копия ещё с пометкой «(бот)». Удалите оригинал в панели Twitch и нажмите: <button className="small" onClick={() => onFinishCopy(r)}>Убрать пометку</button></div>}
+        {managed && info?.skipQueue && <div className="form-hint text-warning"><Icon name="triangle-alert" /> У награды включено «пропускать очередь запросов»: такие погашения закрываются сразу, и вернуть баллы нельзя. Выключите этот пункт в настройках награды на Twitch.</div>}
+        {r.managed && r.originalRewardId && <div className="form-hint"><Icon name="triangle-alert" /> Копия ещё с пометкой «(бот)». Удалите оригинал в панели Twitch и нажмите: <button className="small" onClick={() => onFinishCopy(r)}>Убрать пометку</button></div>}
         {!info && <div className="form-hint">Список наград канала недоступен (бот не запущен) — управление возвратом появится, когда бот подключится.</div>}
       </div>
       <ModalActions>
         <TestButton response={r.response} vars={{ user: "TestUser", message: "тест" }} />
-        <button onClick={() => onSave(r)} className="save-reward-btn primary">{isNew ? <><Icon name="add"  /> Создать реакцию</> : <><Icon name="save"  /> Сохранить</>}</button>
+        <button onClick={() => onSave(r)} className="save-reward-btn primary">{isNew ? <><Icon name="plus"  /> Создать реакцию</> : <><Icon name="save"  /> Сохранить</>}</button>
       </ModalActions>
       <div className="reward-editor-header">
         <div className="reward-id-info"><span className="reward-id-label">Reward ID:</span><code className="reward-id-value">{r.rewardId}</code></div>
-        <p className="reward-vars-hint"><Icon name="lightbulb" /> Доступные переменные: <VariableBadges className="inline-variable-list" variables={VARS} descriptions={DESCR} /></p>
+        <p className="reward-vars-hint"><Icon name="braces" /> Доступные переменные: <VariableBadges className="inline-variable-list" variables={VARS} descriptions={DESCR} /></p>
       </div>
       <ResponseEditor value={r.response} onChange={(response) => setR({ ...r, response })} overlays={config.overlays} variables={VARS} />
     </div>

@@ -72,6 +72,8 @@ export const api = {
   mediaImport: (paths: string[]) => invoke<MediaImportResult>("media_import", { paths }),
   mediaDelete: (name: string) => invoke<void>("media_delete", { name }),
   mediaDeleteUnused: () => invoke<number>("media_delete_unused"),
+  /** Окно файла: переименование (пустое или прежнее имя — без него) и наборы одним махом; возвращает итоговое имя. */
+  mediaUpdate: (name: string, newName: string, sets: string[]) => invoke<string>("media_update", { name, newName, sets }),
   mediaProbe: (name: string) => invoke<ProbeResult>("media_probe", { name }),
   mediaUrl: (name: string) => invoke<string>("media_url", { name }),
   /** Кнопка «Тест» в редакторе: выполнить реакцию как есть. */

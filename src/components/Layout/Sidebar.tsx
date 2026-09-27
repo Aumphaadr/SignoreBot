@@ -6,19 +6,19 @@ import { Hint } from "../Common/hints";
 import "./Sidebar.css";
 
 export const MENU: { id: string; label: string; icon: IconName }[] = [
-  { id: "status", label: "Состояние", icon: "home" },
-  { id: "auth", label: "Авторизация", icon: "key" },
-  { id: "overlays", label: "Оверлеи", icon: "layers" },
-  { id: "commands", label: "Команды", icon: "robot" },
-  { id: "rewards", label: "Баллы канала", icon: "gift" },
-  { id: "events", label: "События", icon: "calendar" },
+  { id: "status", label: "Состояние", icon: "house" },
+  { id: "auth", label: "Авторизация", icon: "lock-key" },
+  { id: "overlays", label: "Оверлеи", icon: "monitor" },
+  { id: "commands", label: "Команды", icon: "window-terminal" },
+  { id: "rewards", label: "Баллы канала", icon: "channel-points" },
+  { id: "events", label: "События", icon: "party-popper" },
   { id: "periodic", label: "Периодическое", icon: "clock" },
-  { id: "shoutouts", label: "Шатауты", icon: "bullhorn" },
+  { id: "shoutouts", label: "Шатауты", icon: "megaphone" },
   { id: "banwords", label: "Банворды", icon: "ban" },
   { id: "media", label: "Медиа", icon: "media" },
-  { id: "notes", label: "Заметки", icon: "note" },
-  { id: "logs", label: "Логи", icon: "document" },
-  { id: "settings", label: "Настройки", icon: "settings" },
+  { id: "notes", label: "Заметки", icon: "sticky-note" },
+  { id: "logs", label: "Логи", icon: "file-text" },
+  { id: "settings", label: "Настройки", icon: "gear-8" },
 ];
 
 export default function Sidebar({ active, onChange }: { active: string; onChange: (id: string) => void }) {
@@ -30,10 +30,10 @@ export default function Sidebar({ active, onChange }: { active: string; onChange
     <aside className="sidebar">
       <div className="sidebar-header">
         <h1><img src={logo} alt="" className="sidebar-logo" /> SignoreBot</h1>
-        <p className="sidebar-subtitle"><span className={`sidebar-dot ${ok ? "ok" : warn ? "bad" : "warn"}`} /> {ok ? "в работе" : warn ? "остановлен" : <><Icon name="refresh" className="spinning" /> подключение…</>}</p>
+        <p className="sidebar-subtitle"><span className={`sidebar-dot ${ok ? "ok" : warn ? "bad" : "warn"}`} /> {ok ? "в работе" : warn ? "остановлен" : <><Icon name="loader" className="spinning" /> подключение…</>}</p>
         {upd?.isNewer && upd.url && (
           <Hint text={<>вышла версия <b>{upd.latest}</b>, у вас {upd.current}; кнопка открывает страницу релиза со ссылками на файлы</>}>
-            <button className="sidebar-update-btn" onClick={() => void openUrl(upd.url!)}><Icon name="download" /> Обновить до {upd.latest}</button>
+            <button className="sidebar-update-btn" onClick={() => void openUrl(upd.url!)}><Icon name="external-link" /> Обновить до {upd.latest}</button>
           </Hint>
         )}
       </div>

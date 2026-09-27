@@ -176,9 +176,10 @@ select {
   padding-bottom: 0;
   padding-right: 34px;
   line-height: normal;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5l5 5 5-5' fill='none' stroke='%23c9c9d6' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  /* chevron-down набора: та же стрелка, что у FontPicker и фильтров логов */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24'><path d='M18 9L12 15L6 9' fill='none' stroke='%23c9c9d6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
   background-repeat: no-repeat;
-  background-position: right 12px center;
+  background-position: right 8px center;
   cursor: pointer;
 }
 

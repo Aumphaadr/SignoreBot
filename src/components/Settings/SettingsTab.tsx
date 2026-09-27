@@ -46,7 +46,7 @@ export default function SettingsTab() {
     try {
       const u = await api.updatesCheck();
       setUpdate(u);
-      showNotification(u.isNewer ? `🆕 Доступна версия ${u.latest}` : u.latest ? `У вас последняя версия (${u.current})` : "Релизов пока нет", u.isNewer ? NOTIFICATION_TYPES.WARNING : NOTIFICATION_TYPES.SUCCESS, 4000);
+      showNotification(u.isNewer ? `Доступна версия ${u.latest}` : u.latest ? `У вас последняя версия (${u.current})` : "Релизов пока нет", u.isNewer ? NOTIFICATION_TYPES.WARNING : NOTIFICATION_TYPES.SUCCESS, 4000);
     } catch (e) { showNotification(`Проверка обновлений: ${errText(e)}`, NOTIFICATION_TYPES.ERROR, 5000); }
     finally { setChecking(false); }
   };
@@ -75,7 +75,7 @@ export default function SettingsTab() {
 
   return (
     <div className="settings-tab">
-      <div className="commands-header"><h2><Icon name="settings" /> Настройки</h2><p className="commands-description">Сеть, ключ доступа, поведение оверлеев, экспорт настроек.</p></div>
+      <div className="commands-header"><h2><Icon name="gear-8" /> Настройки</h2><p className="commands-description">Сеть, ключ доступа, поведение оверлеев, экспорт настроек.</p></div>
 
       <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="globe" /> Сеть</h3></div></div>
         <div style={{ padding: 20 }}>
@@ -100,7 +100,7 @@ export default function SettingsTab() {
         </div>
       </div>
 
-      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="clapperboard" /> Поведение оверлея</h3></div></div>
+      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="monitor" /> Поведение оверлея</h3></div></div>
         <div style={{ padding: 20 }}>
           <div className="form-row">
             <div className="form-group"><label>Пауза между элементами очереди, мс</label><input type="number" min={0} max={30000} step={100} value={ov.pauseBetweenMs} onChange={(e) => setSection("overlaySettings", { ...ov, pauseBetweenMs: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
@@ -121,7 +121,7 @@ export default function SettingsTab() {
         </div>
       </div>
 
-      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="new-item" /> Обновления</h3></div></div>
+      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="sparkle" /> Обновления</h3></div></div>
         <div style={{ padding: 20 }}>
           <div className="form-group">
             <label>Репозиторий с релизами <Tooltip text="GitHub-репозиторий, где публикуются версии. Авторы форков могут указать свой — или прямую ссылку на JSON в формате страницы «последний релиз» GitHub, если релизы лежат на своём сервере." /></label>
@@ -137,7 +137,7 @@ export default function SettingsTab() {
           {update && (
             <div className={`status-hint mt-3 ${update.isNewer ? "status-update-available" : ""}`}>
               Текущая версия: <strong>{update.current}</strong>{update.latest && <> · последний релиз: <strong>{update.latest}</strong>{update.publishedAt && ` (${new Date(update.publishedAt).toLocaleDateString("ru-RU")})`}</>}
-              {update.isNewer && update.url && <div className="mt-2 flex gap-2 items-center"><button className="primary" onClick={() => void openUrl(update.url!)}><Icon name="download"  /> Скачать {update.latest}</button>
+              {update.isNewer && update.url && <div className="mt-2 flex gap-2 items-center"><button className="primary" onClick={() => void openUrl(update.url!)}><Icon name="external-link"  /> Скачать {update.latest}</button>
                 {update.assets.slice(0, 4).map((a) => <button key={a.url} className="small" onClick={() => void openUrl(a.url)} title={a.name}>{a.name.length > 28 ? a.name.slice(0, 26) + "…" : a.name}</button>)}</div>}
               {!update.isNewer && update.latest && <div className="text-success mt-1">У вас последняя версия.</div>}
               {!update.latest && <div className="mt-1">В репозитории пока нет релизов — проверено {new Date(update.checkedAt).toLocaleTimeString("ru-RU")}.</div>}
@@ -147,7 +147,7 @@ export default function SettingsTab() {
         </div>
       </div>
 
-      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="app-window" /> Окно и трей</h3></div></div>
+      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="window" /> Окно и трей</h3></div></div>
         <div style={{ padding: 20 }}>
           <label className="toggle-label">
             <span className="toggle-switch"><input type="checkbox" checked={app.closeToTray} onChange={(e) => setSection("app", { ...app, closeToTray: e.target.checked })} /><span className="toggle-slider"></span></span>
@@ -158,7 +158,7 @@ export default function SettingsTab() {
         </div>
       </div>
 
-      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="info" /> Уведомления</h3></div></div>
+      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="bell" /> Уведомления</h3></div></div>
         <div style={{ padding: 20 }}>
           <div className="form-row">
             <div className="form-group"><label>Сколько держать на экране, с <Tooltip text="Нижняя планка: короткие сообщения («сохранено», «скопировано») живут столько; ошибки и предупреждения — дольше, если им так задано." /></label><input type="number" min={1} max={120} step={1} style={{ maxWidth: 200 }} value={app.notificationSeconds} disabled={app.notificationsSticky} onChange={(e) => setSection("app", { ...app, notificationSeconds: Math.min(120, Math.max(1, parseFloat(e.target.value) || 6)) })} /></div>
@@ -171,7 +171,7 @@ export default function SettingsTab() {
         </div>
       </div>
 
-      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="eye" /> Масштаб панели</h3></div></div>
+      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="zoom-in" /> Масштаб панели</h3></div></div>
         <div style={{ padding: 20 }}>
           <div className="form-group">
             <label>Размер текста и значков <Tooltip text="Как Ctrl+плюс в браузере: крупнее становится всё сразу — текст, значки, поля. На маленьком окне часть карточек может переноситься на две строки." /></label>
@@ -183,7 +183,7 @@ export default function SettingsTab() {
         </div>
       </div>
 
-      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="folder-open" /> Папка данных</h3></div></div>
+      <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="folder" /> Папка данных</h3></div></div>
         <div style={{ padding: 20 }}>
           <div className="form-group">
             <label>Текущая папка <Tooltip text="Здесь лежат config.json, медиа, резервные копии конфига и логи. Токены Twitch — в системном хранилище (или в secrets.json, если оно недоступно)." /></label>
@@ -200,7 +200,7 @@ export default function SettingsTab() {
                 <label>Перенести в другую папку <Tooltip text="Например, на другой диск, если на системном мало места. Старая папка не удаляется — её можно убрать вручную после проверки." /></label>
                 <div className="form-row">
                   <input type="text" value={newDir} onChange={(e) => setNewDir(e.target.value)} placeholder="Полный путь к папке (выбирайте пустую папку)" style={{ fontFamily: "var(--font-mono)" }} />
-                  <button onClick={() => void pickDir()} style={{ flex: "0 0 auto" }}><Icon name="folder-open"  /> Выбрать…</button>
+                  <button onClick={() => void pickDir()} style={{ flex: "0 0 auto" }}><Icon name="folder"  /> Выбрать…</button>
                 </div>
               </div>
               <label className="toggle-label" style={{ marginBottom: 12 }}>
@@ -208,7 +208,7 @@ export default function SettingsTab() {
                 <span className="toggle-text">Скопировать текущие данные в новую папку</span>
               </label>
               <div className="flex gap-2">
-                <button className="primary" disabled={!newDir.trim() || pendingRestart} onClick={() => applyDir(newDir.trim())}><Icon name="redo"  /> Перенести и перезапустить</button>
+                <button className="primary" disabled={!newDir.trim() || pendingRestart} onClick={() => applyDir(newDir.trim())}><Icon name="rotate-cw"  /> Перенести и перезапустить</button>
                 {dataDir.source === "pointer" && <button disabled={pendingRestart} onClick={() => applyDir(null)}>Вернуть стандартную папку</button>}
               </div>
             </>

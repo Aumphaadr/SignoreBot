@@ -32,7 +32,7 @@ export default function Modal({ isOpen, onClose, title, children, size = "medium
         <div className="modal-header">
           <h3>{title}</h3>
           <div className="modal-header-actions" ref={setSlot} />
-          <button className="modal-close-btn" onClick={onClose}><Icon name="close"  /></button>
+          <button className="modal-close-btn" onClick={onClose}><Icon name="x"  /></button>
         </div>
         <HeaderSlot.Provider value={slot}>
           <div className="modal-body">{children}</div>

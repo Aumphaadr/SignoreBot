@@ -48,6 +48,11 @@ pub enum TwitchEvent {
     Cheer { user_name: String, user_id: String, bits: u64, message: String, is_anonymous: bool },
     Raid { from_name: String, from_id: String, viewers: u64 },
     WatchStreak { user_name: String, user_id: String, streak_count: u64, points: u64, system_message: String, message: String },
+    /// Хайповоз начался (уровень 1). `top_*` — лучший вкладчик на этот момент.
+    HypeTrainBegin { id: String, level: u64, total: u64, progress: u64, goal: u64, top_user: String, top_type: String, top_total: u64 },
+    /// Вклад в хайповоз; уровень мог вырасти — движок сам замечает переход.
+    HypeTrainProgress { id: String, level: u64, total: u64, progress: u64, goal: u64, top_user: String, top_type: String, top_total: u64 },
+    HypeTrainEnd { id: String, level: u64, total: u64, top_user: String, top_type: String, top_total: u64 },
     /// Состояние сессии для UI.
     Session { connected: bool, session_id: Option<String>, subscriptions: usize },
 }
@@ -82,6 +87,15 @@ fn u(v: &Value, k: &str) -> u64 {
 }
 fn b(v: &Value, k: &str) -> bool {
     v.get(k).and_then(|x| x.as_bool()).unwrap_or(false)
+}
+
+/// Лучший вкладчик хайповоза: (имя, тип вклада bits|subscription|other, размер).
+fn top_contribution(ev: &Value) -> (String, String, u64) {
+    ev.get("top_contributions")
+        .and_then(|t| t.as_array())
+        .and_then(|arr| arr.iter().max_by_key(|c| u(c, "total")))
+        .map(|c| (name_or_login(c, "user_name", "user_login"), s(c, "type"), u(c, "total")))
+        .unwrap_or_default()
 }
 
 /// Разобрать уведомление в событие.
@@ -168,6 +182,18 @@ pub fn parse_notification(sub_type: &str, ev: &Value) -> Option<TwitchEvent> {
                 message: s(ev, "message"),
                 is_anonymous: anon,
             }
+        }
+        "channel.hype_train.begin" => {
+            let (top_user, top_type, top_total) = top_contribution(ev);
+            TwitchEvent::HypeTrainBegin { id: s(ev, "id"), level: u(ev, "level"), total: u(ev, "total"), progress: u(ev, "progress"), goal: u(ev, "goal"), top_user, top_type, top_total }
+        }
+        "channel.hype_train.progress" => {
+            let (top_user, top_type, top_total) = top_contribution(ev);
+            TwitchEvent::HypeTrainProgress { id: s(ev, "id"), level: u(ev, "level"), total: u(ev, "total"), progress: u(ev, "progress"), goal: u(ev, "goal"), top_user, top_type, top_total }
+        }
+        "channel.hype_train.end" => {
+            let (top_user, top_type, top_total) = top_contribution(ev);
+            TwitchEvent::HypeTrainEnd { id: s(ev, "id"), level: u(ev, "level"), total: u(ev, "total"), top_user, top_type, top_total }
         }
         "channel.raid" => TwitchEvent::Raid {
             from_name: s(ev, "from_broadcaster_user_name"),
@@ -265,24 +291,32 @@ struct SubSpec {
     kind: &'static str,
     version: &'static str,
     condition: Value,
+    /// Право стримера, без которого подписку не создаём (необязательное право).
+    scope: Option<&'static str>,
+    /// Запасная версия подписки, если Twitch отверг основную.
+    fallback_version: Option<&'static str>,
 }
 
 fn subscriptions(bid: &str) -> Vec<SubSpec> {
     let bc = serde_json::json!({ "broadcaster_user_id": bid });
     vec![
-        SubSpec { kind: "channel.chat.message", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
-        SubSpec { kind: "channel.chat.notification", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
-        SubSpec { kind: "channel.channel_points_custom_reward_redemption.add", version: "1", condition: bc.clone() },
-        SubSpec { kind: "channel.channel_points_custom_reward_redemption.update", version: "1", condition: bc.clone() },
-        SubSpec { kind: "channel.channel_points_custom_reward.add", version: "1", condition: bc.clone() },
-        SubSpec { kind: "channel.channel_points_custom_reward.update", version: "1", condition: bc.clone() },
-        SubSpec { kind: "channel.channel_points_custom_reward.remove", version: "1", condition: bc.clone() },
-        SubSpec { kind: "channel.follow", version: "2", condition: serde_json::json!({ "broadcaster_user_id": bid, "moderator_user_id": bid }) },
-        SubSpec { kind: "channel.subscribe", version: "1", condition: bc.clone() },
-        SubSpec { kind: "channel.subscription.message", version: "1", condition: bc.clone() },
-        SubSpec { kind: "channel.subscription.gift", version: "1", condition: bc.clone() },
-        SubSpec { kind: "channel.cheer", version: "1", condition: bc.clone() },
-        SubSpec { kind: "channel.raid", version: "1", condition: serde_json::json!({ "to_broadcaster_user_id": bid }) },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.chat.message", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.chat.notification", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.channel_points_custom_reward_redemption.add", version: "1", condition: bc.clone() },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.channel_points_custom_reward_redemption.update", version: "1", condition: bc.clone() },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.channel_points_custom_reward.add", version: "1", condition: bc.clone() },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.channel_points_custom_reward.update", version: "1", condition: bc.clone() },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.channel_points_custom_reward.remove", version: "1", condition: bc.clone() },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.follow", version: "2", condition: serde_json::json!({ "broadcaster_user_id": bid, "moderator_user_id": bid }) },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.subscribe", version: "1", condition: bc.clone() },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.subscription.message", version: "1", condition: bc.clone() },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.subscription.gift", version: "1", condition: bc.clone() },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.cheer", version: "1", condition: bc.clone() },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.raid", version: "1", condition: serde_json::json!({ "to_broadcaster_user_id": bid }) },
+        // Хайповоз: v2 (общие хайповозы, 2025), при отказе — v1; нужные поля одинаковые.
+        SubSpec { scope: Some("channel:read:hype_train"), fallback_version: Some("1"), kind: "channel.hype_train.begin", version: "2", condition: bc.clone() },
+        SubSpec { scope: Some("channel:read:hype_train"), fallback_version: Some("1"), kind: "channel.hype_train.progress", version: "2", condition: bc.clone() },
+        SubSpec { scope: Some("channel:read:hype_train"), fallback_version: Some("1"), kind: "channel.hype_train.end", version: "2", condition: bc.clone() },
     ]
 }
 
@@ -290,18 +324,42 @@ async fn subscribe_all(p: &SessionParams, session_id: &str) -> usize {
     let mut ok = 0;
     let mut failed = Vec::new();
     for spec in subscriptions(&p.broadcaster_id) {
-        match p.helix.create_eventsub(AccountKind::Broadcaster, spec.kind, spec.version, spec.condition, session_id).await {
-            Ok(_) => ok += 1,
-            Err(super::helix::HelixError::Http { status: 409, .. }) => ok += 1,
-            Err(e) => {
-                let hint = match e.status() {
-                    Some(403) => " — нет прав, переавторизуйте стримера",
-                    Some(401) => " — токен недействителен",
-                    _ => "",
-                };
-                tracing::error!(target: "signorebot::eventsub", "Подписка {}: {e}{hint}", spec.kind);
-                failed.push(spec.kind);
+        if let Some(scope) = spec.scope {
+            if !p.auth.has_scope(AccountKind::Broadcaster, scope) {
+                tracing::info!(target: "signorebot::eventsub", "Подписка {} пропущена: у стримера нет права {scope} — авторизуйте стримера заново, бот запросит его сам", spec.kind);
+                continue;
             }
+        }
+        let mut versions = vec![spec.version];
+        if let Some(v) = spec.fallback_version {
+            versions.push(v);
+        }
+        let mut done = false;
+        let mut last_err: Option<super::helix::HelixError> = None;
+        for (i, ver) in versions.iter().enumerate() {
+            match p.helix.create_eventsub(AccountKind::Broadcaster, spec.kind, ver, spec.condition.clone(), session_id).await {
+                Ok(_) | Err(super::helix::HelixError::Http { status: 409, .. }) => {
+                    done = true;
+                    break;
+                }
+                Err(e) => {
+                    if i + 1 < versions.len() {
+                        tracing::info!(target: "signorebot::eventsub", "Подписка {} v{ver} не принята ({e}), пробуем v{}", spec.kind, versions[i + 1]);
+                    }
+                    last_err = Some(e);
+                }
+            }
+        }
+        if done {
+            ok += 1;
+        } else if let Some(e) = last_err {
+            let hint = match e.status() {
+                Some(403) => " — нет прав, переавторизуйте стримера",
+                Some(401) => " — токен недействителен",
+                _ => "",
+            };
+            tracing::error!(target: "signorebot::eventsub", "Подписка {}: {e}{hint}", spec.kind);
+            failed.push(spec.kind);
         }
     }
     if failed.is_empty() {
@@ -463,6 +521,17 @@ mod tests {
         let ev = serde_json::json!({"notice_type":"watch_streak","chatter_user_name":"S","watch_streak":{"streak_count":5,"channel_points_awarded":10},"system_message":"x"});
         let TwitchEvent::WatchStreak { streak_count, .. } = parse_notification("channel.chat.notification", &ev).unwrap() else { panic!() };
         assert_eq!(streak_count, 5);
+    }
+
+    #[test]
+    fn parses_hype_train() {
+        let ev = serde_json::json!({"id":"ht1","level":1,"total":300,"progress":300,"goal":1600,
+            "top_contributions":[{"user_name":"A","user_login":"a","type":"bits","total":100},{"user_name":"B","user_login":"b","type":"subscription","total":200}]});
+        let TwitchEvent::HypeTrainBegin { id, level, goal, top_user, top_type, top_total, .. } = parse_notification("channel.hype_train.begin", &ev).unwrap() else { panic!() };
+        assert_eq!((id.as_str(), level, goal, top_user.as_str(), top_type.as_str(), top_total), ("ht1", 1, 1600, "B", "subscription", 200));
+        let ev = serde_json::json!({"id":"ht1","level":3,"total":5000});
+        let TwitchEvent::HypeTrainEnd { level, top_user, .. } = parse_notification("channel.hype_train.end", &ev).unwrap() else { panic!() };
+        assert_eq!((level, top_user.as_str()), (3, ""));
     }
 
     #[test]

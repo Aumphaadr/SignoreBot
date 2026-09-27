@@ -1019,3 +1019,5 @@
 /* Карточка набора: поле переименования — половина ширины, капсулы не сжимаются */
 .media-set-card input[type="text"] { flex: 0 0 50%; height: 34px; box-sizing: border-box; padding: 0 10px; }
 .media-set-card .badge { white-space: nowrap; flex-shrink: 0; }
+.media-file-name-label { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-weight: 600; }
+.media-file-name-input { width: 100%; box-sizing: border-box; margin-bottom: 14px; }

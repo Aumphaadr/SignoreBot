@@ -65,7 +65,7 @@ function NotificationItem({ item, onClose }: { item: Item; onClose: () => void }
     };
   }, [item.duration]);
   const icon =
-    item.type === "success" ? <Icon name="check"  /> : item.type === "error" ? <Icon name="close"  /> : item.type === "warning" ? <Icon name="warning"  /> : item.type === "confirm" ? <Icon name="help"  /> : <Icon name="info"  />;
+    item.type === "success" ? <Icon name="circle-check"  /> : item.type === "error" ? <Icon name="circle-x"  /> : item.type === "warning" ? <Icon name="triangle-alert"  /> : item.type === "confirm" ? <Icon name="circle-question"  /> : <Icon name="circle-info"  />;
   return (
     <div className={`notification ${item.type}`}>
       <div className="notification-content">
@@ -75,7 +75,7 @@ function NotificationItem({ item, onClose }: { item: Item; onClose: () => void }
           <Icon name="copy"  />
         </button>
         <button className="notification-close" onClick={(e) => { e.stopPropagation(); onClose(); }}>
-          <Icon name="close"  />
+          <Icon name="x"  />
         </button>
       </div>
       {item.duration > 0 && (
@@ -92,9 +92,9 @@ export function ConfirmModal({ message, onConfirm, onCancel }: { message: string
     <div className="confirm-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
       <div className="confirm-dialog">
         <div className="confirm-header">
-          <Icon name="warning" className="confirm-icon warning" />
+          <Icon name="triangle-alert" className="confirm-icon warning" />
           <h3>Подтверждение</h3>
-          <button className="confirm-close-btn" onClick={onCancel}><Icon name="close"  /></button>
+          <button className="confirm-close-btn" onClick={onCancel}><Icon name="x"  /></button>
         </div>
         <div className="confirm-body"><p>{message}</p></div>
         <div className="confirm-footer">

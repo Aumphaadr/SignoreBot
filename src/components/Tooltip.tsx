@@ -32,7 +32,7 @@ export default function Tooltip({ text, children, inline = false }: { text: Reac
         onMouseEnter={() => { timer.current = setTimeout(() => setShow(true), 200); }}
         onMouseLeave={() => { if (timer.current) clearTimeout(timer.current); setShow(false); }}
       >
-        {children ?? <Icon name="help" className="tooltip-icon" />}
+        {children ?? <Icon name="circle-question" className="tooltip-icon" />}
       </span>
       {show &&
         createPortal(

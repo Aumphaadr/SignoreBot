@@ -18,9 +18,9 @@ import "./CommandEditor.css";
 export function reactionBadge(r: Response) {
   const c = r.chat.enabled, m = r.media.enabled;
   if (!c && !m) return <><Icon name="sleep" /> Нет реакции</>;
-  if (c && !m) return <><Icon name="chat" /> Текст</>;
+  if (c && !m) return <><Icon name="message-dots" /> Текст</>;
   if (!c && m) return <><Icon name="clapperboard" /> Медиа</>;
-  return <><span className="badge-icons"><Icon name="chat" /><Icon name="clapperboard" /></span> Текст + Медиа</>;
+  return <><span className="badge-icons"><Icon name="message-dots" /><Icon name="clapperboard" /></span> Текст + Медиа</>;
 }
 
 function CommandEditor({ initial, isNew, all, onSave }: { initial: Command; isNew: boolean; all: Command[]; onSave: (c: Command) => void }) {
@@ -33,7 +33,7 @@ function CommandEditor({ initial, isNew, all, onSave }: { initial: Command; isNe
       <ModalActions>
         <TestButton response={cmd.response} vars={{ user: "TestUser", target: "TestUser", message: "тест" }} />
         <button onClick={() => onSave({ ...cmd, name })} className="save-command-btn primary" disabled={empty} title={empty ? "Введите название команды" : ""}>
-          {isNew ? <><Icon name="add"  /> Создать команду</> : <><Icon name="save"  /> Сохранить</>}
+          {isNew ? <><Icon name="plus"  /> Создать команду</> : <><Icon name="save"  /> Сохранить</>}
         </button>
       </ModalActions>
       <div className="command-editor-header">
@@ -67,7 +67,7 @@ function CommandEditor({ initial, isNew, all, onSave }: { initial: Command; isNe
         onChange={(response) => setCmd({ ...cmd, response })}
         overlays={config.overlays}
         variables={["user", "target", "message"]}
-        extraTab={{ label: <><Icon name="lightning" /> Алиасы</>, content: <AliasEditor value={cmd.aliases} onChange={(aliases) => setCmd({ ...cmd, aliases })} allCommands={all} currentId={cmd.id} currentName={name} enabled={cmd.enabled} /> }}
+        extraTab={{ label: <><Icon name="link" /> Алиасы</>, content: <AliasEditor value={cmd.aliases} onChange={(aliases) => setCmd({ ...cmd, aliases })} allCommands={all} currentId={cmd.id} currentName={name} enabled={cmd.enabled} /> }}
       />
     </div>
   );
@@ -100,15 +100,15 @@ export default function CommandsTab() {
   return (
     <div className="commands-tab">
       <div className="commands-header">
-        <h2><Icon name="robot" /> Команды чата</h2>
+        <h2><Icon name="window-terminal" /> Команды чата</h2>
         <p className="commands-description">
           Команды, которые бот выполняет в чате. Переменные:
           <VariableBadges className="inline-variable-list" variables={["user", "target", "message"]} />
         </p>
-        <button className="create-command-btn" onClick={() => setEditing({ cmd: defaultCommand(), isNew: true })}><Icon name="add"  /> Создать команду</button>
+        <button className="create-command-btn" onClick={() => setEditing({ cmd: defaultCommand(), isNew: true })}><Icon name="plus"  /> Создать команду</button>
       </div>
       <div className="commands-list">
-        {commands.length === 0 && <div className="empty-commands"><p><Icon name="inbox-empty" /> Команды не созданы</p><p className="hint">Нажмите «Создать команду»</p></div>}
+        {commands.length === 0 && <div className="empty-commands"><p><Icon name="inbox" /> Команды не созданы</p><p className="hint">Нажмите «Создать команду»</p></div>}
         {commands.map((c) => {
           const ov = c.response.media.enabled && c.response.media.overlay ? config.overlays.find((o) => o.id === c.response.media.overlay) : null;
           return (
@@ -117,17 +117,17 @@ export default function CommandsTab() {
                 <div className="command-title">
                   <span className="command-name">!{c.name}</span>
                   <Hint text={hintReaction({ kind: "command", name: c.name }, c.response)}><span className="command-type-badge">{reactionBadge(c.response)}</span></Hint>
-                  {c.aliases.length > 0 && <Hint text={hintAliases(c.name, c.aliases)}><span className="command-aliases-badge"><Icon name="lightning" /> {c.aliases.map((a) => `!${a}`).join(", ")}</span></Hint>}
+                  {c.aliases.length > 0 && <Hint text={hintAliases(c.name, c.aliases)}><span className="command-aliases-badge"><Icon name="link" /> {c.aliases.map((a) => `!${a}`).join(", ")}</span></Hint>}
                   {c.permissions.length > 0 && <Hint text={hintPermissions(c.name, c.permissions)}><span className="permissions-badge"><Icon name="lock" /> {c.permissions.length}</span></Hint>}
                   {(c.cooldownSec > 0 || c.cooldownUserSec > 0) && <Hint text={hintCooldown(c.name, c.cooldownSec, c.cooldownUserSec)}><span className="command-type-badge"><Icon name="stopwatch" /> {[c.cooldownSec > 0 ? `${c.cooldownSec} с` : null, c.cooldownUserSec > 0 ? `${c.cooldownUserSec} с/зритель` : null].filter(Boolean).join(" · ")}</span></Hint>}
-                  {c.reply && <Hint text={hintReply(c.name)}><span className="command-type-badge"><Icon name="chat" /> реплай</span></Hint>}
-                  {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="overlay-screen" /> {ov.name}</span></Hint>}
-                  {!ov && c.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="broadcast" /> Все оверлеи</span></Hint>}
+                  {c.reply && <Hint text={hintReply(c.name)}><span className="command-type-badge"><Icon name="message-reply" /> реплай</span></Hint>}
+                  {ov && <Hint text={hintOverlay(ov)}><span className="overlay-badge"><Icon name="monitor" /> {ov.name}</span></Hint>}
+                  {!ov && c.response.media.enabled && <Hint text={hintOverlayAll(config.overlays)}><span className="overlay-badge all-overlays"><Icon name="radio-tower" /> Все оверлеи</span></Hint>}
                 </div>
                 <div className="command-actions">
                   <Hint text={hintStatus({ kind: "command", name: c.name }, c.enabled)}><button onClick={() => toggle(c)} className={`status-toggle-btn ${c.enabled ? "on" : "off"}`}><Icon name="power"  /></button></Hint>
-                  <button onClick={() => setEditing({ cmd: c, isNew: false })} className="edit-btn" title="Редактировать"><Icon name="edit"  /></button>
-                  <button onClick={() => remove(c)} className="delete-btn" title="Удалить"><Icon name="delete"  /></button>
+                  <button onClick={() => setEditing({ cmd: c, isNew: false })} className="edit-btn" title="Редактировать"><Icon name="pencil"  /></button>
+                  <button onClick={() => remove(c)} className="delete-btn" title="Удалить"><Icon name="trash"  /></button>
                 </div>
               </div>
             </div>

@@ -92,7 +92,7 @@ export default function RewardParamsForm({ value, onChange }: { value: NewReward
         <span className="toggle-text">Пропускать очередь запросов</span>
         <Tooltip text="Погашения закрываются сразу, не попадая в очередь запросов Twitch. Тогда вернуть баллы нельзя — ни боту, ни модераторам. Оставьте выключенным, если хотите возвращать баллы при недоступном оверлее." />
       </label>
-      {value.skipQueue && <div className="form-hint text-warning"><Icon name="warning" /> С этим пунктом возврат баллов при недоступном оверлее работать не будет.</div>}
+      {value.skipQueue && <div className="form-hint text-warning"><Icon name="triangle-alert" /> С этим пунктом возврат баллов при недоступном оверлее работать не будет.</div>}
     </div>
   );
 }

@@ -438,3 +438,42 @@ async fn media_set_antispam_is_per_set() {
     while rx.try_recv().is_ok() { got += 1; }
     assert_eq!(got, 2);
 }
+
+/// Хайповоз: реакция «новый уровень» — только когда уровень вырос, не на каждый вклад.
+#[tokio::test]
+async fn hype_train_level_reaction_fires_once_per_level() {
+    use signorebot_lib::config::EventReaction;
+    let dir = tempfile::tempdir().unwrap();
+    let paths = AppPaths::new(dir.path());
+    paths.ensure_dirs().unwrap();
+    let mut cfg = Config::default();
+    cfg.normalize();
+    cfg.overlay_settings.antispam_window_ms = 0;
+    cfg.overlays.push(overlay("o-a", "Видео", "video", None));
+    let mut lvl = EventReaction { enabled: true, ..Default::default() };
+    lvl.response.media.enabled = true; lvl.response.media.file = "level.mp4".into(); lvl.response.media.overlay = Some("o-a".into());
+    lvl.response.media.text.enabled = true; lvl.response.media.text.content = "Уровень {level}, лучший — {topUser}".into();
+    cfg.events.insert("hypeTrainLevel".into(), lvl);
+    let mut end = EventReaction { enabled: true, ..Default::default() };
+    end.response.media.enabled = true; end.response.media.file = "end.mp4".into(); end.response.media.overlay = Some("o-a".into());
+    cfg.events.insert("hypeTrainEnd".into(), end);
+    let config: SharedConfig = Arc::new(parking_lot::RwLock::new(cfg));
+    let auth = AuthManager::new("cid".into(), Secrets::file_only(&paths));
+    let helix = Arc::new(Helix::new(Arc::clone(&auth)));
+    let hub = OverlayHub::new();
+    let engine = Engine::new(config, auth, helix, hub.clone(), paths.deleted_messages_log());
+    let (_i, mut rx) = hub.connect("video", "t".into());
+    let ht = |level: u64, progress: u64| TwitchEvent::HypeTrainProgress { id: "ht1".into(), level, total: 1000, progress, goal: 1600, top_user: "Fan".into(), top_type: "bits".into(), top_total: 500 };
+    engine.dispatch(TwitchEvent::HypeTrainBegin { id: "ht1".into(), level: 1, total: 300, progress: 300, goal: 1600, top_user: "Fan".into(), top_type: "bits".into(), top_total: 300 }).await;
+    engine.dispatch(ht(1, 900)).await;  // вклад без нового уровня — тишина
+    engine.dispatch(ht(2, 100)).await;  // уровень 2 — реакция
+    engine.dispatch(ht(2, 800)).await;  // ещё вклад — тишина
+    engine.dispatch(ht(3, 50)).await;   // уровень 3 — реакция
+    engine.dispatch(TwitchEvent::HypeTrainEnd { id: "ht1".into(), level: 3, total: 4000, top_user: "Fan".into(), top_type: "bits".into(), top_total: 900 }).await;
+    let mut got = Vec::new();
+    while let Ok(m) = rx.try_recv() { got.push(serde_json::from_str::<serde_json::Value>(&m).unwrap()); }
+    let files: Vec<&str> = got.iter().map(|v| v["videoFile"].as_str().unwrap()).collect();
+    assert_eq!(files, vec!["level.mp4", "level.mp4", "end.mp4"], "{files:?}");
+    assert_eq!(got[0]["text"]["content"], "Уровень 2, лучший — Fan");
+    assert_eq!(got[1]["text"]["content"], "Уровень 3, лучший — Fan");
+}

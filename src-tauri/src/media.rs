@@ -48,6 +48,8 @@ pub enum MediaError {
     TooBig,
     #[error("неподдерживаемый тип файла: {0}")]
     Unsupported(String),
+    #[error("{0}")]
+    Invalid(String),
     #[error("ошибка ввода-вывода: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -60,6 +62,96 @@ pub fn kind_of(name: &str) -> &'static str {
         "mp3" | "wav" | "ogg" | "oga" | "m4a" | "flac" | "aac" | "opus" => "audio",
         _ => "unknown",
     }
+}
+
+/// Мягкая правка имени файла: имя остаётся как есть — кириллица, пробелы,
+/// скобки допустимы. Меняются только символы, которые Windows не пускает в
+/// имя файла, и управляющие; концевые точки и пробелы срезаются; зарезервированные
+/// имена Windows (CON, NUL, COM1…) получают подчёркивание; длина — до 120 знаков.
+pub fn soft_stem(stem: &str) -> String {
+    let mut s: String = stem
+        .chars()
+        .map(|c| if c.is_control() || matches!(c, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*') { '_' } else { c })
+        .collect();
+    s = s.trim().trim_end_matches('.').trim().to_string();
+    if s.is_empty() {
+        s = "file".into();
+    }
+    let upper = s.to_ascii_uppercase();
+    let reserved = matches!(upper.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || ((upper.starts_with("COM") || upper.starts_with("LPT")) && upper.len() == 4 && upper.as_bytes()[3].is_ascii_digit());
+    if reserved {
+        s.push('_');
+    }
+    if s.chars().count() > 120 {
+        s = s.chars().take(120).collect::<String>().trim_end().to_string();
+    }
+    s
+}
+
+/// Переименовать файл в папке медиа и поправить все ссылки на него в конфиге
+/// (реакции, резервы оверлеев, наборы). Расширение менять нельзя — по нему бот
+/// определяет тип; если его не написали, оно подставляется. Возвращает итоговое имя.
+pub fn rename(paths: &AppPaths, cfg: &mut Config, old: &str, new: &str) -> Result<String, MediaError> {
+    let old = safe_file_name(old).ok_or(MediaError::BadName)?;
+    let dir = paths.media_dir();
+    if !dir.join(&old).is_file() {
+        return Err(MediaError::NotFound);
+    }
+    let old_ext = Path::new(&old).extension().and_then(|e| e.to_str()).unwrap_or("").to_string();
+    let new = new.trim();
+    if new.is_empty() {
+        return Err(MediaError::Invalid("введите имя файла".into()));
+    }
+    let suffix = format!(".{}", old_ext.to_lowercase());
+    let stem = if !old_ext.is_empty() && new.to_lowercase().ends_with(&suffix) { &new[..new.len() - suffix.len()] } else { new };
+    if let Some(e) = Path::new(stem).extension().and_then(|e| e.to_str()) {
+        if kind_of(&format!("x.{e}")) != "unknown" {
+            return Err(MediaError::Invalid(format!("расширение менять нельзя — по нему бот понимает тип файла (сейчас .{old_ext})")));
+        }
+    }
+    let stem = soft_stem(stem);
+    let target = if old_ext.is_empty() { stem } else { format!("{stem}.{old_ext}") };
+    let target = safe_file_name(&target).ok_or(MediaError::BadName)?;
+    if target == old {
+        return Ok(old);
+    }
+    let case_only = target.to_lowercase() == old.to_lowercase();
+    if !case_only && dir.join(&target).exists() {
+        return Err(MediaError::Invalid(format!("файл «{target}» уже есть")));
+    }
+    std::fs::rename(dir.join(&old), dir.join(&target))?;
+    replace_references(cfg, &old, &target);
+    Ok(target)
+}
+
+/// Заменить имя файла во всех ссылках конфига. Возвращает число правок.
+pub fn replace_references(cfg: &mut Config, old: &str, new: &str) -> usize {
+    let mut n = 0;
+    let mut fix = |r: &mut crate::config::Response| {
+        if r.media.file == old {
+            r.media.file = new.to_string();
+            n += 1;
+        }
+        if r.media.secondary_file == old {
+            r.media.secondary_file = new.to_string();
+            n += 1;
+        }
+    };
+    cfg.commands.iter_mut().for_each(|c| fix(&mut c.response));
+    cfg.rewards.iter_mut().for_each(|r| fix(&mut r.response));
+    cfg.events.values_mut().for_each(|e| fix(&mut e.response));
+    cfg.periodic_events.iter_mut().for_each(|p| fix(&mut p.response));
+    cfg.overlays.iter_mut().filter_map(|o| o.fallback.as_mut()).for_each(|r| fix(r));
+    for ms in cfg.media_sets.iter_mut() {
+        for f in ms.files.iter_mut() {
+            if f == old {
+                *f = new.to_string();
+                n += 1;
+            }
+        }
+    }
+    n
 }
 
 /// Все имена файлов, на которые ссылается конфиг.
@@ -77,6 +169,8 @@ pub fn referenced_files(cfg: &Config) -> HashSet<String> {
     cfg.rewards.iter().for_each(|r| add(&r.response));
     cfg.events.values().for_each(|e| add(&e.response));
     cfg.periodic_events.iter().for_each(|p| add(&p.response));
+    // резервная реакция оверлея — тоже ссылка (раньше её файл считался сиротой)
+    cfg.overlays.iter().filter_map(|o| o.fallback.as_ref()).for_each(|r| add(r));
     // файл в наборе — используемый, даже если набор пока никем не вызывается
     for ms in &cfg.media_sets {
         for f in &ms.files {
@@ -168,12 +262,7 @@ pub fn import(paths: &AppPaths, source: &Path) -> Result<MediaFile, MediaError> 
         return Err(MediaError::Unsupported(mime.to_string()));
     }
     let orig = source.file_name().and_then(|s| s.to_str()).unwrap_or("file");
-    let mut base = Path::new(orig).file_stem().and_then(|s| s.to_str()).unwrap_or("file").to_string();
-    // только безопасные символы в имени
-    base = base.chars().map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' { c } else { '_' }).collect();
-    if base.is_empty() {
-        base = "file".into();
-    }
+    let base = soft_stem(Path::new(orig).file_stem().and_then(|s| s.to_str()).unwrap_or("file"));
     let ext = if real_ext == "mpga" { "mp3" } else { real_ext };
     let wanted = format!("{base}.{ext}");
     let dir = paths.media_dir();
@@ -317,5 +406,63 @@ mod tests {
         let r = probe(&paths, "v.mp4").unwrap();
         assert_eq!(r.codec.as_deref(), Some("H.265/HEVC"));
         assert_eq!(r.warnings.len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod naming_tests {
+    use super::*;
+    use crate::config::{Command, Config, MediaSet, Overlay, Response};
+
+    #[test]
+    fn soft_stem_keeps_names_and_fixes_only_forbidden() {
+        assert_eq!(soft_stem("Мой клип (финал) #2"), "Мой клип (финал) #2");
+        assert_eq!(soft_stem("a<b>c:d\"e/f\\g|h?i*j"), "a_b_c_d_e_f_g_h_i_j");
+        assert_eq!(soft_stem("  точки в конце... "), "точки в конце");
+        assert_eq!(soft_stem("con"), "con_");
+        assert_eq!(soft_stem("COM1"), "COM1_");
+        assert_eq!(soft_stem("command"), "command");
+        assert_eq!(soft_stem(""), "file");
+        assert_eq!(soft_stem("x".repeat(200).as_str()).chars().count(), 120);
+    }
+
+    #[test]
+    fn set_members_and_fallbacks_count_as_used() {
+        let mut cfg = Config::default();
+        cfg.media_sets.push(MediaSet { id: "s".into(), name: "n".into(), files: vec!["x.mp4".into()] });
+        let mut fb = Response::default();
+        fb.media.file = "fb.mp3".into();
+        cfg.overlays.push(Overlay { id: "o".into(), name: "o".into(), path: "o".into(), fallback: Some(fb), fallback_enabled: false });
+        let used = referenced_files(&cfg);
+        assert!(used.contains("x.mp4") && used.contains("fb.mp3"));
+        assert_eq!(remove_from_sets(&mut cfg, "x.mp4"), 1);
+    }
+
+    #[test]
+    fn rename_moves_file_and_rewrites_references() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = AppPaths::new(dir.path());
+        paths.ensure_dirs().unwrap();
+        std::fs::write(paths.media_dir().join("old name.mp4"), b"x").unwrap();
+        std::fs::write(paths.media_dir().join("busy.mp4"), b"x").unwrap();
+        let mut cfg = Config::default();
+        let mut cmd = Command { name: "a".into(), ..Default::default() };
+        cmd.response.media.file = "old name.mp4".into();
+        cfg.commands.push(cmd);
+        let mut fb = Response::default();
+        fb.media.secondary_file = "old name.mp4".into();
+        cfg.overlays.push(Overlay { id: "o".into(), name: "o".into(), path: "o".into(), fallback: Some(fb), fallback_enabled: true });
+        cfg.media_sets.push(MediaSet { id: "s".into(), name: "n".into(), files: vec!["old name.mp4".into()] });
+        // без расширения — подставится; кириллица и пробелы остаются
+        let n = rename(&paths, &mut cfg, "old name.mp4", "Новое имя").unwrap();
+        assert_eq!(n, "Новое имя.mp4");
+        assert!(paths.media_dir().join("Новое имя.mp4").is_file() && !paths.media_dir().join("old name.mp4").exists());
+        assert_eq!(cfg.commands[0].response.media.file, "Новое имя.mp4");
+        assert_eq!(cfg.overlays[0].fallback.as_ref().unwrap().media.secondary_file, "Новое имя.mp4");
+        assert_eq!(cfg.media_sets[0].files, vec!["Новое имя.mp4".to_string()]);
+        // другое расширение — отказ; занятое имя — отказ; то же имя — без изменений
+        assert!(matches!(rename(&paths, &mut cfg, "Новое имя.mp4", "x.mp3"), Err(MediaError::Invalid(_))));
+        assert!(matches!(rename(&paths, &mut cfg, "Новое имя.mp4", "busy"), Err(MediaError::Invalid(_))));
+        assert_eq!(rename(&paths, &mut cfg, "Новое имя.mp4", "Новое имя.mp4").unwrap(), "Новое имя.mp4");
     }
 }

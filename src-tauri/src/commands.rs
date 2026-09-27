@@ -229,6 +229,49 @@ pub fn media_delete(s: State<'_, CoreState>, name: String) -> Res<()> {
     Ok(())
 }
 
+/// Окно файла на вкладке «Медиа»: новое имя (пустое или прежнее — без переименования)
+/// и список наборов, в которых файл должен состоять. Одна атомарная правка конфига.
+#[tauri::command]
+pub fn media_update(s: State<'_, CoreState>, name: String, new_name: String, sets: Vec<String>) -> Res<String> {
+    let c = core(&s);
+    let mut out: Result<String, String> = Ok(name.clone());
+    let mut set_changes = 0usize;
+    c.update_config(|cfg| {
+        let final_name = if !new_name.trim().is_empty() && new_name.trim() != name {
+            match media::rename(&c.paths, cfg, &name, &new_name) {
+                Ok(n) => n,
+                Err(e) => {
+                    out = Err(e.to_string());
+                    return;
+                }
+            }
+        } else {
+            name.clone()
+        };
+        for ms in cfg.media_sets.iter_mut() {
+            let want = sets.contains(&ms.id);
+            let has = ms.files.contains(&final_name);
+            if want && !has {
+                ms.files.push(final_name.clone());
+                set_changes += 1;
+            } else if !want && has {
+                ms.files.retain(|f| f != &final_name);
+                set_changes += 1;
+            }
+        }
+        out = Ok(final_name);
+    })?;
+    let final_name = out?;
+    if final_name != name {
+        tracing::info!(target: "signorebot::media", "Файл «{name}» переименован в «{final_name}»; ссылки в реакциях и наборах обновлены");
+    }
+    if set_changes > 0 {
+        tracing::info!(target: "signorebot::media", "Файл «{final_name}»: наборы обновлены ({set_changes})");
+    }
+    c.emit_changed("config");
+    Ok(final_name)
+}
+
 #[tauri::command]
 pub fn media_delete_unused(s: State<'_, CoreState>) -> Res<usize> {
     let c = core(&s);
@@ -259,8 +302,18 @@ pub fn media_url(s: State<'_, CoreState>, name: String) -> Res<String> {
     Ok(format!("http://127.0.0.1:{port}/media/{}?key={}", urlencoding(&name), st.overlay_key))
 }
 
+/// Кодирование сегмента пути: пробел → `%20`. Раньше здесь был `form_urlencoded`,
+/// который даёт `+`, а сегмент пути (в отличие от строки запроса) `+` в пробел не
+/// превращает; пока имена файлов не могли содержать пробелы, разницы не было.
 fn urlencoding(s: &str) -> String {
-    url::form_urlencoded::byte_serialize(s.as_bytes()).collect()
+    let mut out = String::with_capacity(s.len() * 3);
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
 }
 
 // ---------------------------------------------------------------- действия
@@ -743,4 +796,14 @@ pub fn data_dir_set(s: State<'_, CoreState>, path: Option<String>, copy: bool) -
 #[tauri::command]
 pub fn app_restart(app: tauri::AppHandle) {
     app.restart();
+}
+
+#[cfg(test)]
+mod url_tests {
+    #[test]
+    fn path_segment_encoding_keeps_spaces_as_percent20() {
+        assert_eq!(super::urlencoding("Мой клип (финал).mp4"), "%D0%9C%D0%BE%D0%B9%20%D0%BA%D0%BB%D0%B8%D0%BF%20%28%D1%84%D0%B8%D0%BD%D0%B0%D0%BB%29.mp4");
+        assert_eq!(super::urlencoding("a-b_c.d~e"), "a-b_c.d~e");
+        assert_eq!(super::urlencoding("a+b"), "a%2Bb");
+    }
 }

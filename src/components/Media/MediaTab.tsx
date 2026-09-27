@@ -12,6 +12,21 @@ import { pickAndImport, useMediaFiles } from "../Common/MediaEditor";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
 import "../Common/MediaEditor.css";
 
+type MediaSort = "newest" | "oldest" | "name" | "size" | "kind";
+const KIND_ORDER: Record<string, number> = { video: 0, audio: 1, image: 2, unknown: 3 };
+function sortFiles(list: MediaFile[], sort: MediaSort): MediaFile[] {
+  const byName = (a: MediaFile, b: MediaFile) => a.name.localeCompare(b.name, "ru", { numeric: true, sensitivity: "base" });
+  const out = [...list];
+  switch (sort) {
+    case "oldest": out.sort((a, b) => a.modified - b.modified); break;
+    case "name": out.sort(byName); break;
+    case "size": out.sort((a, b) => b.size - a.size || byName(a, b)); break;
+    case "kind": out.sort((a, b) => (KIND_ORDER[a.kind] ?? 9) - (KIND_ORDER[b.kind] ?? 9) || byName(a, b)); break;
+    default: out.sort((a, b) => b.modified - a.modified);
+  }
+  return out;
+}
+
 export default function MediaTab() {
   const { files, reload } = useMediaFiles();
   const { showNotification, showConfirm } = useNotification();
@@ -19,6 +34,10 @@ export default function MediaTab() {
   const sets = config.mediaSets;
   const saveSets = (next: MediaSet[]) => setSection("mediaSets", next);
   const [setFilter, setSetFilter] = useState<string>("all");
+  const [sort, setSort] = useState<MediaSort>(() => { try { const v = localStorage.getItem("sb.mediaSort"); return v === "oldest" || v === "name" || v === "size" || v === "kind" ? v : "newest"; } catch { return "newest"; } });
+  useEffect(() => { try { localStorage.setItem("sb.mediaSort", sort); } catch { /* приватный режим */ } }, [sort]);
+  // Черновик имени файла в окне файла; применяется по «Сохранить»
+  const [draftName, setDraftName] = useState("");
   const [newSetName, setNewSetName] = useState("");
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   // Черновик наборов для открытого файла: галочки применяются по «Сохранить»
@@ -37,16 +56,18 @@ export default function MediaTab() {
     if (setFilter === s.id) setSetFilter("all");
     showNotification(`Набор «${s.name}» удалён`, NOTIFICATION_TYPES.WARNING, 2500);
   });
-  const applyDraftSets = (name: string) => {
-    saveSets(sets.map((s) => {
-      const want = draftSets.includes(s.id); const has = s.files.includes(name);
-      if (want === has) return s;
-      return { ...s, files: want ? [...s.files, name] : s.files.filter((f) => f !== name) };
-    }));
-    showNotification(draftSets.length ? `«${name}» — в наборах: ${sets.filter((s) => draftSets.includes(s.id)).map((s) => s.name).join(", ")}` : `«${name}» не входит ни в один набор`, NOTIFICATION_TYPES.SUCCESS, 2500);
-    setPreview(null);
+  const saveFile = async () => {
+    if (!preview) return;
+    try {
+      const finalName = await api.mediaUpdate(preview.name, draftName, draftSets);
+      const inSets = sets.filter((x) => draftSets.includes(x.id)).map((x) => x.name);
+      const setsText = inSets.length ? `в наборах: ${inSets.join(", ")}` : "не входит ни в один набор";
+      showNotification(finalName !== preview.name ? `Файл переименован: «${finalName}» — ${setsText}` : `«${finalName}» — ${setsText}`, NOTIFICATION_TYPES.SUCCESS, 2500);
+      setPreview(null);
+      await reload();
+    } catch (e) { showNotification(`${errText(e)}`, NOTIFICATION_TYPES.ERROR, 6000); }
   };
-  const openFile = (f: MediaFile) => { setDraftSets(setsOf(f.name).map((s) => s.id)); setPreview(f); };
+  const openFile = (f: MediaFile) => { setDraftSets(setsOf(f.name).map((s) => s.id)); setDraftName(f.name); setPreview(f); };
   const setsOf = (name: string) => sets.filter((s) => s.files.includes(name));
   const missingOf = (s: MediaSet) => s.files.filter((n) => !files.some((f) => f.name === n));
   // «используется/сирота» считает ядро с учётом наборов — после правки наборов перечитываем список
@@ -69,10 +90,10 @@ export default function MediaTab() {
     api.mediaUrl(preview.name).then((u) => { if (alive) setPreviewUrl(u); }).catch(() => setPreviewUrl(null));
     return () => { alive = false; };
   }, [preview]);
-  const list = useMemo(() => files.filter((f) => (kind === "all" || f.kind === kind) && (!onlyUnused || !f.used) && (setFilter === "all" || !!sets.find((s) => s.id === setFilter)?.files.includes(f.name)) && f.name.toLowerCase().includes(q.toLowerCase())), [files, kind, onlyUnused, q, setFilter, sets]);
+  const list = useMemo(() => sortFiles(files.filter((f) => (kind === "all" || f.kind === kind) && (!onlyUnused || !f.used) && (setFilter === "all" || !!sets.find((s) => s.id === setFilter)?.files.includes(f.name)) && f.name.toLowerCase().includes(q.toLowerCase())), sort), [files, kind, onlyUnused, q, setFilter, sets, sort]);
   const unused = files.filter((f) => !f.used);
   const unusedSize = unused.reduce((a, f) => a + f.size, 0);
-  const icon = (k: string): IconName => (k === "video" ? "clapperboard" : k === "audio" ? "audio-note" : k === "image" ? "image" : "document");
+  const icon = (k: string): IconName => (k === "video" ? "film" : k === "audio" ? "music" : k === "image" ? "image" : "file-text");
 
   const del = (name: string) => showConfirm(`Удалить файл "${name}"?`, async () => {
     try { await api.mediaDelete(name); setPreview((p) => (p?.name === name ? null : p)); showNotification(`Файл "${name}" удалён`, NOTIFICATION_TYPES.WARNING, 2000); await reload(); }
@@ -86,11 +107,11 @@ export default function MediaTab() {
   return (
     <div className="media-tab">
       <div className="commands-header">
-        <h2><Icon name="filmstrip" /> Медиа</h2>
+        <h2><Icon name="media" /> Медиа</h2>
         <p className="commands-description">Все файлы, доступные для реакций. Всего: {files.length} ({formatSize(files.reduce((a, f) => a + f.size, 0))}), неиспользуемых: {unused.length} ({formatSize(unusedSize)}).</p>
         <div className="flex gap-2 mt-3">
-          <button className="primary" onClick={() => void pickAndImport(null, showNotification).then((a) => { if (a.length) void reload(); })}><Icon name="add"  /> Добавить файлы</button>
-          <button className="warning" onClick={cleanup} disabled={unused.length === 0}><Icon name="clean"  /> Удалить неиспользуемые</button>
+          <button className="primary" onClick={() => void pickAndImport(null, showNotification).then((a) => { if (a.length) void reload(); })}><Icon name="upload"  /> Добавить файлы</button>
+          <button className="warning" onClick={cleanup} disabled={unused.length === 0}><Icon name="trash"  /> Удалить неиспользуемые</button>
         </div>
       </div>
       <div className="media-sets">
@@ -98,7 +119,7 @@ export default function MediaTab() {
           <h3><Icon name="layers" /> Наборы <Tooltip text="Набор — список файлов, из которого реакция показывает случайный файл без повторов подряд (выбирается в редакторе медиа: «Случайный из набора»). Файл может входить в несколько наборов. Файл в наборе считается используемым." /></h3>
           <div className="flex gap-2 items-center">
             <input type="text" value={newSetName} onChange={(e) => setNewSetName(e.target.value)} placeholder="Название нового набора" onKeyDown={(e) => { if (e.key === "Enter" && createSet(newSetName)) setNewSetName(""); }} style={{ width: 240 }} />
-            <button className="small" onClick={() => { if (createSet(newSetName)) setNewSetName(""); }}><Icon name="add" /> Создать набор</button>
+            <button className="small" onClick={() => { if (createSet(newSetName)) setNewSetName(""); }}><Icon name="plus" /> Создать набор</button>
           </div>
         </div>
         {sets.length === 0 ? <p className="form-hint">Наборов пока нет. Создайте набор, затем у нужных файлов нажмите «В набор…».</p> : (
@@ -115,8 +136,8 @@ export default function MediaTab() {
                   <span className={`badge ${info.empty || info.mixed ? "badge-warning" : "badge-info"}`} title={info.mixed ? `В наборе файлы разных типов (${info.kinds.join(", ")}): настройки длительности и анимаций подходят не всем, а предпросмотр показывает один файл. Работать будет, но лучше держать наборы однотипными.` : info.empty ? "В наборе нет файлов — реакция с ним ничего не покажет" : "Все файлы одного типа"}>{info.label}</span>
                   {missing.length > 0 && <span className="badge badge-warning" title={`Нет на диске: ${missing.join(", ")}`}>нет на диске: {missing.length}</span>}
                   <span className="media-set-actions">
-                    <button className="small" onClick={() => setRenaming({ id: s.id, name: s.name })} title="Переименовать"><Icon name="edit" /></button>
-                    <button className="small danger" onClick={() => deleteSet(s)} title="Удалить набор (файлы остаются)"><Icon name="delete" /></button>
+                    <button className="small" onClick={() => setRenaming({ id: s.id, name: s.name })} title="Переименовать"><Icon name="pencil" /></button>
+                    <button className="small danger" onClick={() => deleteSet(s)} title="Удалить набор (файлы остаются)"><Icon name="trash" /></button>
                   </span>
                 </div>
               );
@@ -135,12 +156,16 @@ export default function MediaTab() {
                 <option value="all">Все наборы</option>{sets.map((s) => <option key={s.id} value={s.id}>Набор: {s.name}</option>)}
               </select>
             )}
+            <span title="Порядок файлов в списке" style={{ display: "inline-flex", color: "var(--text-secondary)" }}><Icon name="arrow-up-down" /></span>
+            <select value={sort} onChange={(e) => setSort(e.target.value as MediaSort)} style={{ width: "auto" }} title="Порядок файлов в списке">
+              <option value="newest">Сначала новые</option><option value="oldest">Сначала старые</option><option value="name">По имени</option><option value="size">По размеру</option><option value="kind">По типу</option>
+            </select>
             <label className="toggle-label"><input type="checkbox" checked={onlyUnused} onChange={(e) => setOnlyUnused(e.target.checked)} style={{ width: "auto" }} /> только неиспользуемые</label>
           </div>
           <div className="file-search">
             <Icon name="search" className="search-icon" />
             <input type="text" placeholder="Поиск файлов..." value={q} onChange={(e) => setQ(e.target.value)} className="file-search-input" />
-            {q && <button className="search-clear-btn" onClick={() => setQ("")}><Icon name="close" /> </button>}
+            {q && <button className="search-clear-btn" onClick={() => setQ("")}><Icon name="x" /> </button>}
           </div>
         </div>
         {list.length === 0 ? <p className="empty-files">{files.length === 0 ? "Нет файлов" : "Ничего не найдено"}</p> : (
@@ -152,7 +177,7 @@ export default function MediaTab() {
                 {setsOf(f.name).map((s) => <span key={s.id} className="badge badge-info" title={`В наборе «${s.name}»`}>{s.name}</span>)}
                 {!f.used && <span className="badge badge-warning" title="Не используется ни одной реакцией и не входит ни в один набор">сирота</span>}
                 <span className="file-size">{formatSize(f.size)}</span>
-                <button className="delete-file-btn" title="Удалить" onClick={(e) => { e.stopPropagation(); del(f.name); }}><Icon name="delete"  /></button>
+                <button className="delete-file-btn" title="Удалить" onClick={(e) => { e.stopPropagation(); del(f.name); }}><Icon name="trash"  /></button>
               </div>
             ))}
           </div>
@@ -166,7 +191,7 @@ export default function MediaTab() {
             {previewUrl && preview.kind === "audio" && <audio ref={(el) => { playerRef.current = el; }} src={previewUrl} controls preload="auto" onLoadedMetadata={(e) => { e.currentTarget.volume = volume; }} />}
             {previewUrl && (preview.kind === "video" || preview.kind === "audio") && (
               <div className="media-preview-volume">
-                <button className="small" onClick={() => setVolume(volume > 0 ? 0 : 1)} title={volume > 0 ? "Выключить звук" : "Включить звук"}>{volume > 0 ? <Icon name="volume-on"  /> : <Icon name="volume-muted"  />}</button>
+                <button className="small" onClick={() => setVolume(volume > 0 ? 0 : 1)} title={volume > 0 ? "Выключить звук" : "Включить звук"}>{volume > 0 ? <Icon name="volume"  /> : <Icon name="volume-x"  />}</button>
                 <input type="range" min={0} max={100} value={Math.round(volume * 100)} onChange={(e) => setVolume(parseInt(e.target.value) / 100)} />
                 <span className="media-preview-volume-value">{Math.round(volume * 100)}%</span>
               </div>
@@ -174,6 +199,8 @@ export default function MediaTab() {
             {preview.kind === "unknown" && <p className="text-muted">Неизвестный тип файла — предпросмотр недоступен.</p>}
             <div className="form-hint" style={{ marginTop: 10 }}>{formatSize(preview.size)} · {new Date(preview.modified).toLocaleString("ru-RU")} · {preview.used ? "используется в реакциях" : "не используется (сирота)"}</div>
             <div className="media-file-settings">
+              <label className="media-file-name-label">Имя файла <Tooltip text={`Расширение менять нельзя — по нему бот понимает тип файла; можно его не писать. Кириллица, пробелы и скобки допустимы; символы, которые не пускает Windows (< > : " / \\ | ? *), заменятся на подчёркивание. Ссылки на файл в реакциях и наборах обновятся сами.`} /></label>
+              <input type="text" className="media-file-name-input" value={draftName} onChange={(e) => setDraftName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void saveFile(); }} />
               <h4><Icon name="layers" /> Наборы</h4>
               {sets.length === 0 ? <p className="form-hint">Наборов пока нет — создайте набор в блоке «Наборы» над списком файлов.</p> : (
                 <div className="media-file-sets">
@@ -186,9 +213,9 @@ export default function MediaTab() {
                 </div>
               )}
               <div className="flex gap-2" style={{ marginTop: 12 }}>
-                <button className="primary" onClick={() => applyDraftSets(preview.name)}><Icon name="save" /> Сохранить</button>
+                <button className="primary" onClick={() => void saveFile()}><Icon name="save" /> Сохранить</button>
                 <button onClick={() => setPreview(null)}>Закрыть</button>
-                <button className="danger" style={{ marginLeft: "auto" }} onClick={() => del(preview.name)}><Icon name="delete" /> Удалить файл</button>
+                <button className="danger" style={{ marginLeft: "auto" }} onClick={() => del(preview.name)}><Icon name="trash" /> Удалить файл</button>
               </div>
             </div>
           </div>

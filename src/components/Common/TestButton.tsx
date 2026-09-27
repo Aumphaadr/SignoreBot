@@ -26,5 +26,5 @@ export default function TestButton({ response, vars, eventType }: { response: Re
       showNotification(`Тест: ${parts.join("; ")}`, ok ? NOTIFICATION_TYPES.SUCCESS : NOTIFICATION_TYPES.WARNING, 5000);
     } catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 6000); }
   };
-  return <button onClick={() => void run()} className="modal-test-btn" title="Выполнить реакцию прямо сейчас: текст в чат и медиа на оверлей (с тестовыми значениями переменных)"><Icon name="play" /> Тест</button>;
+  return <button onClick={() => void run()} className="modal-test-btn" title="Выполнить реакцию прямо сейчас: текст в чат и медиа на оверлей (с тестовыми значениями переменных)"><Icon name="flask-conical" /> Тест</button>;
 }

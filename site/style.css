@@ -141,7 +141,10 @@ section { padding: 56px 0; border-top: 1px solid var(--border); }
 .callout p:last-child { margin-bottom: 0; }
 details { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 0 18px; margin-bottom: 10px; }
 summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; gap: 10px; align-items: center; }
-summary::before { content: "▸"; color: var(--accent-text); transition: .15s; }
+summary::before { content: ""; flex: none; width: 1em; height: 1em; background: var(--accent-text); transition: .15s;
+  /* chevron-right набора значков */
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6L15 12L9 18'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6L15 12L9 18'/></svg>") center / contain no-repeat; }
 details[open] summary::before { transform: rotate(90deg); }
 details > :not(summary) { margin-bottom: 14px; }
 

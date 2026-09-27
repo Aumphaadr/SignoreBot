@@ -52,16 +52,16 @@ export default function ShoutoutsTab() {
   return (
     <div className="shoutouts-tab">
       <div className="shoutouts-header">
-        <h2><Icon name="bullhorn" /> Автоматический шатаут</h2>
-        <p className="shoutouts-description">Бот делает /shoutout пользователям из списка при их первом сообщении за сессию. Кулдаун между шатаутами — {Math.round(so.cooldownSec / 60)} мин.</p>
-        <Tooltip text="Shoutout выполняется от имени стримера (нужны права moderator:manage:shoutouts). Twitch не даёт делать shoutout, когда стрим офлайн." />
+        <h2><Icon name="megaphone" /> Автоматический шатаут</h2>
+        <p className="shoutouts-description">Бот делает шатаут пользователям из списка при их первом сообщении за сессию. Кулдаун между шатаутами — {Math.round(so.cooldownSec / 60)} мин.</p>
+        <Tooltip text="Шатаут выполняется от имени стримера (нужны права moderator:manage:shoutouts). Twitch не даёт делать шатаут, когда стрим офлайн." />
       </div>
       <div className="shoutouts-content">
         <div className="shoutout-list-section">
-          <h3><Icon name="launch-rocket" /> Шатаут для рейдов</h3>
+          <h3><Icon name="users" /> Шатаут для рейдов</h3>
           <div className="raid-mode-control">
             <label htmlFor="raid-shoutout-mode">За какие рейды делать шатаут? <Tooltip text="Рейд приводит другой стример: он отправляет к вам своих зрителей. Шатаут за рейд получает этот стример, один на весь рейд — пришедшие зрители в очередь не попадают, сколько бы их ни было." /></label>
-            <select id="raid-shoutout-mode" value={so.raidMode} onChange={(e) => { setSection("shoutout", { ...so, raidMode: e.target.value as RaidShoutoutMode }); showNotification(`Режим shoutout для рейдов: ${RAID_MODES.find((m) => m.value === e.target.value)?.label}`, NOTIFICATION_TYPES.SUCCESS, 2000); }} className="raid-mode-select">
+            <select id="raid-shoutout-mode" value={so.raidMode} onChange={(e) => { setSection("shoutout", { ...so, raidMode: e.target.value as RaidShoutoutMode }); showNotification(`Режим шатаута за рейд: ${RAID_MODES.find((m) => m.value === e.target.value)?.label}`, NOTIFICATION_TYPES.SUCCESS, 2000); }} className="raid-mode-select">
               {RAID_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </div>
@@ -69,27 +69,27 @@ export default function ShoutoutsTab() {
         </div>
 
         <div className="shoutout-list-section">
-          <h3><Icon name="users" /> Список для авто-шатаута</h3>
+          <h3><Icon name="user-plus" /> Список для авто-шатаута</h3>
           <div className="shoutout-users-list">
             {so.autoList.length === 0 ? (
-              <div className="empty-shoutout-list"><p><Icon name="inbox-empty" /> Список пуст</p><p className="hint">Добавьте пользователей для автоматического шатаута</p></div>
+              <div className="empty-shoutout-list"><p><Icon name="inbox" /> Список пуст</p><p className="hint">Добавьте пользователей для автоматического шатаута</p></div>
             ) : so.autoList.map((u) => (
               <div key={u} className="shoutout-user-card">
                 <div className="shoutout-user-info">
                   <span className="shoutout-username">{u}</span>
-                  {isDone(u) && <span className="shoutout-done-badge"><Icon name="success-badge" /> Выполнено</span>}
+                  {isDone(u) && <span className="shoutout-done-badge"><Icon name="circle-check" /> Выполнено</span>}
                   {inQueue(u) && <span className="shoutout-queue-badge"><Icon name="hourglass" /> В очереди</span>}
                 </div>
                 <div className="shoutout-user-actions">
-                  <button className="shoutout-trigger-btn" onClick={() => void trigger(u)} disabled={busy} title="Шатаут вручную"><Icon name="bullhorn"  /> Шатаутнуть</button>
-                  <button className="shoutout-remove-btn" onClick={() => showConfirm(`Удалить ${u} из списка авто-шатаутов?`, () => { setSection("shoutout", { ...so, autoList: so.autoList.filter((x) => x !== u) }); showNotification(`${u} удалён из авто-шатаута`, NOTIFICATION_TYPES.WARNING, 2000); })}><Icon name="delete"  /></button>
+                  <button className="shoutout-trigger-btn" onClick={() => void trigger(u)} disabled={busy} title="Шатаут вручную"><Icon name="megaphone"  /> Шатаутнуть</button>
+                  <button className="shoutout-remove-btn" onClick={() => showConfirm(`Удалить ${u} из списка авто-шатаутов?`, () => { setSection("shoutout", { ...so, autoList: so.autoList.filter((x) => x !== u) }); showNotification(`${u} удалён из авто-шатаута`, NOTIFICATION_TYPES.WARNING, 2000); })}><Icon name="trash"  /></button>
                 </div>
               </div>
             ))}
           </div>
           <div className="add-shoutout-form">
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Логин пользователя (например: twitchuser)" className="shoutout-input" />
-            <button onClick={add} className="add-shoutout-btn"><Icon name="add"  /> Добавить</button>
+            <button onClick={add} className="add-shoutout-btn"><Icon name="plus"  /> Добавить</button>
           </div>
           <div className="add-shoutout-form" style={{ marginTop: 12 }}>
             <input type="text" placeholder="Шатаутнуть любого (логин)" className="shoutout-input" onKeyDown={(e) => { if (e.key === "Enter") { const v = (e.target as HTMLInputElement).value.trim(); if (v) { void trigger(v); (e.target as HTMLInputElement).value = ""; } } }} />
@@ -100,11 +100,11 @@ export default function ShoutoutsTab() {
         {st && (
           <div className="shoutout-status-section">
             <div className="shoutout-status-header">
-              <h3><Icon name="statistics" /> Статус шатаутов</h3>
-              <button onClick={() => { void api.shoutoutReset().then(load); showNotification("Список выполненных шатаутов сброшен", NOTIFICATION_TYPES.SUCCESS, 2000); }} className="reset-shoutout-btn"><Icon name="refresh"  /> Сбросить выполненные</button>
+              <h3><Icon name="chart-bar" /> Статус шатаутов</h3>
+              <button onClick={() => { void api.shoutoutReset().then(load); showNotification("Список выполненных шатаутов сброшен", NOTIFICATION_TYPES.SUCCESS, 2000); }} className="reset-shoutout-btn"><Icon name="rotate-ccw"  /> Сбросить выполненные</button>
             </div>
             <div className="shoutout-status-grid">
-              <div className="status-card"><div className="status-icon"><Icon name="success-badge" /> </div><div className="status-info"><div className="status-label">Выполнено</div><div className="status-value">{st.done.length}</div></div></div>
+              <div className="status-card"><div className="status-icon"><Icon name="circle-check" /> </div><div className="status-info"><div className="status-label">Выполнено</div><div className="status-value">{st.done.length}</div></div></div>
               <div className="status-card"><div className="status-icon"><Icon name="hourglass" /> </div><div className="status-info"><div className="status-label">В очереди</div><div className="status-value">{st.queue.length}</div></div></div>
               <div className="status-card"><div className="status-icon"><Icon name="stopwatch" /> </div><div className="status-info"><div className="status-label">Кулдаун</div><div className="status-value">{cooldown(st.cooldownRemainingMs)}</div></div></div>
             </div>
@@ -114,14 +114,14 @@ export default function ShoutoutsTab() {
                   {st.queue.map((q) => (
                     <span key={q.id} className="queue-item">
                       <span className="queue-item-text">{q.username}<span className="shoutout-source"> {SOURCE[q.source]}{st.currentId === q.id ? " · отправляется" : ""}</span></span>
-                      <button type="button" className="queue-remove-btn" title="Удалить из очереди" disabled={st.currentId === q.id} onClick={() => api.shoutoutRemove(q.id).then(load).catch((e) => showNotification(`${errText(e)}`, NOTIFICATION_TYPES.ERROR, 3000))}><Icon name="close"  /></button>
+                      <button type="button" className="queue-remove-btn" title="Удалить из очереди" disabled={st.currentId === q.id} onClick={() => api.shoutoutRemove(q.id).then(load).catch((e) => showNotification(`${errText(e)}`, NOTIFICATION_TYPES.ERROR, 3000))}><Icon name="x"  /></button>
                     </span>
                   ))}
                 </div>
               </div>
             )}
             {st.done.length > 0 && (
-              <div className="done-list"><strong>Авто-shoutout за сессию:</strong>
+              <div className="done-list"><strong>Авто-шатаут за сессию:</strong>
                 <div className="done-items">{st.done.map((d) => <span key={d.username} className="done-item">{d.username}<span className="shoutout-source"> {d.sources.map((s) => SOURCE[s]).join(", ")}</span></span>)}</div>
               </div>
             )}
@@ -131,11 +131,11 @@ export default function ShoutoutsTab() {
         <div className="shoutout-info">
           <h4><Icon name="book-open" /> Как это работает</h4>
           <ul>
-            <li>При первом сообщении пользователя из списка за сессию бот делает /shoutout</li>
+            <li>При первом сообщении пользователя из списка за сессию бот делает шатаут</li>
             <li>За рейд шатаут получает стример, который его привёл, — один на рейд, по режиму выше</li>
-            <li>Shoutout за сообщение не мешает более позднему shoutout за рейд, но рейд блокирует последующий авто-шатаут за сообщение</li>
+            <li>Шатаут за сообщение не мешает более позднему шатауту за рейд, но рейд блокирует последующий авто-шатаут за сообщение</li>
             <li>Кулдаун между шатаутами — 2 минуты (ограничение Twitch)</li>
-            <li>Twitch ограничивает повторный shoutout одному пользователю в течение часа; лишние записи можно удалить из очереди</li>
+            <li>Twitch ограничивает повторный шатаут одному пользователю в течение часа; лишние записи можно удалить из очереди</li>
             <li>Список выполненных сбрасывается при перезапуске или кнопкой «Сбросить»</li>
           </ul>
         </div>

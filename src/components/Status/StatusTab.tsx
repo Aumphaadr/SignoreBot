@@ -19,7 +19,7 @@ export default function StatusTab({ goTo }: { goTo: (tab: string) => void }) {
     <div className={`status-tile ${st.state === "authorized" ? "ok" : st.state === "pending" ? "warn" : "bad"}`}>
       <div className="status-tile-label">{label}</div>
       <div className="status-tile-value">{st.state === "authorized" ? st.login : st.state === "pending" ? "ожидание кода…" : st.state === "invalid" ? "токен недействителен" : "не авторизован"}</div>
-      {st.state === "authorized" && st.missingScopes.length > 0 && <div className="status-tile-sub"><Icon name="warning" /> не хватает прав</div>}
+      {st.state === "authorized" && st.missingScopes.length > 0 && <div className="status-tile-sub"><Icon name="triangle-alert" /> не хватает прав</div>}
     </div>
   );
   const importLegacy = async () => {
@@ -42,7 +42,7 @@ export default function StatusTab({ goTo }: { goTo: (tab: string) => void }) {
 
   return (
     <div className="status-tab">
-      <div className="commands-header"><h2><Icon name="home" /> Состояние бота</h2><p className="commands-description">SignoreBot {s.version} · данные: <code>{s.dataDir}</code> <button className="small" onClick={() => void api.openDataDir()}><Icon name="folder-open"  /> открыть</button></p></div>
+      <div className="commands-header"><h2><Icon name="house" /> Состояние бота</h2><p className="commands-description">SignoreBot {s.version} · данные: <code>{s.dataDir}</code> <button className="small" onClick={() => void api.openDataDir()}><Icon name="folder-open"  /> открыть</button></p></div>
 
       {s.migration && (
         <div className="status-migration">
@@ -53,25 +53,25 @@ export default function StatusTab({ goTo }: { goTo: (tab: string) => void }) {
       )}
 
       <div className="status-grid">
-        {acc(s.broadcaster, <><Icon name="streamer-camera" /> Стример</>)}
+        {acc(s.broadcaster, <><Icon name="video-camera" /> Стример</>)}
         {acc(s.bot, <><Icon name="robot" /> Бот{config.accounts.sameAccount && " (тот же аккаунт)"}</>)}
         <div className={`status-tile ${s.running ? (s.eventsub.connected ? "ok" : "warn") : "bad"}`}>
-          <div className="status-tile-label"><Icon name="settings" /> Ядро</div>
-          <div className="status-tile-value">{s.running ? (s.eventsub.connected ? "работает" : <><Icon name="refresh" className="spinning" /> EventSub подключается…</>) : "остановлено"}</div>
-          <div className="status-tile-sub">{s.running ? `EventSub: ${s.eventsub.connected ? `${s.eventsub.subscriptions} подписок` : "нет связи"}` : "нужны оба аккаунта"}</div>
+          <div className="status-tile-label"><Icon name="activity" /> Ядро</div>
+          <div className="status-tile-value">{s.running ? (s.eventsub.connected ? "работает" : <><Icon name="loader" className="spinning" /> связь с Twitch устанавливается…</>) : "остановлено"}</div>
+          <div className="status-tile-sub">{s.running ? `События Twitch: ${s.eventsub.connected ? `${s.eventsub.subscriptions} подписок` : "нет связи"}` : "нужны оба аккаунта"}</div>
         </div>
         <div className={`status-tile ${s.server.running ? "ok" : "bad"}`}>
-          <div className="status-tile-label"><Icon name="globe" /> Сервер оверлеев</div>
+          <div className="status-tile-label"><Icon name="server" /> Сервер оверлеев</div>
           <div className="status-tile-value">{s.server.running ? s.server.address : "не запущен"}</div>
           <div className="status-tile-sub">{s.server.error ?? (s.server.allowLan ? "доступен из локальной сети" : "только этот компьютер")}</div>
         </div>
       </div>
 
       {(s.broadcaster.state !== "authorized" || s.bot.state !== "authorized") && (
-        <div className="status-hint"><Icon name="auth-lock" /> Чтобы бот заработал, авторизуйте оба аккаунта на вкладке <a href="#" onClick={(e) => { e.preventDefault(); goTo("auth"); }}>Авторизация</a>.</div>
+        <div className="status-hint"><Icon name="lock-key" /> Чтобы бот заработал, авторизуйте оба аккаунта на вкладке <a href="#" onClick={(e) => { e.preventDefault(); goTo("auth"); }}>Авторизация</a>.</div>
       )}
 
-      <h3 className="status-section-title"><Icon name="overlay-screen" /> Оверлеи</h3>
+      <h3 className="status-section-title"><Icon name="monitor" /> Оверлеи</h3>
       {s.overlays.length === 0 ? (
         <div className="status-hint">Оверлеев нет. <a href="#" onClick={(e) => { e.preventDefault(); goTo("overlays"); }}>Создать</a>.</div>
       ) : (
@@ -87,13 +87,13 @@ export default function StatusTab({ goTo }: { goTo: (tab: string) => void }) {
             </div>
           ))}
           <div className="flex gap-2 mt-2">
-            <button className="small" onClick={() => void api.overlayClear(null, false)}>Очистить очереди</button>
+            <button className="small" onClick={() => void api.overlayClear(null, false)}><Icon name="list-ordered-x" /> Очистить очереди</button>
             <button className="small danger" onClick={() => void api.overlayClear(null, true).then(() => showNotification("Все оверлеи остановлены", NOTIFICATION_TYPES.INFO, 1500))}><Icon name="stop"  /> Остановить всё</button>
           </div>
         </div>
       )}
 
-      <h3 className="status-section-title"><Icon name="chat" /> Сообщение в чат от бота</h3>
+      <h3 className="status-section-title"><Icon name="message-dots" /> Сообщение в чат от бота</h3>
       <div className="form-row">
         <input type="text" value={msg} onChange={(e) => setMsg(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void send()} placeholder={s.running ? "Текст сообщения…" : "Бот не запущен"} disabled={!s.running} />
         <button className="primary" onClick={() => void send()} disabled={!s.running || !msg.trim()} style={{ flex: "0 0 auto" }}><Icon name="send"  /> Отправить</button>
@@ -102,7 +102,7 @@ export default function StatusTab({ goTo }: { goTo: (tab: string) => void }) {
       <h3 className="status-section-title"><Icon name="package" /> Перенос настроек</h3>
       <div className="status-hint">
         Команд: {config.commands.length}, наград: {config.rewards.length}, оверлеев: {config.overlays.length}. Если это новая установка — импортируйте <code>config.json</code> старой версии: настройки будут переведены в новый формат, медиа скопированы.
-        <div className="mt-2"><button onClick={() => void importLegacy()}><Icon name="folder-open"  /> Импортировать config.json…</button></div>
+        <div className="mt-2"><button onClick={() => void importLegacy()}><Icon name="upload"  /> Импортировать config.json…</button></div>
       </div>
     </div>
   );
