@@ -32,7 +32,7 @@ export default function Sidebar({ active, onChange }: { active: string; onChange
         <h1><img src={logo} alt="" className="sidebar-logo" /> SignoreBot</h1>
         <p className="sidebar-subtitle"><span className={`sidebar-dot ${ok ? "ok" : warn ? "bad" : "warn"}`} /> {ok ? "в работе" : warn ? "остановлен" : <><Icon name="loader" className="spinning" /> подключение…</>}</p>
         {upd?.isNewer && upd.url && (
-          <Hint text={<>вышла версия <b>{upd.latest}</b>, у вас {upd.current}; кнопка открывает страницу релиза со ссылками на файлы</>}>
+          <Hint text={<>вышла версия <b>{upd.latest}</b>, у вас {upd.current}; кнопка открывает страницу скачивания на сайте</>}>
             <button className="sidebar-update-btn" onClick={() => void openUrl(upd.url!)}><Icon name="external-link" /> Обновить до {upd.latest}</button>
           </Hint>
         )}

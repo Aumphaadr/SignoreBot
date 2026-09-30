@@ -35,33 +35,33 @@
 <section id="download"><div class="wrap">
   <h2>Скачать</h2>
   <p class="muted" id="dl-os-note"></p>
-  <p class="muted" id="dl-status" data-version="1.0.5">Версия 1.0.5. Файлы отдаёт GitHub, установка не требует ни аккаунта, ни регистрации.</p>
+  <p class="muted">Версия {{version}} от {{date}}. Файлы отдаёт GitHub, установка не требует ни аккаунта, ни регистрации.</p>
   <div class="dl">
     <div class="card" data-os="windows">
       <div class="os">{{icon:window}} Windows 10 / 11</div>
       <strong>Установщик или portable</strong>
-      <div class="name" data-size="setup">установщик ≈9 МБ · portable 18.6 МБ</div>
-      <a class="btn primary" data-dl="setup" href="https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.5/SignoreBot_1.0.5-windows-x64-setup.exe">{{icon:download}} Установщик</a>
-      <a class="btn" data-dl="portable" href="https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.5/SignoreBot_1.0.5-windows-x64-portable.exe">Portable .exe</a>
+      <div class="name">установщик {{sizeSetup}} · portable {{sizePortable}}</div>
+      <a class="btn primary" href="{{dlSetup}}">{{icon:download}} Установщик</a>
+      <a class="btn" href="{{dlPortable}}">Portable .exe</a>
       <div class="dl-hint">SmartScreen предупредит о неизвестном издателе: «Подробнее», затем «Выполнить в любом случае». Что это значит, разбирает урок <a href="{{root}}start/">«Скачать, установить, запустить»</a>.</div>
     </div>
     <div class="card" data-os="linux">
       <div class="os">{{icon:package}} Linux · Debian, Ubuntu и родственные</div>
       <strong>Пакет .deb</strong>
-      <div class="name" data-size="deb">12.1 МБ</div>
-      <a class="btn primary" data-dl="deb" href="https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.5/SignoreBot_1.0.5-linux-amd64.deb">{{icon:download}} Скачать .deb</a>
-      <div class="dl-hint"><code>sudo apt install ./SignoreBot_1.0.5-linux-amd64.deb</code></div>
+      <div class="name">{{sizeDeb}}</div>
+      <a class="btn primary" href="{{dlDeb}}">{{icon:download}} Скачать .deb</a>
+      <div class="dl-hint"><code>sudo apt install ./{{fileDeb}}</code></div>
     </div>
     <div class="card" data-os="linux">
       <div class="os">{{icon:package}} Linux · любой дистрибутив</div>
       <strong>AppImage</strong>
-      <div class="name" data-size="appimage">82.1 МБ</div>
-      <a class="btn primary" data-dl="appimage" href="https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.5/SignoreBot_1.0.5-linux-amd64.AppImage">{{icon:download}} Скачать AppImage</a>
-      <div class="dl-hint">Сделать исполняемым: <code>chmod +x SignoreBot_1.0.5-linux-amd64.AppImage</code></div>
+      <div class="name">{{sizeAppimage}}</div>
+      <a class="btn primary" href="{{dlAppimage}}">{{icon:download}} Скачать AppImage</a>
+      <div class="dl-hint">Сделать исполняемым: <code>chmod +x {{fileAppimage}}</code></div>
     </div>
   </div>
-  <div class="notes" id="dl-notes" hidden><h3>Что нового</h3><pre id="dl-notes-text"></pre></div>
-  <p class="muted" style="margin-top:16px">Все сборки и прошлые версии — на <a href="https://github.com/Aumphaadr/SignoreBot/releases">странице релизов</a>. Обновления приложение проверяет само и показывает плашку со ссылкой; настройки и медиа при обновлении остаются на месте. Собрать из исходников — <a href="https://github.com/Aumphaadr/SignoreBot#readme">README</a>.</p>
+  <div class="notes" id="dl-notes"><h3>Что нового в {{version}}</h3>{{notesHtml}}</div>
+  <p class="muted" style="margin-top:16px">Все сборки и прошлые версии — на <a href="{{releasesUrl}}">странице релизов</a>. Обновления приложение проверяет само и показывает плашку со ссылкой сюда; настройки и медиа при обновлении остаются на месте. Собрать из исходников — <a href="https://github.com/Aumphaadr/SignoreBot#readme">README</a>.</p>
 </div></section>
 <section id="lessons"><div class="wrap">
   <h2>Как начать: девять коротких уроков</h2>
