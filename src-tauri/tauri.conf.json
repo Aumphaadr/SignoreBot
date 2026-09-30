@@ -40,6 +40,8 @@
       "icons/icon.ico"
     ],
     "shortDescription": "Локальный Twitch-бот с оверлеями для OBS",
+    "copyright": "Copyright (c) 2026 Aumphaadr",
+    "license": "MIT",
     "linux": {
       "appimage": {
         "bundleMediaFramework": false

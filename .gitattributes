@@ -1,0 +1,15 @@
+# Переводы строк — LF во всех текстовых файлах, на любой ОС.
+* text=auto eol=lf
+
+# Тексты лицензий шрифтов хранятся так, как их выпустили авторы (с CRLF).
+*OFL.txt -text
+
+# Двоичные файлы.
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
