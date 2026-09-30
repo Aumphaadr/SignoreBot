@@ -110,14 +110,20 @@ impl Default for NetworkSettings {
 #[serde(rename_all = "camelCase", default)]
 #[ts(export, export_to = "config.ts")]
 pub struct UpdateSettings {
-    /// Репозиторий GitHub с релизами (для форков — свой).
-    pub repo_url: String,
+    /// Откуда узнавать о новых версиях: адрес сайта с `version.json` (по умолчанию —
+    /// сайт SignoreBot), репозиторий GitHub с релизами или прямая ссылка на JSON.
+    /// До перевыпуска 1.0.5 поле звалось `repoUrl` и хранило репозиторий GitHub.
+    #[serde(alias = "repoUrl")]
+    pub source_url: String,
     pub check_on_start: bool,
 }
 
+/// Сайт SignoreBot: там лежит `version.json`, который пишет `npm run site`.
+pub const DEFAULT_UPDATE_SOURCE: &str = "https://aumphaadr.github.io/SignoreBot/";
+
 impl Default for UpdateSettings {
     fn default() -> Self {
-        Self { repo_url: "https://github.com/Aumphaadr/SignoreBot".into(), check_on_start: true }
+        Self { source_url: DEFAULT_UPDATE_SOURCE.into(), check_on_start: true }
     }
 }
 
@@ -742,6 +748,12 @@ impl Config {
     /// Нормализация после загрузки/правки: дефолты, порядок, ограничения.
     pub fn normalize(&mut self) {
         self.version = CONFIG_VERSION;
+        // До перевыпуска 1.0.5 обновления проверялись по репозиторию GitHub; теперь — по
+        // version.json сайта. Прежний адрес по умолчанию и пустое поле — на новый адрес,
+        // чужой адрес (форк) остаётся.
+        if self.updates.source_url.trim().is_empty() || crate::updates::is_default_repo(&self.updates.source_url) {
+            self.updates.source_url = DEFAULT_UPDATE_SOURCE.into();
+        }
         if self.twitch.client_id.trim().is_empty() || self.twitch.client_id == LEGACY_TWITCH_CLIENT_ID {
             self.twitch.client_id = DEFAULT_TWITCH_CLIENT_ID.into();
         }

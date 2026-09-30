@@ -277,6 +277,8 @@ clientId: string, };
 
 export type UpdateSettings = { 
 /**
- * Репозиторий GitHub с релизами (для форков — свой).
+ * Откуда узнавать о новых версиях: адрес сайта с `version.json` (по умолчанию —
+ * сайт SignoreBot), репозиторий GitHub с релизами или прямая ссылка на JSON.
+ * До перевыпуска 1.0.5 поле звалось `repoUrl` и хранило репозиторий GitHub.
  */
-repoUrl: string, checkOnStart: boolean, };
+sourceUrl: string, checkOnStart: boolean, };

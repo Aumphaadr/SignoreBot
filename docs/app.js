@@ -98,26 +98,6 @@
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && box) box.classList.remove("open"); });
 
-  // ------------------------------------------------------------ свежий релиз
-  // Ссылки на скачивание прописаны в HTML и работают без скриптов. Этот код —
-  // только улучшение: если на GitHub появился релиз новее, он подставит его
-  // файлы, размеры и заметки. Не ответил GitHub (лимит запросов, нет сети) —
-  // на странице остаются рабочие ссылки на текущую версию.
-  const REPO = "Aumphaadr/SignoreBot";
-  const KINDS = {
-    deb: (n) => n.endsWith(".deb"),
-    appimage: (n) => n.endsWith(".appimage"),
-    setup: (n) => n.endsWith(".exe") && n.includes("setup"),
-    portable: (n) => (n.endsWith(".exe") || n.endsWith(".zip")) && n.includes("portable"),
-  };
-  const size = (b) => (b > 1048576 ? (b / 1048576).toFixed(1) + " МБ" : Math.round(b / 1024) + " КБ");
-  const num = (v) => String(v).replace(/^v/, "").split(/[.-]/).map((x) => parseInt(x, 10) || 0);
-  const newer = (a, b) => {
-    const [x, y] = [num(a), num(b)];
-    for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
-    return false;
-  };
-  let release = null; // Promise с ответом GitHub, один на всё время жизни страницы
 
   // Карточки скачивания: определяем ОС посетителя и приглушаем чужие.
   function detectOs() {
@@ -137,35 +117,6 @@
     if (note) note.textContent = os === "windows" ? "Похоже, у вас Windows — подходящая карточка первая." : os === "linux" ? "Похоже, у вас Linux — подходящие карточки выделены." : "";
   }
 
-  function enhanceDownloads() {
-    const status = document.getElementById("dl-status");
-    if (!status) return;
-    const fallback = status.dataset.version || "0";
-    if (!release) {
-      release = fetch("https://api.github.com/repos/" + REPO + "/releases/latest", { headers: { Accept: "application/vnd.github+json" } })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error("http " + r.status))));
-    }
-    release.then((rel) => {
-      const tag = String(rel.tag_name || rel.name || "").replace(/^v/, "");
-      if (!tag || !newer(tag, fallback)) return;
-      const assets = rel.assets || [];
-      let replaced = 0;
-      for (const [kind, match] of Object.entries(KINDS)) {
-        const a = assets.find((x) => match(x.name.toLowerCase()));
-        if (!a) continue;
-        replaced++;
-        document.querySelectorAll(`[data-dl="${kind}"]`).forEach((el) => { el.href = a.browser_download_url; });
-        const sz = document.querySelector(`[data-size="${kind}"]`);
-        if (sz) sz.textContent = size(a.size);
-      }
-      if (!replaced) return;
-      const date = rel.published_at ? new Date(rel.published_at).toLocaleDateString("ru-RU") : "";
-      status.textContent = `Версия ${tag}${date ? " от " + date : ""}. Файлы отдаёт GitHub, установка не требует ни аккаунта, ни регистрации.`;
-      const notes = document.getElementById("dl-notes");
-      if (rel.body && notes) { notes.hidden = false; document.getElementById("dl-notes-text").textContent = rel.body; }
-    }).catch(() => { /* оставляем ссылки из HTML */ });
-  }
-
   // Иконка вкладки задана относительным путём ({{root}}logo.svg), а <head>
   // при переходах не меняется: браузер перезапрашивал её от адреса урока и
   // получал 404. Один раз делаем адрес абсолютным.
@@ -173,7 +124,6 @@
   if (icon) icon.setAttribute("href", icon.href);
 
   function enhance() {
-    enhanceDownloads();
     enhanceOsCards();
   }
   enhance();

@@ -5,8 +5,8 @@
 //     сайтов — ни с CDN, ни с GitHub, в том числе с сайта и из репозитория набора
 //     Klaarheid: GitHub не хостинг для раздачи файлов. Можно: ссылку для перехода
 //     (<a href>, openUrl), комментарий, пространство имён XML, адрес этого компьютера
-//     (127.0.0.1, localhost — сервер оверлеев, OBS) и одно исключение — сведения о
-//     последнем релизе у API GitHub на сайте (EXCEPTIONS ниже).
+//     (127.0.0.1, localhost — сервер оверлеев, OBS). Сайт узнаёт версию из своей
+//     сборки (version.json), в API GitHub не ходит.
 //  2. Значки. icons.ts собран из файлов; значки набора — в формате набора, раздел
 //     «Значки» в THIRD-PARTY-NOTICES.md сходится с папкой; лишних значков нет.
 //  3. Шрифты. У каждого файла шрифта рядом лежит лицензия, и notices её называют.
@@ -47,12 +47,6 @@ const SERVED_DIRS = ["src", "public", "src-tauri/overlay", "site", "docs"];
 const SERVED_EXT = new Set([".html", ".css", ".js", ".mjs", ".ts", ".tsx", ".svg", ".json"]);
 const NAMESPACE = /^http:\/\/(?:www\.w3\.org\/(?:2000\/svg|1999\/xlink|1999\/xhtml|XML\/1998\/namespace)|www\.inkscape\.org\/namespaces\/inkscape|sodipodi\.sourceforge\.net\/DTD\/sodipodi-0\.dtd|creativecommons\.org\/ns#|purl\.org\/dc\/elements\/1\.1\/|www\.w3\.org\/1999\/02\/22-rdf-syntax-ns#)$/u;
 const LOOPBACK = /^(?:[a-z]+:)?\/\/(?:localhost|127(?:\.\d{1,3}){3}|\[::1\])(?:[:/?#]|$)/iu;
-// Единственное исключение: сайт спрашивает у API GitHub, какой релиз последний,
-// чтобы кнопки скачивания вели на свежие файлы. Файлов запрос не грузит; без него
-// кнопки ведут на версию, записанную при сборке сайта.
-const EXCEPTIONS = [
-  { files: ["site/app.js", "docs/app.js"], prefix: "https://api.github.com/repos/" },
-];
 // Полный адрес или адрес без протокола: «//cdn.example.com/…».
 const ADDRESS = /(?:\b[a-z][a-z0-9+.-]*:)?\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)+(?::\d+)?[^\s"'`)<>]*|(?:\b[a-z][a-z0-9+.-]*:)?\/\/(?:localhost|\[::1\])(?::\d+)?[^\s"'`)<>]*/giu;
 const COMMENT_LINE = /^\s*(?:\/\/|\/\*|\*|<!--|\{\/\*)/u;
@@ -67,12 +61,11 @@ function inAnchorHref(text, index) {
 /** Адрес открывается в браузере пользователя, а не грузится страницей. */
 const inNavigation = (text, index) => /(?:openUrl|window\.open)\(\s*["'`]$/u.test(text.slice(Math.max(0, index - 40), index));
 
-export function externalAddresses(text, rel = "") {
+export function externalAddresses(text) {
   const found = [];
   for (const m of text.matchAll(ADDRESS)) {
     const addr = m[0];
     if (NAMESPACE.test(addr) || LOOPBACK.test(addr) || inAnchorHref(text, m.index) || inNavigation(text, m.index)) continue;
-    if (EXCEPTIONS.some((e) => e.files.includes(rel) && addr.startsWith(e.prefix))) continue;
     const lineStart = text.lastIndexOf("\n", m.index - 1) + 1;
     const lineEnd = text.indexOf("\n", m.index);
     const line = text.slice(lineStart, lineEnd < 0 ? text.length : lineEnd);
@@ -83,18 +76,26 @@ export function externalAddresses(text, rel = "") {
 }
 
 function checkLocalOnly() {
-  const files = ["index.html", ...SERVED_DIRS.flatMap((d) => walk(d, SERVED_EXT))].sort();
+  // docs/version.json — данные для приложения: адреса файлов релиза, которые скачивает
+  // человек (как <a href>), страница их не грузит. Проверяется отдельно: есть и
+  // называет версию из package.json.
+  const files = ["index.html", ...SERVED_DIRS.flatMap((d) => walk(d, SERVED_EXT))].filter((f) => f !== "docs/version.json").sort();
   const hits = [];
-  for (const rel of files) for (const h of externalAddresses(read(rel), rel)) hits.push(`${rel}:${h.line} — ${h.address}`);
+  for (const rel of files) for (const h of externalAddresses(read(rel))) hits.push(`${rel}:${h.line} — ${h.address}`);
   if (hits.length) bad("внешние адреса — всё, что нужно странице, кладётся в репозиторий, значки Klaarheid копируются через npm run icons:sync", hits);
   else ok(`внешних загрузок нет (файлов: ${files.length})`);
   // Проверка не пустая: в обходе панель, оверлей, сайт и его сборка.
   const must = ["index.html", "src/main.tsx", "src/components/Icon/icons.ts", "src-tauri/overlay/overlay.html", "site/app.js", "docs/index.html", "public/favicon.svg"];
   const missing = must.filter((m) => !files.includes(m));
   if (missing.length) bad("страж внешних адресов не видит файлов", missing);
+  const pkgVersion = JSON.parse(read("package.json")).version;
+  const vj = existsSync(join(ROOT, "docs/version.json")) ? JSON.parse(read("docs/version.json")) : null;
+  if (!vj) bad("нет docs/version.json — npm run site");
+  else if (vj.version !== pkgVersion) bad(`docs/version.json называет ${vj.version}, а package.json — ${pkgVersion}: npm run site`);
+  else ok(`docs/version.json: версия ${vj.version} от ${vj.date}, файлов ${Object.keys(vj.files ?? {}).length}`);
 
   // самопроверка на обратном
-  const caught = (text, rel = "x.html") => externalAddresses(text, rel).map((h) => h.address);
+  const caught = (text) => externalAddresses(text).map((h) => h.address);
   const set = "https://aumphaadr.github.io/Klaarheid-Icons/svg/fill/eye.svg";
   const raw = "https://raw.githubusercontent.com/Aumphaadr/Klaarheid-Icons/main/svg/fill/eye.svg";
   const cases = [
@@ -103,7 +104,7 @@ function checkLocalOnly() {
     [caught('<script src="https://cdn.jsdelivr.net/gh/Aumphaadr/Klaarheid-Icons/svg/fill/x.svg"></script>'), ["https://cdn.jsdelivr.net/gh/Aumphaadr/Klaarheid-Icons/svg/fill/x.svg"], "jsDelivr gh/"],
     [caught(".x { background: url(//cdn.example.com/a.png) }"), ["//cdn.example.com/a.png"], "адрес без протокола в CSS"],
     [caught('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost">'), ["https://fonts.googleapis.com/css2?family=Jost"], "шрифт с чужого сервера"],
-    [caught("fetch('https://api.github.com/repos/Aumphaadr/SignoreBot/releases/latest')", "src/x.ts"), ["https://api.github.com/repos/Aumphaadr/SignoreBot/releases/latest"], "исключение сайта не действует в панели"],
+    [caught("fetch('https://api.github.com/repos/Aumphaadr/SignoreBot/releases/latest')"), ["https://api.github.com/repos/Aumphaadr/SignoreBot/releases/latest"], "API GitHub — тоже загрузка"],
     [caught('<a href="https://github.com/Aumphaadr/SignoreBot">исходники</a>'), [], "ссылка для перехода"],
     [caught('<a className="x" href={"https://www.twitch.tv/x"}>канал</a>'), [], "ссылка в JSX"],
     [caught('void openUrl("https://dev.twitch.tv/console");'), [], "открыть в браузере"],
@@ -111,7 +112,6 @@ function checkLocalOnly() {
     [caught("{/* https://example.com/doc */}"), [], "комментарий JSX"],
     [caught('<code>http://127.0.0.1:3001/overlay/a?key=…</code> ws://localhost:4455'), [], "адрес этого компьютера"],
     [caught('<svg xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd">'), [], "пространства имён"],
-    [caught("fetch('https://api.github.com/repos/' + REPO + '/releases/latest')", "site/app.js"), [], "сведения о релизе на сайте"],
   ];
   const wrong = cases.filter(([got, want]) => JSON.stringify(got) !== JSON.stringify(want)).map(([got, want, what]) => `${what}: ждали ${JSON.stringify(want)}, получили ${JSON.stringify(got)}`);
   if (wrong.length) bad("самопроверка стража внешних адресов", wrong);

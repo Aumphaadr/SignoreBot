@@ -697,7 +697,7 @@ impl Core {
 
     /// Проверить релизы на GitHub, запомнить результат, сообщить панели.
     pub async fn check_updates(&self) -> Result<crate::updates::UpdateInfo, String> {
-        let repo = self.config.read().updates.repo_url.clone();
+        let repo = self.config.read().updates.source_url.clone();
         let info = crate::updates::check(&repo).await?;
         if info.is_newer {
             tracing::info!(target: "signorebot::updates", "Доступно обновление {} (текущая {})", info.latest.clone().unwrap_or_default(), info.current);

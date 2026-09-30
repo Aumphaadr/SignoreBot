@@ -404,3 +404,17 @@ async fn event_with_empty_user_gets_placeholder() {
     let v: serde_json::Value = serde_json::from_str(&msg).unwrap();
     assert_eq!(v["text"]["content"], "Привет, someone!");
 }
+
+/// Адрес проверки обновлений: старый репозиторий по умолчанию → сайт, чужой адрес форка остаётся.
+#[test]
+fn update_source_migrates_from_repo_url() {
+    let load = |updates: &str| -> Config {
+        let mut c: Config = serde_json::from_value(serde_json::json!({ "version": 2, "updates": serde_json::from_str::<serde_json::Value>(updates).unwrap() })).unwrap();
+        c.normalize();
+        c
+    };
+    assert_eq!(load(r#"{"repoUrl":"https://github.com/Aumphaadr/SignoreBot","checkOnStart":true}"#).updates.source_url, signorebot_lib::config::DEFAULT_UPDATE_SOURCE);
+    assert_eq!(load(r#"{"repoUrl":"https://github.com/someone/SignoreBot"}"#).updates.source_url, "https://github.com/someone/SignoreBot");
+    assert_eq!(load(r#"{"sourceUrl":"http://127.0.0.1:8765/version.json"}"#).updates.source_url, "http://127.0.0.1:8765/version.json");
+    assert_eq!(load(r#"{"sourceUrl":"  "}"#).updates.source_url, signorebot_lib::config::DEFAULT_UPDATE_SOURCE);
+}

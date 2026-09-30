@@ -17,7 +17,7 @@ export default function SettingsTab() {
   const [port, setPort] = useState(String(net.httpPort));
   const [clientId, setClientId] = useState(config.twitch.clientId);
   const upd = config.updates;
-  const [repoUrl, setRepoUrl] = useState(upd.repoUrl);
+  const [sourceUrl, setSourceUrl] = useState(upd.sourceUrl);
   const [update, setUpdate] = useState<UpdateInfo | null>(status?.update ?? null);
   const [checking, setChecking] = useState(false);
   const app = config.app;
@@ -46,7 +46,7 @@ export default function SettingsTab() {
     try {
       const u = await api.updatesCheck();
       setUpdate(u);
-      showNotification(u.isNewer ? `Доступна версия ${u.latest}` : u.latest ? `У вас последняя версия (${u.current})` : "Релизов пока нет", u.isNewer ? NOTIFICATION_TYPES.WARNING : NOTIFICATION_TYPES.SUCCESS, 4000);
+      showNotification(u.isNewer ? `Доступна версия ${u.latest}` : u.pending ? `Версия ${u.pending} выходит — файлы ещё не выложены` : u.latest ? `У вас последняя версия (${u.current})` : "Релизов пока нет", u.isNewer ? NOTIFICATION_TYPES.WARNING : NOTIFICATION_TYPES.SUCCESS, 4000);
     } catch (e) { showNotification(`Проверка обновлений: ${errText(e)}`, NOTIFICATION_TYPES.ERROR, 5000); }
     finally { setChecking(false); }
   };
@@ -124,9 +124,9 @@ export default function SettingsTab() {
       <div className="card mb-4"><div className="card-header" style={{ cursor: "default" }}><div className="card-title"><h3><Icon name="sparkle" /> Обновления</h3></div></div>
         <div style={{ padding: 20 }}>
           <div className="form-group">
-            <label>Репозиторий с релизами <Tooltip text="GitHub-репозиторий, где публикуются версии. Авторы форков могут указать свой — или прямую ссылку на JSON в формате страницы «последний релиз» GitHub, если релизы лежат на своём сервере." /></label>
+            <label>Откуда узнавать о версиях <Tooltip text="Адрес сайта, на котором лежит version.json (по умолчанию — сайт SignoreBot). Авторы форков могут указать свой сайт, свой репозиторий GitHub с релизами или прямую ссылку на JSON в формате version.json либо страницы «последний релиз» GitHub." /></label>
             <div className="form-row">
-              <input type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} onBlur={() => { const v = repoUrl.trim(); if (v && v !== upd.repoUrl) setSection("updates", { ...upd, repoUrl: v }); }} style={{ fontFamily: "var(--font-mono)" }} />
+              <input type="text" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} onBlur={() => { const v = sourceUrl.trim(); if (v && v !== upd.sourceUrl) setSection("updates", { ...upd, sourceUrl: v }); }} style={{ fontFamily: "var(--font-mono)" }} />
               <button onClick={() => void checkUpdates()} disabled={checking} style={{ flex: "0 0 auto" }}><Icon name="refresh" className={checking ? "spinning" : ""} /> Проверить</button>
             </div>
           </div>
@@ -138,9 +138,11 @@ export default function SettingsTab() {
             <div className={`status-hint mt-3 ${update.isNewer ? "status-update-available" : ""}`}>
               Текущая версия: <strong>{update.current}</strong>{update.latest && <> · последний релиз: <strong>{update.latest}</strong>{update.publishedAt && ` (${new Date(update.publishedAt).toLocaleDateString("ru-RU")})`}</>}
               {update.isNewer && update.url && <div className="mt-2 flex gap-2 items-center"><button className="primary" onClick={() => void openUrl(update.url!)}><Icon name="external-link"  /> Скачать {update.latest}</button>
-                {update.assets.slice(0, 4).map((a) => <button key={a.url} className="small" onClick={() => void openUrl(a.url)} title={a.name}>{a.name.length > 28 ? a.name.slice(0, 26) + "…" : a.name}</button>)}</div>}
+                {update.assets.slice(0, 4).map((a) => <button key={a.url} className="small" onClick={() => void openUrl(a.url)} title={a.name}>{a.name.length > 28 ? a.name.slice(0, 26) + "…" : a.name}</button>)}
+                {update.releaseUrl && update.releaseUrl !== update.url && <button className="small" onClick={() => void openUrl(update.releaseUrl!)} title="Страница релиза на GitHub">релиз на GitHub</button>}</div>}
+              {update.pending && <div className="mt-1">Версия <strong>{update.pending}</strong> уже объявлена на сайте, но её файлы ещё не выложены — бот предложит обновиться, когда они появятся.</div>}
               {!update.isNewer && update.latest && <div className="text-success mt-1">У вас последняя версия.</div>}
-              {!update.latest && <div className="mt-1">В репозитории пока нет релизов — проверено {new Date(update.checkedAt).toLocaleTimeString("ru-RU")}.</div>}
+              {!update.latest && !update.pending && <div className="mt-1">Релизов пока нет — проверено {new Date(update.checkedAt).toLocaleTimeString("ru-RU")}.</div>}
               {update.notes && update.isNewer && <pre className="mt-2" style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", color: "var(--text-secondary)", maxHeight: 200, overflow: "auto" }}>{update.notes}</pre>}
             </div>
           )}

@@ -108,7 +108,7 @@ Credential Manager на Windows.
 ## Чего пока нет
 
 - Автозапуска вместе с системой.
-- Самообновления — только проверка и ссылка на релиз.
+- Самообновления — только проверка и ссылка на страницу скачивания.
 - Второй копии приложения: повторный запуск показывает окно первой. Это
   намеренно — две копии портили бы друг другу одноразовые refresh-токены.
 
@@ -129,7 +129,7 @@ npm run icons:sync -- ../Klaarheid-Icons [имя …]  # взять значки
 npm run check                                   # стражи: внешние адреса, значки, шрифты, лицензии библиотек
 npm run licenses                                # пересобрать раздел «Библиотеки» в THIRD-PARTY-NOTICES.md
 npm run fonts                                   # пересобрать встроенные шрифты оверлея из src-tauri/fonts/manifest.json
-npm run site                                    # собрать сайт из site/ в docs/ (GitHub Pages)
+npm run site                                    # собрать сайт из site/ в docs/ (GitHub Pages) и docs/version.json
 npm run site:serve                              # посмотреть собранный сайт: http://127.0.0.1:8765/
 npm run build:linux                             # deb + AppImage (с tools/fix-appimage.sh)
 npm run build:windows                           # portable .exe кросс-компиляцией с Linux (cargo-xwin)
@@ -161,7 +161,9 @@ npm run release:collect                         # сложить бандлы в
   OFL, дописать в манифест, пересобрать.
 - **Twitch-приложение** должно быть типа Public (Device Code Flow без
   секрета); Client ID — в настройках, по умолчанию вшит наш. У форка будет
-  свой репозиторий для проверки обновлений — адрес меняется в настройках.
+  свой адрес для проверки обновлений — меняется в настройках: сайт с
+  `version.json` (его пишет `npm run site`), репозиторий GitHub с релизами
+  или прямая ссылка на JSON любого из этих двух форматов.
 - Переменные окружения: `SIGNOREBOT_DATA_DIR` (каталог данных, токены в нём
   файлом), `SIGNOREBOT_SECRETS=file|keyring`, `SIGNOREBOT_LOG` (фильтр логов).
 
@@ -190,6 +192,12 @@ docs/               собранный сайт (GitHub Pages): npm run site; к
 сервера: `config`, `playVideo` (см. `engine/mod.rs::send_media`), `clearQueue`,
 `clearAll`; медиа — `/media/<file>?key=<ключ>`. `&debug=1` к адресу страницы
 включает отладочную плашку.
+
+Проверка обновлений: через 20 с после запуска и раз в 12 часов бот читает
+`version.json` с сайта (`version`, `date`, `notes`, `page`, `release`, `files`,
+`sizes`; файл пишет `npm run site` из `package.json`, CHANGELOG и
+`site/release.json`) и предлагает версию, только если её первый файл уже
+скачивается — сайт обычно обновляется на несколько минут раньше релиза.
 
 История версий — [CHANGELOG.md](CHANGELOG.md).
 

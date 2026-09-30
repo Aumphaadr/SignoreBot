@@ -170,11 +170,23 @@ nextInSec: number, };
 
 export type UpdateAsset = { name: string, url: string, size: number, };
 
-export type UpdateInfo = { current: string, latest: string | null, isNewer: boolean, url: string | null, publishedAt: string | null, notes: string | null, 
+export type UpdateInfo = { current: string, latest: string | null, isNewer: boolean, 
+/**
+ * Куда вести за обновлением: страница скачивания сайта (или страница релиза).
+ */
+url: string | null, 
+/**
+ * Страница релиза на GitHub, если известна.
+ */
+releaseUrl: string | null, publishedAt: string | null, notes: string | null, 
 /**
  * Ссылки на файлы релиза.
  */
 assets: Array<UpdateAsset>, 
+/**
+ * Версия объявлена на сайте, но её файлы ещё не выложены — обновление не предлагается.
+ */
+pending: string | null, 
 /**
  * Unix-время проверки, мс.
  */

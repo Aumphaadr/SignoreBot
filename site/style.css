@@ -127,7 +127,8 @@ section { padding: 56px 0; border-top: 1px solid var(--border); }
 .dl .name { font-family: "Fira Code", Consolas, monospace; font-size: 14px; color: var(--text2); overflow-wrap: anywhere; }
 .status-line { margin-top: 14px; color: var(--muted); font-size: 14px; }
 .notes { margin-top: 18px; }
-.notes pre { white-space: pre-wrap; }
+.notes ul { margin: 8px 0 0; padding-left: 22px; }
+.notes li { margin: 6px 0; }
 
 /* шаги и врезки */
 .steps { counter-reset: s; display: grid; gap: 14px; margin: 18px 0; }
