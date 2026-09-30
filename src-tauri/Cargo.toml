@@ -3,6 +3,9 @@ name = "signorebot"
 version = "1.0.5"
 description = "SignoreBot — локальный Twitch-бот с оверлеями для OBS"
 authors = ["Aumphaadr"]
+license = "MIT"
+repository = "https://github.com/Aumphaadr/SignoreBot"
+homepage = "https://aumphaadr.github.io/SignoreBot/"
 edition = "2021"
 rust-version = "1.80"
 

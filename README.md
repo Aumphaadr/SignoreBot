@@ -124,7 +124,10 @@ npm install
 npm run tauri dev                               # окно + Vite HMR + автопересборка Rust
 SIGNOREBOT_DATA_DIR=/tmp/sb npm run tauri dev   # отдельные данные и токены (боевой keyring не трогается)
 npm run test:rust                               # тесты ядра; полный прогон генерирует src/api/generated/*.ts
-npm run icons                                   # пересобрать src/components/Icon/icons.ts из src/assets/icons/*.svg
+npm run icons                                   # пересобрать src/components/Icon/icons.ts из src/assets/icons/
+npm run icons:sync -- ../Klaarheid-Icons [имя …]  # взять значки из локальной копии набора Klaarheid Icons
+npm run check                                   # стражи: внешние адреса, значки, шрифты, лицензии библиотек
+npm run licenses                                # пересобрать раздел «Библиотеки» в THIRD-PARTY-NOTICES.md
 npm run fonts                                   # пересобрать встроенные шрифты оверлея из src-tauri/fonts/manifest.json
 npm run site                                    # собрать сайт из site/ в docs/ (GitHub Pages)
 npm run site:serve                              # посмотреть собранный сайт: http://127.0.0.1:8765/
@@ -144,11 +147,14 @@ npm run release:collect                         # сложить бандлы в
   панели не играют. Вторая половина проблемы — `AppRun` выставляет
   `GST_PLUGIN_SYSTEM_PATH_1_0` на пустой каталог — чинится в самом приложении
   (`lib.rs::fix_appimage_gstreamer_env`).
-- **Иконки** — свои, 127 штук в `src/assets/icons/` (набор «точных иконок»:
-  сетка 24, линия 2, поле уже внутри кадра). Генератор собирает их в
-  один `icons.ts` (svgo + `currentColor`), компонент
-  `<Icon name="…" />` типизирован по именам файлов. Добавили SVG — запустите
-  `npm run icons` и коммитьте результат: панель собирается без генератора.
+- **Значки** — из набора [Klaarheid Icons](https://aumphaadr.github.io/Klaarheid-Icons/)
+  (MIT-0): копии файлов `svg/fill` в `src/assets/icons/klaarheid/`, их кладёт
+  и обновляет только `npm run icons:sync -- <папка набора> [имя …]` — из
+  локальной копии набора, не по сети. Знаки Bits и баллов канала — свои, в
+  `src/assets/icons/twitch/`. Генератор собирает всё в один `icons.ts` (svgo +
+  `currentColor`), компонент `<Icon name="…" />` типизирован по именам файлов;
+  `icons.ts` коммитится: панель собирается без генератора. Порядок — в
+  [CONTRIBUTING.md](CONTRIBUTING.md#чужие-файлы).
 - **Шрифты оверлея** лежат в `src-tauri/fonts/` и описаны в `manifest.json`;
   `npm run fonts` генерирует байты для сервера (`fonts_gen.rs`), `@font-face`
   для панели и список для выпадающего меню. Добавить шрифт — положить TTF под
@@ -189,5 +195,20 @@ docs/               собранный сайт (GitHub Pages): npm run site; к
 
 ## Лицензия
 
-MIT — см. [LICENSE](LICENSE). Шрифт, иконки, иллюстрации и зависимости
-описаны в [THIRD-PARTY.md](THIRD-PARTY.md).
+Код SignoreBot — [MIT](LICENSE) © 2026 Nathaniel Larsson. Коротко:
+
+- пользоваться ботом можно без всяких условий — лицензия касается только
+  копирования кода;
+- копировать, менять и встраивать код в свои проекты можно бесплатно
+  и без разрешения, в том числе в коммерческие;
+- условие одно: в копиях сохраняется текст лицензии, файл [LICENSE](LICENSE).
+  Упоминать автора в интерфейсе не требуется.
+
+Неофициальный перевод лицензии на русский — [LICENSE_RU.md](LICENSE_RU.md).
+Шрифты (SIL Open Font License), значки набора Klaarheid Icons (MIT-0),
+библиотеки панели и ядра, картинки сайта и условия Twitch описаны в
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Как добавлять чужие файлы и
+что проверить перед публикацией — в [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Код и тексты написаны с Claude — ИИ-ассистентом Anthropic — под руководством
+автора.

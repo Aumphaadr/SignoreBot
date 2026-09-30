@@ -3,6 +3,20 @@
   "private": true,
   "version": "1.0.5",
   "type": "module",
+  "description": "Локальный Twitch-бот с оверлеями для OBS: команды, награды за баллы, события, шатауты, банворды и медиа-алерты",
+  "license": "MIT",
+  "author": "Nathaniel Larsson",
+  "homepage": "https://aumphaadr.github.io/SignoreBot/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aumphaadr/SignoreBot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Aumphaadr/SignoreBot/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -16,7 +30,10 @@
     "test:rust": "cd src-tauri && cargo test",
     "build:linux": "tauri build && bash tools/fix-appimage.sh",
     "release:collect": "bash tools/collect-release.sh",
-    "build:windows": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --no-bundle"
+    "build:windows": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --no-bundle",
+    "icons:sync": "node tools/sync-icons.mjs",
+    "licenses": "node tools/licenses.mjs",
+    "check": "node tools/check.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
