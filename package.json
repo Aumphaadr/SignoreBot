@@ -1,7 +1,7 @@
 {
   "name": "signorebot",
   "private": true,
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "description": "Локальный Twitch-бот с оверлеями для OBS: команды, награды за баллы, события, шатауты, банворды и медиа-алерты",
   "license": "MIT",
@@ -28,6 +28,7 @@
     "site": "node tools/build-site.mjs",
     "site:serve": "node tools/serve-site.mjs",
     "test:rust": "cd src-tauri && cargo test",
+    "test:overlay": "node --test tools/overlay-websocket.test.mjs",
     "build:linux": "tauri build && bash tools/fix-appimage.sh",
     "release:collect": "bash tools/collect-release.sh",
     "build:windows": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --no-bundle",

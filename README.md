@@ -124,6 +124,7 @@ npm install
 npm run tauri dev                               # окно + Vite HMR + автопересборка Rust
 SIGNOREBOT_DATA_DIR=/tmp/sb npm run tauri dev   # отдельные данные и токены (боевой keyring не трогается)
 npm run test:rust                               # тесты ядра; полный прогон генерирует src/api/generated/*.ts
+npm run test:overlay                            # гонки WebSocket оверлея, без OBS и сети
 npm run icons                                   # пересобрать src/components/Icon/icons.ts из src/assets/icons/
 npm run icons:sync -- ../Klaarheid-Icons [имя …]  # взять значки из локальной копии набора Klaarheid Icons
 npm run check                                   # стражи: внешние адреса, значки, шрифты, лицензии библиотек

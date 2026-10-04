@@ -15,6 +15,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Соединение оверлея — гонки подключения и реконнект
+        run: npm run test:overlay
       - name: Типы и сборка панели
         run: npm run build
       - name: Стражи — внешние адреса, значки, шрифты, лицензии библиотек

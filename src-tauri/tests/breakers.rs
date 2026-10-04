@@ -162,6 +162,7 @@ fn chat(login: &str, text: &str) -> TwitchEvent {
         is_vip: false,
         is_subscriber: false,
         reward_id: None,
+        reply_parent: None,
     })
 }
 
