@@ -6,7 +6,7 @@ import { api, errText, type MediaFile, type MediaSet } from "../../api";
 import { useAppState } from "../../state/AppState";
 import { newId, setKindLabel } from "../../api/defaults";
 import Tooltip from "../Tooltip";
-import Modal from "../Common/Modal";
+import Modal, { ModalActions } from "../Common/Modal";
 import { formatSize } from "../../api/defaults";
 import { pickAndImport, useMediaFiles } from "../Common/MediaEditor";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
@@ -186,6 +186,9 @@ export default function MediaTab() {
       <Modal isOpen={!!preview} onClose={() => setPreview(null)} title={preview ? <><Icon name={icon(preview.kind)} /> {preview.name}</> : ""} size="large">
         {preview && (
           <div className="media-preview-modal">
+            <ModalActions>
+              <button className="primary" onClick={() => void saveFile()}><Icon name="save" /> Сохранить</button>
+            </ModalActions>
             {previewUrl && preview.kind === "image" && <img src={previewUrl} alt="" />}
             {previewUrl && preview.kind === "video" && <video ref={(el) => { playerRef.current = el; }} src={previewUrl} controls preload="auto" onLoadedMetadata={(e) => { e.currentTarget.volume = volume; }} />}
             {previewUrl && preview.kind === "audio" && <audio ref={(el) => { playerRef.current = el; }} src={previewUrl} controls preload="auto" onLoadedMetadata={(e) => { e.currentTarget.volume = volume; }} />}
@@ -212,11 +215,6 @@ export default function MediaTab() {
                   ))}
                 </div>
               )}
-              <div className="flex gap-2" style={{ marginTop: 12 }}>
-                <button className="primary" onClick={() => void saveFile()}><Icon name="save" /> Сохранить</button>
-                <button onClick={() => setPreview(null)}>Закрыть</button>
-                <button className="danger" style={{ marginLeft: "auto" }} onClick={() => del(preview.name)}><Icon name="trash" /> Удалить файл</button>
-              </div>
             </div>
           </div>
         )}

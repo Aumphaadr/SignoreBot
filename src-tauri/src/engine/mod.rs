@@ -729,7 +729,7 @@ impl Engine {
             return;
         }
 
-        if !msg.text.starts_with('!') {
+        if !msg.command_text().starts_with('!') {
             return;
         }
         self.handle_command(&msg).await;
@@ -793,11 +793,12 @@ impl Engine {
     }
 
     async fn handle_command(&self, msg: &ChatMessage) {
+        let Some(text) = msg.command_text().strip_prefix('!') else { return };
         // После «!» сразу имя: «! кусь» — не команда (как в старой версии).
-        if msg.text[1..].starts_with(char::is_whitespace) {
+        if text.starts_with(char::is_whitespace) {
             return;
         }
-        let mut parts = msg.text[1..].split_whitespace();
+        let mut parts = text.split_whitespace();
         let Some(name) = parts.next() else { return };
         let name = name.to_lowercase();
         let args: Vec<&str> = parts.collect();
@@ -1338,6 +1339,7 @@ mod tests {
             is_vip: false,
             is_subscriber: false,
             reward_id: None,
+            reply_parent: None,
         }
     }
 

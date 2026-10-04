@@ -831,22 +831,37 @@
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsHost = window.location.host; // тот же хост и порт, что и страница
 
+        function scheduleWebSocketReconnect() {
+            if (reconnectTimer) return;
+            reconnectTimer = setTimeout(() => {
+                reconnectTimer = null;
+                connectWebSocket();
+            }, WS_RECONNECT_DELAY);
+        }
+
         function connectWebSocket() {
-            if (ws && ws.readyState === WebSocket.OPEN) return;
+            // focus/online могут прийти ещё до завершения подключения или закрытия.
+            // Пока сокет жив, второй не создаём: сервер разошлёт алёрт обоим.
+            if (ws && ws.readyState !== WebSocket.CLOSED) return;
             if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+            ws = null;
 
             const wsUrl = `${wsProtocol}//${wsHost}/ws?path=${encodeURIComponent(overlayPath)}&key=${encodeURIComponent(overlayKey)}`;
 
             try {
-                ws = new WebSocket(wsUrl);
+                const socket = new WebSocket(wsUrl);
+                ws = socket;
 
-                ws.onopen = () => {
+                // Запоздавшие события заменённого сокета не затрагивают новый.
+                socket.onopen = () => {
+                    if (ws !== socket) return;
                     log(`✅ WS подключен (overlay: ${overlayId})`);
                     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
                     if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 };
 
-                ws.onmessage = (event) => {
+                socket.onmessage = (event) => {
+                    if (ws !== socket) return;
                     try {
                         const data = JSON.parse(event.data);
                         log('📩', data.command, data.videoFile || '');
@@ -860,20 +875,25 @@
                         } else if (data.command === 'clearAll') {
                             clearAll();
                         } else if (data.command === 'ping') {
-                            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ command: 'pong' }));
+                            if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ command: 'pong' }));
                         }
                     } catch (err) { error('❌ Ошибка WS-сообщения:', err); }
                 };
 
-                ws.onerror = () => error('❌ WS ошибка');
+                socket.onerror = () => {
+                    if (ws !== socket) return;
+                    error('❌ WS ошибка');
+                };
 
-                ws.onclose = () => {
+                socket.onclose = () => {
+                    if (ws !== socket) return;
+                    ws = null;
                     log('🔌 WS отключен');
-                    if (!reconnectTimer) reconnectTimer = setTimeout(connectWebSocket, WS_RECONNECT_DELAY);
+                    scheduleWebSocketReconnect();
                 };
             } catch (err) {
                 error('❌ WS:', err);
-                if (!reconnectTimer) reconnectTimer = setTimeout(connectWebSocket, WS_RECONNECT_DELAY);
+                scheduleWebSocketReconnect();
             }
         }
 

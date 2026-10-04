@@ -31,6 +31,31 @@ pub struct ChatMessage {
     pub is_subscriber: bool,
     /// Награда за баллы с текстом (id награды).
     pub reward_id: Option<String>,
+    /// Автор сообщения, на которое отвечают; исходный text сохраняется целиком.
+    pub reply_parent: Option<ReplyParent>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReplyParent {
+    pub user_login: String,
+    pub user_name: String,
+}
+
+impl ChatMessage {
+    /// Для команды пропускаем только начальное @упоминание адресата реплая.
+    /// Обычные сообщения, аргументы, текст награды и модерация не меняются.
+    pub fn command_text(&self) -> &str {
+        let Some(parent) = &self.reply_parent else { return &self.text };
+        let Some((prefix, body)) = self.text.split_once(char::is_whitespace) else { return &self.text };
+        let Some(mention) = prefix.strip_prefix('@') else { return &self.text };
+        if !mention.is_empty()
+            && (mention.eq_ignore_ascii_case(&parent.user_login) || mention.to_lowercase() == parent.user_name.to_lowercase())
+        {
+            body.trim_start()
+        } else {
+            &self.text
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -129,6 +154,10 @@ pub fn parse_notification(sub_type: &str, ev: &Value) -> Option<TwitchEvent> {
                 is_vip,
                 is_subscriber,
                 reward_id,
+                reply_parent: ev.get("reply").filter(|r| r.is_object()).map(|r| ReplyParent {
+                    user_login: s(r, "parent_user_login"),
+                    user_name: s(r, "parent_user_name"),
+                }),
             })
         }
         "channel.channel_points_custom_reward_redemption.update" => {
@@ -509,6 +538,7 @@ mod tests {
         assert_eq!(c.text, "!кусь @x");
         assert!(c.is_moderator && c.is_subscriber && !c.is_vip);
         assert_eq!(c.reward_id, None);
+        assert!(c.reply_parent.is_none());
     }
 
     #[test]

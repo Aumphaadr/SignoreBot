@@ -6,7 +6,7 @@ use signorebot_lib::overlay::hub::OverlayHub;
 use signorebot_lib::paths::AppPaths;
 use signorebot_lib::secrets::Secrets;
 use signorebot_lib::twitch::accounts::AuthManager;
-use signorebot_lib::twitch::eventsub::{ChatMessage, TwitchEvent};
+use signorebot_lib::twitch::eventsub::{parse_notification, ChatMessage, TwitchEvent};
 #[allow(unused_imports)]
 use signorebot_lib::config::{MediaSet, Response};
 use signorebot_lib::twitch::helix::Helix;
@@ -24,6 +24,7 @@ fn chat(login: &str, text: &str) -> TwitchEvent {
         is_vip: false,
         is_subscriber: false,
         reward_id: None,
+        reply_parent: None,
     })
 }
 
@@ -91,6 +92,7 @@ fn msg(message_id: &str, user_id: &str, text: &str) -> TwitchEvent {
         is_vip: false,
         is_subscriber: false,
         reward_id: None,
+        reply_parent: None,
     })
 }
 
@@ -113,6 +115,56 @@ fn media_engine(dir: &std::path::Path) -> (Arc<Engine>, tokio::sync::mpsc::Recei
     let engine = Engine::new(config, auth, helix, hub.clone(), paths.deleted_messages_log());
     let (_id, rx) = hub.connect("audio", "test".into());
     (engine, rx)
+}
+
+#[tokio::test]
+async fn commands_in_replies_skip_only_the_parent_mention() {
+    let dir = tempfile::tempdir().unwrap();
+    let (engine, mut rx) = media_engine(dir.path());
+    {
+        let mut cfg = engine.config.write();
+        cfg.commands[0].aliases = vec!["sound".into()];
+        cfg.commands[0].response.media.text.enabled = true;
+        cfg.commands[0].response.media.text.content = "{user}: {message}".into();
+    }
+    let parent = serde_json::json!({
+        "parent_message_id": "original", "parent_message_body": "!snd original text",
+        "parent_user_login": "parent", "parent_user_name": "Собеседник"
+    });
+    let cases = [
+        ("@Parent !SND привет мир", parent.clone(), Some("привет мир")),
+        ("@Собеседник !sound @bob привет", parent.clone(), Some("@bob привет")),
+        ("@parent\t  !snd", parent.clone(), Some("")),
+        ("!snd без упоминания", parent.clone(), Some("без упоминания")),
+        ("!snd обычная команда", serde_json::Value::Null, Some("обычная команда")),
+        ("@parent !snd", serde_json::Value::Null, None),
+        ("@parent !snd", serde_json::json!({}), None),
+        ("@parent_extra !snd", parent.clone(), None),
+        ("@other !snd", parent.clone(), None),
+        ("@parent текст !snd", parent.clone(), None),
+        ("@parent ! snd", parent.clone(), None),
+        ("@parent !missing", parent.clone(), None),
+        ("@parent", parent.clone(), None),
+        ("  !snd", parent.clone(), None),
+        ("@parent спасибо", parent, None),
+    ];
+    for (text, reply, args) in cases {
+        let payload = serde_json::json!({
+            "message_id": "reply", "chatter_user_id": "2", "chatter_user_login": "alice",
+            "chatter_user_name": "Alice", "message": { "text": text }, "reply": reply,
+            "channel_points_custom_reward_id": null
+        });
+        let event = parse_notification("channel.chat.message", &payload).unwrap();
+        let TwitchEvent::Chat(ref message) = event else { panic!() };
+        assert_eq!(message.text, text, "исходный текст нужен модерации и наградам");
+        engine.dispatch(event).await;
+        if let Some(args) = args {
+            let v: serde_json::Value = serde_json::from_str(&rx.try_recv().expect(text)).unwrap();
+            assert_eq!(v["videoFile"], "a.mp3", "{text}");
+            assert_eq!(v["text"]["content"], format!("Alice: {args}"), "{text}");
+        }
+        assert!(rx.try_recv().is_err(), "лишний или неожиданный алёрт: {text}");
+    }
 }
 
 /// Один аккаунт в обеих ролях: собственное эхо отсеивается по message_id,
