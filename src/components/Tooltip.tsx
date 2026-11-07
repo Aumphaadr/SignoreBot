@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import "./Tooltip.css";
 
 /// `text` — строка или готовая разметка (например, с выделенными именами);
-/// `inline` — обёртка без отступа и без курсора «?» (для капсул-бейджей).
+/// `inline` — обёртка без отступа для капсул-бейджей.
 export default function Tooltip({ text, children, inline = false }: { text: ReactNode; children?: ReactNode; inline?: boolean }) {
   const [show, setShow] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });

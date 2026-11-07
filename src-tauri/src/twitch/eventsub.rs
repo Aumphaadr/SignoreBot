@@ -61,6 +61,8 @@ impl ChatMessage {
 #[derive(Debug, Clone)]
 pub enum TwitchEvent {
     Chat(ChatMessage),
+    /// Пользователь проявился на канале; логин для авто-шатаута независимо от текста.
+    Activity { user_login: String },
     Redemption { redemption_id: String, reward_id: String, reward_title: String, user_name: String, user_input: String },
     /// Погашение закрыто (стример/модератор/бот): status = fulfilled | canceled.
     RedemptionUpdate { redemption_id: String, reward_id: String, status: String },
@@ -123,43 +125,74 @@ fn top_contribution(ev: &Value) -> (String, String, u64) {
         .unwrap_or_default()
 }
 
-/// Разобрать уведомление в событие.
+/// Одинаковые данные автора и текста в chat.message и chat.notification.
+fn chat_message(ev: &Value) -> ChatMessage {
+    let mut is_broadcaster = false;
+    let mut is_moderator = false;
+    let mut is_vip = false;
+    let mut is_subscriber = false;
+    if let Some(badges) = ev.get("badges").and_then(|x| x.as_array()) {
+        for bd in badges {
+            match s(bd, "set_id").as_str() {
+                "broadcaster" => is_broadcaster = true,
+                "moderator" => is_moderator = true,
+                "vip" => is_vip = true,
+                "subscriber" | "founder" => is_subscriber = true,
+                _ => {}
+            }
+        }
+    }
+    let reward_id = ev.get("channel_points_custom_reward_id").and_then(|x| x.as_str()).filter(|x| !x.is_empty()).map(String::from);
+    ChatMessage {
+        message_id: s(ev, "message_id"),
+        user_id: s(ev, "chatter_user_id"),
+        user_login: s(ev, "chatter_user_login"),
+        user_name: name_or_login(ev, "chatter_user_name", "chatter_user_login"),
+        text: ev.get("message").map(|m| s(m, "text")).unwrap_or_default(),
+        is_broadcaster,
+        is_moderator,
+        is_vip,
+        is_subscriber,
+        reward_id,
+        reply_parent: ev.get("reply").filter(|r| r.is_object()).map(|r| ReplyParent {
+            user_login: s(r, "parent_user_login"),
+            user_name: s(r, "parent_user_name"),
+        }),
+    }
+}
+
+/// Одно уведомление может содержать и событие канала, и сообщение зрителя.
+/// Команды берём из чатных payload с id, логином и бейджами автора, а не из
+/// redemption/subscription/cheer: иначе потеряем права и выполним команду дважды.
+pub fn parse_notifications(sub_type: &str, ev: &Value) -> Vec<TwitchEvent> {
+    // Рейд приходит отдельно через channel.raid и подчиняется своему режиму.
+    let raid_notice = matches!(s(ev, "notice_type").as_str(), "raid" | "unraid" | "shared_chat_raid" | "shared_chat_unraid");
+    let user_login = match sub_type {
+        "channel.follow" | "channel.subscribe" | "channel.subscription.message"
+        | "channel.channel_points_custom_reward_redemption.add"
+        | "channel.channel_points_automatic_reward_redemption.add" => s(ev, "user_login"),
+        "channel.subscription.gift" | "channel.cheer" if !b(ev, "is_anonymous") => s(ev, "user_login"),
+        "channel.chat.notification" if !b(ev, "chatter_is_anonymous") && !raid_notice => s(ev, "chatter_user_login"),
+        _ => String::new(),
+    };
+    let mut events = Vec::new();
+    if !user_login.trim().is_empty() {
+        events.push(TwitchEvent::Activity { user_login });
+    }
+    events.extend(parse_notification(sub_type, ev));
+    if sub_type == "channel.chat.notification" && !b(ev, "chatter_is_anonymous") && !raid_notice {
+        let chat = chat_message(ev);
+        if !chat.text.is_empty() && !chat.message_id.is_empty() && !chat.user_id.is_empty() && !chat.user_login.is_empty() {
+            events.push(TwitchEvent::Chat(chat));
+        }
+    }
+    events
+}
+
+/// Тематическое событие; дополнительное сообщение зрителя добавляет parse_notifications.
 pub fn parse_notification(sub_type: &str, ev: &Value) -> Option<TwitchEvent> {
     Some(match sub_type {
-        "channel.chat.message" => {
-            let mut is_broadcaster = false;
-            let mut is_moderator = false;
-            let mut is_vip = false;
-            let mut is_subscriber = false;
-            if let Some(badges) = ev.get("badges").and_then(|x| x.as_array()) {
-                for bd in badges {
-                    match s(bd, "set_id").as_str() {
-                        "broadcaster" => is_broadcaster = true,
-                        "moderator" => is_moderator = true,
-                        "vip" => is_vip = true,
-                        "subscriber" | "founder" => is_subscriber = true,
-                        _ => {}
-                    }
-                }
-            }
-            let reward_id = ev.get("channel_points_custom_reward_id").and_then(|x| x.as_str()).filter(|x| !x.is_empty()).map(String::from);
-            TwitchEvent::Chat(ChatMessage {
-                message_id: s(ev, "message_id"),
-                user_id: s(ev, "chatter_user_id"),
-                user_login: s(ev, "chatter_user_login"),
-                user_name: name_or_login(ev, "chatter_user_name", "chatter_user_login"),
-                text: ev.get("message").map(|m| s(m, "text")).unwrap_or_default(),
-                is_broadcaster,
-                is_moderator,
-                is_vip,
-                is_subscriber,
-                reward_id,
-                reply_parent: ev.get("reply").filter(|r| r.is_object()).map(|r| ReplyParent {
-                    user_login: s(r, "parent_user_login"),
-                    user_name: s(r, "parent_user_name"),
-                }),
-            })
-        }
+        "channel.chat.message" => TwitchEvent::Chat(chat_message(ev)),
         "channel.channel_points_custom_reward_redemption.update" => {
             let reward = ev.get("reward").cloned().unwrap_or(Value::Null);
             TwitchEvent::RedemptionUpdate { redemption_id: s(ev, "id"), reward_id: s(&reward, "id"), status: s(ev, "status").to_lowercase() }
@@ -248,14 +281,14 @@ pub fn parse_notification(sub_type: &str, ev: &Value) -> Option<TwitchEvent> {
     })
 }
 
-struct Deduper {
+pub(crate) struct Deduper {
     seen: VecDeque<(String, Instant)>,
 }
 impl Deduper {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { seen: VecDeque::new() }
     }
-    fn is_dup(&mut self, id: &str) -> bool {
+    pub(crate) fn is_dup(&mut self, id: &str) -> bool {
         let now = Instant::now();
         while let Some((_, t)) = self.seen.front() {
             if now.duration_since(*t) > DEDUP_TTL {
@@ -331,6 +364,7 @@ fn subscriptions(bid: &str) -> Vec<SubSpec> {
     vec![
         SubSpec { scope: None, fallback_version: None, kind: "channel.chat.message", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
         SubSpec { scope: None, fallback_version: None, kind: "channel.chat.notification", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
+        SubSpec { scope: None, fallback_version: Some("1"), kind: "channel.channel_points_automatic_reward_redemption.add", version: "2", condition: bc.clone() },
         SubSpec { scope: None, fallback_version: None, kind: "channel.channel_points_custom_reward_redemption.add", version: "1", condition: bc.clone() },
         SubSpec { scope: None, fallback_version: None, kind: "channel.channel_points_custom_reward_redemption.update", version: "1", condition: bc.clone() },
         SubSpec { scope: None, fallback_version: None, kind: "channel.channel_points_custom_reward.add", version: "1", condition: bc.clone() },
@@ -407,7 +441,7 @@ async fn handle_text(p: &SessionParams, dedup: &mut Deduper, v: &Value) {
     }
     let sub_type = v.pointer("/metadata/subscription_type").and_then(|x| x.as_str()).unwrap_or("");
     let ev = v.pointer("/payload/event").cloned().unwrap_or(Value::Null);
-    if let Some(e) = parse_notification(sub_type, &ev) {
+    for e in parse_notifications(sub_type, &ev) {
         let _ = p.tx.send(e).await;
     }
 }

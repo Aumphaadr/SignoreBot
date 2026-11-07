@@ -6,7 +6,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { api, errText, type ObsSource, type Overlay, type Response } from "../../api";
 import Modal, { ModalActions } from "../Common/Modal";
 import { VariableBadges } from "../Common/VariableBadge";
-import { Hint, hintFallback } from "../Common/hints";
+import { Em, Hint, hintFallback } from "../Common/hints";
 import { newId } from "../../api/defaults";
 import { useAppState } from "../../state/AppState";
 import ResponseEditor from "../Common/ResponseEditor";
@@ -165,7 +165,7 @@ export default function OverlaysTab() {
               </div>
               <div className="overlay-card-url">
                 {st && !st.connected && st.pageRequestOk !== false && st.pageRequestAgeSec !== null ? <Hint text={st.hint ?? ""}><span className={`badge ${st?.connected ? "badge-success" : "badge-warning"}`}>{st?.connected ? <><Icon name="radio" /> подключён{(st.connections ?? 0) > 1 ? ` ×${st.connections}` : ""}</> : <><Icon name="radio-off" /> не подключён</>}</span></Hint> : <Hint text={st?.connected ? <>подключений: {st.connections}</> : "оверлей не подключён"}><span className={`badge ${st?.connected ? "badge-success" : "badge-warning"}`}>{st?.connected ? <><Icon name="radio" /> подключён{(st.connections ?? 0) > 1 ? ` ×${st.connections}` : ""}</> : <><Icon name="radio-off" /> не подключён</>}</span></Hint>}
-                {st && st.pending > 0 && <span className="badge badge-info">в очереди: {st.pending}</span>}
+                {st && st.pending > 0 && <Hint text={<>медиа для оверлея <Em>«{o.name}»</Em> ждёт подключения в очереди до 30 секунд</>}><span className="badge badge-info">в очереди: {st.pending}</span></Hint>}
                 {st && !st.connected && st.pageRequestOk === false && <Hint text={st.hint ?? ""}><span className="badge badge-warning">адрес в OBS без ключа</span></Hint>}
                 {st && !st.connected && st.pageRequestAgeSec === null && <Hint text={st.hint ?? ""}><span className="badge badge-warning">страницу не запрашивали</span></Hint>}
                 <span className="overlay-url">{st?.url ?? `…/overlay/${o.path}`}</span>

@@ -261,7 +261,7 @@ originalRewardId: string | null, };
 
 export type ShoutoutSettings = { 
 /**
- * Логины (нижний регистр) для авто-shoutout по первому сообщению за сессию.
+ * Логины (нижний регистр) для авто-shoutout по первому действию за сессию.
  */
 autoList: Array<string>, raidMode: RaidShoutoutMode, 
 /**

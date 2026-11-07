@@ -29,6 +29,8 @@ pub fn load_or_create(paths: &AppPaths) -> Result<Loaded, StoreError> {
     let file = paths.config_file();
     if !file.exists() {
         let mut cfg = Config::default();
+        // Только новая установка: старые сохранённые режимы не меняются.
+        cfg.accounts.same_account = true;
         cfg.normalize();
         save(paths, &cfg)?;
         return Ok(Loaded { config: cfg, report: None, created: true });
@@ -115,11 +117,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn existing_separate_mode_survives_reload() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = AppPaths::new(dir.path());
+        paths.ensure_dirs().unwrap();
+        let mut config = Config::default();
+        config.accounts.same_account = false;
+        save(&paths, &config).unwrap();
+        let loaded = load_or_create(&paths).unwrap();
+        assert!(!loaded.created);
+        assert!(!loaded.config.accounts.same_account);
+        // Старый JSON без этого поля также сохраняет прежний отдельный режим.
+        let accounts: super::super::schema::Accounts = serde_json::from_str("{}").unwrap();
+        assert!(!accounts.same_account);
+    }
+
+    #[test]
     fn creates_loads_and_migrates() {
         let dir = tempfile::tempdir().unwrap();
         let paths = AppPaths::new(dir.path());
         let l = load_or_create(&paths).unwrap();
         assert!(l.created);
+        assert!(l.config.accounts.same_account);
         assert!(paths.config_file().exists());
 
         // подсунем старый формат

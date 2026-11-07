@@ -1,7 +1,7 @@
 import Icon from "../Icon";
 import TestButton from "../Common/TestButton";
 import Tooltip from "../Tooltip";
-import { Em, Hint, hintOverlay, hintOverlayAll, hintReaction, hintRewardMissing, hintStatus } from "../Common/hints";
+import { Em, Hint, hintOverlay, hintOverlayAll, hintReaction, hintRewardCost, hintRewardMissing, hintStatus } from "../Common/hints";
 import { useCallback, useEffect, useState } from "react";
 import { api, errText, type ChannelReward, type ManagedCopyResult, type NewReward, type PendingRedemption, type Reward } from "../../api";
 import RewardParamsForm, { defaultParams, paramsFromChannel, paramsProblem } from "./RewardParamsForm";
@@ -133,7 +133,7 @@ export default function RewardsTab() {
         <p className="rewards-description">Реакции бота на активацию наград. Переменные: <VariableBadges className="inline-variable-list" variables={VARS} descriptions={DESCR} /></p>
         <div className="eventsub-status-bar">
           <div className={`eventsub-indicator ${es?.connected ? "connected" : running ? "connecting" : "disconnected"}`}>{es?.connected ? <><Icon name="radio" /> Связь с Twitch есть</> : running ? <><Icon name="loader" className="spinning" /> Связь с Twitch устанавливается…</> : <><Icon name="radio-off" /> Связи с Twitch нет</>}</div>
-          {es?.connected && <span className="eventsub-subs-count"><Icon name="radio-tower" /> Подписок: {es.subscriptions}</span>}
+          {es?.connected && <Hint text="Количество активных подписок на сообщения и события Twitch, а не платных подписчиков канала"><span className="eventsub-subs-count"><Icon name="radio-tower" /> Подписок: {es.subscriptions}</span></Hint>}
         </div>
       </div>
       <div className="rewards-list">
@@ -147,7 +147,7 @@ export default function RewardsTab() {
                 <div className="reward-title">
                   {info?.image && <img src={info.image} alt="" className="reward-icon" />}
                   <span className="reward-name">{r.rewardTitle}</span>
-                  {info && <span className="reward-cost">{info.cost} <Icon name="channel-points" /></span>}
+                  {info && <Hint text={hintRewardCost(r.rewardTitle, info.cost)}><span className="reward-cost">{info.cost} <Icon name="channel-points" /></span></Hint>}
                   {channel.length > 0 && !info && <Hint text={hintRewardMissing(r.rewardTitle)}><span className="reward-status-badge disabled">нет на канале</span></Hint>}
                   {info?.isManaged && <Hint text={<>награда <Em>«{r.rewardTitle}»</Em> создана через бота: бот может менять её и возвращать баллы зрителям</>}><span className="reward-status-badge managed"><Icon name="robot" /></span></Hint>}
                   {r.managed && r.originalRewardId && <Hint text={<>копия ещё с пометкой «(бот)»: удалите оригинал в панели Twitch и нажмите «Убрать пометку» в редакторе</>}><span className="reward-status-badge warning-badge">оригинал не удалён</span></Hint>}
@@ -185,7 +185,7 @@ export default function RewardsTab() {
 
       <div className="redemptions-section">
         <div className="redemptions-header">
-          <h3><Icon name="hourglass" /> Невыполненные погашения {openRedemptions.length > 0 && <span className="badge badge-warning">{openRedemptions.length}</span>}</h3>
+          <h3><Icon name="hourglass" /> Невыполненные погашения {openRedemptions.length > 0 && <Hint text="Количество записей о недоступном оверлее: погашения, которые требуют внимания, и уже выполненные ботом возвраты баллов"><span className="badge badge-warning">{openRedemptions.length}</span></Hint>}</h3>
           <div className="flex gap-2">
             <button className="small" onClick={() => void openQueue()} disabled={!running} title="Очередь запросов Twitch — там стример и модераторы возвращают баллы или отмечают выполнение"><Icon name="external-link" /> Очередь запросов Twitch</button>
           </div>

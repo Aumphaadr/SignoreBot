@@ -4,6 +4,7 @@ import { api, errText, type RaidShoutoutMode, type ShoutoutStatus } from "../../
 import { useAppState } from "../../state/AppState";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
 import Tooltip from "../Tooltip";
+import { Em, Hint } from "../Common/hints";
 import "./ShoutoutsTab.css";
 
 const RAID_MODES: { value: RaidShoutoutMode; label: string; description: string }[] = [
@@ -12,7 +13,7 @@ const RAID_MODES: { value: RaidShoutoutMode; label: string; description: string 
   { value: "unlisted", label: "Только если стримера нет в списке", description: "Шатаут получит стример, который привёл рейд, — если его логина нет в списке ниже." },
   { value: "all", label: "За любой рейд", description: "Шатаут получит любой стример, который привёл рейд." },
 ];
-const SOURCE: Record<string, string> = { message: "сообщение", raid: "рейд", manual: "ручной" };
+const SOURCE: Record<string, string> = { message: "сообщение", activity: "действие", raid: "рейд", manual: "ручной" };
 
 export default function ShoutoutsTab() {
   const { config, setSection, onChanged } = useAppState();
@@ -53,7 +54,7 @@ export default function ShoutoutsTab() {
     <div className="shoutouts-tab">
       <div className="shoutouts-header">
         <h2><Icon name="megaphone" /> Автоматический шатаут</h2>
-        <p className="shoutouts-description">Бот делает шатаут пользователям из списка при их первом сообщении за сессию. Кулдаун между шатаутами — {Math.round(so.cooldownSec / 60)} мин.</p>
+        <p className="shoutouts-description">Бот делает шатаут пользователям из списка при первом действии за сессию: сообщении, фоллове, подписке, подарке, награде, Bits или серии просмотров. Текст не обязателен. Кулдаун между шатаутами — {Math.round(so.cooldownSec / 60)} мин.</p>
         <Tooltip text="Шатаут выполняется от имени стримера (нужны права moderator:manage:shoutouts). Twitch не даёт делать шатаут, когда стрим офлайн." />
       </div>
       <div className="shoutouts-content">
@@ -77,8 +78,8 @@ export default function ShoutoutsTab() {
               <div key={u} className="shoutout-user-card">
                 <div className="shoutout-user-info">
                   <span className="shoutout-username">{u}</span>
-                  {isDone(u) && <span className="shoutout-done-badge"><Icon name="circle-check" /> Выполнено</span>}
-                  {inQueue(u) && <span className="shoutout-queue-badge"><Icon name="hourglass" /> В очереди</span>}
+                  {isDone(u) && <Hint text={<>автоматический шатаут для <Em>{u}</Em> уже выполнен в этой сессии; список выполненных можно сбросить ниже</>}><span className="shoutout-done-badge"><Icon name="circle-check" /> Выполнено</span></Hint>}
+                  {inQueue(u) && <Hint text={<>шатаут для <Em>{u}</Em> находится в очереди; бот отправляет шатауты с учётом кулдауна Twitch</>}><span className="shoutout-queue-badge"><Icon name="hourglass" /> В очереди</span></Hint>}
                 </div>
                 <div className="shoutout-user-actions">
                   <button className="shoutout-trigger-btn" onClick={() => void trigger(u)} disabled={busy} title="Шатаут вручную"><Icon name="megaphone"  /> Шатаутнуть</button>
@@ -131,9 +132,9 @@ export default function ShoutoutsTab() {
         <div className="shoutout-info">
           <h4><Icon name="book-open" /> Как это работает</h4>
           <ul>
-            <li>При первом сообщении пользователя из списка за сессию бот делает шатаут</li>
+            <li>Первое сообщение, фоллов, подписка, дарение или получение подарочной подписки, награда за баллы, Bits или серия просмотров пользователя из списка ставят его в очередь — даже без текста</li>
             <li>За рейд шатаут получает стример, который его привёл, — один на рейд, по режиму выше</li>
-            <li>Шатаут за сообщение не мешает более позднему шатауту за рейд, но рейд блокирует последующий авто-шатаут за сообщение</li>
+            <li>Авто-шатаут за действие не мешает более позднему шатауту за рейд, но рейд блокирует последующий авто-шатаут за действие</li>
             <li>Кулдаун между шатаутами — 2 минуты (ограничение Twitch)</li>
             <li>Twitch ограничивает повторный шатаут одному пользователю в течение часа; лишние записи можно удалить из очереди</li>
             <li>Список выполненных сбрасывается при перезапуске или кнопкой «Сбросить»</li>

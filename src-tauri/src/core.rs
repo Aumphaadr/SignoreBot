@@ -103,6 +103,7 @@ pub struct OverlayStatusItem {
 pub struct CoreStatus {
     pub broadcaster: crate::twitch::accounts::AccountStatus,
     pub bot: crate::twitch::accounts::AccountStatus,
+    pub auth_setup: crate::twitch::accounts::AuthSetupStatus,
     /// Рантайм (EventSub, таймеры) запущен.
     pub running: bool,
     pub eventsub: crate::engine::EventSubStatus,
@@ -222,24 +223,23 @@ impl Core {
         tauri::async_runtime::spawn(async move {
             let mut rx = c.auth.subscribe();
             while let Ok(AuthEvent::Changed(kind)) = rx.recv().await {
-                // Сохраняем несекретную информацию об аккаунте в конфиг.
-                let info = c.auth.info(kind);
-                let has = c.auth.has_tokens(kind);
-                let mut changed = false;
-                {
+                // Режим может примениться после проверки кандидата. Сохраняем
+                // реальные слоты: в общем режиме не подменяем запасного бота стримером.
+                let setup = c.auth.setup_status();
+                let info = c.auth.stored_info(kind);
+                let changed = {
                     let mut cfg = c.config.write();
-                    let slot = match kind {
-                        AccountKind::Broadcaster => &mut cfg.accounts.broadcaster,
-                        AccountKind::Bot => &mut cfg.accounts.bot,
-                    };
-                    let new_val = if has { info } else { None };
-                    if *slot != new_val {
-                        *slot = new_val;
-                        changed = true;
+                    let before = cfg.accounts.clone();
+                    cfg.accounts.same_account = setup.same_account;
+                    match kind {
+                        AccountKind::Broadcaster => cfg.accounts.broadcaster = info,
+                        AccountKind::Bot => cfg.accounts.bot = info,
                     }
-                }
+                    before != cfg.accounts
+                };
                 if changed {
                     let _ = c.save_config();
+                    c.emit_changed("config");
                 }
                 c.emit_changed("auth");
             }
@@ -397,7 +397,12 @@ impl Core {
     async fn supervise(self: Arc<Self>) {
         // Проверка токенов при старте.
         let a = Arc::clone(&self.auth);
-        let (b, o) = tokio::join!(a.validate_or_refresh(AccountKind::Broadcaster), a.validate_or_refresh(AccountKind::Bot));
+        let (b, o) = if a.is_shared() {
+            let ready = a.validate_or_refresh(AccountKind::Broadcaster).await;
+            (ready, ready)
+        } else {
+            tokio::join!(a.validate_or_refresh(AccountKind::Broadcaster), a.validate_or_refresh(AccountKind::Bot))
+        };
         if !b || !o {
             let missing: Vec<&str> = [(b, "стример"), (o, "бот")].iter().filter(|(ok, _)| !ok).map(|(_, n)| *n).collect();
             tracing::warn!(target: "signorebot::core", "Не авторизован: {}. Откройте вкладку «Авторизация».", missing.join(", "));
@@ -681,6 +686,7 @@ impl Core {
         CoreStatus {
             broadcaster: self.auth.status(AccountKind::Broadcaster),
             bot: self.auth.status(AccountKind::Bot),
+            auth_setup: self.auth.setup_status(),
             running: self.is_running(),
             eventsub: self.engine.eventsub_status(),
             server: self.server_status(),
@@ -727,8 +733,8 @@ impl Core {
 
     /// Включить/выключить режим «бот — тот же аккаунт».
     pub fn set_same_account(self: &Arc<Self>, on: bool) -> Result<(), String> {
-        self.update_config(|cfg| cfg.accounts.same_account = on)?;
-        self.auth.set_shared(on);
+        self.auth.select_mode(on);
+        self.update_config(|cfg| cfg.accounts.same_account = self.auth.is_shared())?;
         self.emit_changed("config");
         Ok(())
     }

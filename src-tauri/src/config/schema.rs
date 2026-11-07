@@ -539,7 +539,7 @@ impl Default for PeriodicEvent {
 #[serde(rename_all = "camelCase", default)]
 #[ts(export, export_to = "config.ts")]
 pub struct ShoutoutSettings {
-    /// Логины (нижний регистр) для авто-shoutout по первому сообщению за сессию.
+    /// Логины (нижний регистр) для авто-shoutout по первому действию за сессию.
     pub auto_list: Vec<String>,
     pub raid_mode: RaidShoutoutMode,
     /// Пауза между shoutout, с (Twitch: минимум 2 минуты).

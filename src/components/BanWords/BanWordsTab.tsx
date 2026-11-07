@@ -5,6 +5,7 @@ import type { BanWord, BanWordKind } from "../../api";
 import { useAppState } from "../../state/AppState";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
 import Tooltip from "../Tooltip";
+import { Em, Hint } from "../Common/hints";
 import "./BanWordsTab.css";
 
 const MAP: Record<string, string[]> = {
@@ -61,9 +62,9 @@ export default function BanWordsTab() {
         <div className="stat-card"><span className="stat-value">{total}</span><span className="stat-label">Вариантов написания</span></div>
       </div>
       <div className="rules-info">
-        <div className="rule-item"><span className="badge hard"><Icon name="ban" /> Жёсткий контроль</span><span>Удаляет сообщение, если слово встречается где угодно (даже как часть другого слова)</span></div>
-        <div className="rule-item"><span className="badge soft"><Icon name="triangle-alert" /> Мягкий контроль</span><span>Удаляет только если слово стоит отдельно</span></div>
-        <div className="rule-item"><span className="badge alias"><Icon name="shield-star" /> Защита от обхода</span><span>Варианты замены русских букв на похожие латинские и цифры (не более {MAX} на слово)</span></div>
+        <div className="rule-item"><Hint text="Жёсткий контроль ищет запрещённое слово в любой части сообщения, в том числе внутри другого слова"><span className="badge hard"><Icon name="ban" /> Жёсткий контроль</span></Hint><span>Удаляет сообщение, если слово встречается где угодно (даже как часть другого слова)</span></div>
+        <div className="rule-item"><Hint text="Мягкий контроль ищет запрещённое слово отдельно: по краям сообщения, рядом с пробелами или знаками пунктуации"><span className="badge soft"><Icon name="triangle-alert" /> Мягкий контроль</span></Hint><span>Удаляет только если слово стоит отдельно</span></div>
+        <div className="rule-item"><Hint text={`Для слова создаётся до ${MAX} вариантов с похожими буквами и цифрами; при проверке также учитываются замены символов и повторы букв`}><span className="badge alias"><Icon name="shield-star" /> Защита от обхода</span></Hint><span>Варианты замены русских букв на похожие латинские и цифры (не более {MAX} на слово)</span></div>
       </div>
       <label className="toggle-label" style={{ marginBottom: 20 }}>
         <span className="toggle-switch"><input type="checkbox" checked={bw.skipPrivileged} onChange={(e) => setSection("banwords", { ...bw, skipPrivileged: e.target.checked })} /><span className="toggle-slider"></span></span>
@@ -81,7 +82,7 @@ export default function BanWordsTab() {
                 <select value={w.kind} onChange={(e) => { setWords(words.map((x, xi) => (xi === i ? { ...x, kind: e.target.value as BanWordKind } : x))); showNotification(`Тип контроля: ${e.target.value === "hard" ? "жёсткий" : "мягкий"}`, NOTIFICATION_TYPES.INFO, 1500); }} className={`word-type-select ${w.kind}`}>
                   <option value="hard">Жёсткий</option><option value="soft">Мягкий</option>
                 </select>
-                <span className="aliases-count">{w.aliases.length} вариантов</span>
+                <Hint text={<>сохранённые варианты написания слова <Em>«{w.word}»</Em>; их можно посмотреть, скопировать или пересоздать кнопками справа</>}><span className="aliases-count">{w.aliases.length} вариантов</span></Hint>
               </div>
               <div className="word-actions">
                 <button onClick={() => setOpen((o) => ({ ...o, [w.word]: !o[w.word] }))} className="show-aliases-btn">{open[w.word] ? <Icon name="eye-off"  /> : <Icon name="eye"  />}<span>{open[w.word] ? "Скрыть" : `${w.aliases.length}`}</span></button>

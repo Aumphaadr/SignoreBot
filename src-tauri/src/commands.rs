@@ -175,9 +175,7 @@ pub fn auth_set_same_account(s: State<'_, CoreState>, on: bool) -> Res<()> {
 pub async fn auth_refresh(s: State<'_, CoreState>, kind: String) -> Res<()> {
     let c = core(&s);
     let k = kind_of(&kind)?;
-    c.auth.refresh(k).await.map_err(|e| e.to_string())?;
-    c.auth.validate_or_refresh(k).await;
-    Ok(())
+    c.auth.refresh_account(k).await.map_err(|e| e.to_string())
 }
 
 // ---------------------------------------------------------------- медиа

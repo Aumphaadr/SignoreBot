@@ -44,7 +44,8 @@
   gap: 8px;
   padding: 16px 12px;
   background: transparent;
-  border: none;
+  /* Рамка не должна менять высоту кнопки при выборе раздела. */
+  border: 1px solid transparent;
   border-radius: var(--border-radius);
   cursor: pointer;
   transition: var(--transition);
@@ -58,7 +59,7 @@
 
 .sidebar-btn.active {
   background: var(--accent-light);
-  border: 1px solid var(--accent);
+  border-color: var(--accent);
 }
 
 .sidebar-btn-icon {

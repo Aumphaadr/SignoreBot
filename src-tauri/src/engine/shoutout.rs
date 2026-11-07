@@ -1,4 +1,4 @@
-//! Очередь shoutout: авто по первому сообщению, по рейдам, вручную.
+//! Очередь shoutout: авто по первому действию пользователя, по рейдам, вручную.
 
 use crate::config::RaidShoutoutMode;
 use parking_lot::Mutex;
@@ -13,6 +13,7 @@ use tokio::sync::Notify;
 #[ts(export, export_to = "api.ts")]
 pub enum ShoutoutSource {
     Message,
+    Activity,
     Raid,
     Manual,
 }
@@ -21,6 +22,7 @@ impl ShoutoutSource {
     pub fn label(self) -> &'static str {
         match self {
             ShoutoutSource::Message => "сообщение",
+            ShoutoutSource::Activity => "действие",
             ShoutoutSource::Raid => "рейд",
             ShoutoutSource::Manual => "ручной запуск",
         }
@@ -143,6 +145,15 @@ impl ShoutoutQueue {
 
     /// Авто-shoutout по сообщению: только из списка и только раз за сессию.
     pub fn enqueue_message(&self, username: &str, auto_list: &[String]) -> bool {
+        self.enqueue_auto(username, auto_list, ShoutoutSource::Message)
+    }
+
+    /// Подписка, награда и другие действия делят с сообщениями один авто-шатаут.
+    pub fn enqueue_activity(&self, username: &str, auto_list: &[String]) -> bool {
+        self.enqueue_auto(username, auto_list, ShoutoutSource::Activity)
+    }
+
+    fn enqueue_auto(&self, username: &str, auto_list: &[String], source: ShoutoutSource) -> bool {
         let lower = Self::norm(username);
         if lower.is_empty() || !auto_list.contains(&lower) {
             return false;
@@ -152,11 +163,11 @@ impl ShoutoutQueue {
             if s.done.contains_key(&lower) {
                 return false;
             }
-            if s.queue.iter().any(|q| Self::norm(&q.username) == lower && matches!(q.source, ShoutoutSource::Message | ShoutoutSource::Raid)) {
+            if s.queue.iter().any(|q| Self::norm(&q.username) == lower && matches!(q.source, ShoutoutSource::Message | ShoutoutSource::Activity | ShoutoutSource::Raid)) {
                 return false;
             }
         }
-        self.push(username, ShoutoutSource::Message)
+        self.push(username, source)
     }
 
     pub fn enqueue_raid(&self, username: &str, mode: RaidShoutoutMode, auto_list: &[String]) -> bool {
@@ -247,7 +258,7 @@ impl ShoutoutQueue {
             SendOutcome::Ok => {
                 let item = s.queue.remove(idx);
                 let key = Self::norm(&item.username);
-                if matches!(item.source, ShoutoutSource::Message | ShoutoutSource::Raid) {
+                if matches!(item.source, ShoutoutSource::Message | ShoutoutSource::Activity | ShoutoutSource::Raid) {
                     s.done.entry(key).or_default().insert(item.source);
                 }
                 s.cooldown_until = Some(Instant::now() + cooldown);
@@ -271,7 +282,7 @@ impl ShoutoutQueue {
             SendOutcome::AlreadyDone => {
                 let item = s.queue.remove(idx);
                 let key = Self::norm(&item.username);
-                if matches!(item.source, ShoutoutSource::Message | ShoutoutSource::Raid) {
+                if matches!(item.source, ShoutoutSource::Message | ShoutoutSource::Activity | ShoutoutSource::Raid) {
                     s.done.entry(key).or_default().insert(item.source);
                 }
                 tracing::info!(target: "signorebot::shoutout", "Шатаут для {} уже сделан (вручную или ранее) — снят из очереди", item.username);

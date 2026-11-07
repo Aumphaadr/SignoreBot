@@ -1,14 +1,15 @@
-// Авторизация двух аккаунтов через Twitch Device Code Flow.
+// Подключение канала и выбор отправителя. Попытка входа отделена от
+// действующей авторизации: ядро принимает только проверенный Twitch ID.
 
-import Icon from "../Icon";
-import type { ReactNode } from "react";
-import { copyText } from "../../api/clipboard";
-import { useState } from "react";
+import { useRef, useState, type MutableRefObject } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api, errText, type AccountKind, type AccountStatus } from "../../api";
+import { copyText } from "../../api/clipboard";
 import { useAppState } from "../../state/AppState";
 import { useNotification, NOTIFICATION_TYPES } from "../Notification";
+import Icon from "../Icon";
 import Tooltip from "../Tooltip";
+import { Hint } from "../Common/hints";
 import "./OAuthTab.css";
 
 const SCOPE_LABELS: Record<string, string> = {
@@ -22,153 +23,220 @@ const SCOPE_LABELS: Record<string, string> = {
   "channel:read:subscriptions": "подписки",
   "channel:read:hype_train": "хайповоз",
   "channel:read:redemptions": "награды за баллы",
+  "channel:manage:redemptions": "возврат баллов",
   "bits:read": "bits",
 };
 
-function AccountCard({ kind, st, title, badge, hint }: { kind: AccountKind; st: AccountStatus; title: ReactNode; badge: string; hint: string }) {
+const connected = (st: AccountStatus) => st.state === "authorized" && st.missingScopes.length === 0;
+
+function AccountCard({ kind, st, streamer, shared, locked, otherPending, changingMode, duplicate, onShared, revision }: {
+  kind: AccountKind;
+  st: AccountStatus;
+  streamer: string | null;
+  shared: boolean;
+  locked?: boolean;
+  otherPending: boolean;
+  changingMode: boolean;
+  duplicate?: boolean;
+  onShared: () => Promise<void>;
+  revision: MutableRefObject<number>;
+}) {
+  const { reloadStatus } = useAppState();
   const { showNotification, showConfirm } = useNotification();
   const [busy, setBusy] = useState(false);
-  const label = kind === "broadcaster" ? "стримера" : "бота";
+  const [copiedFor, setCopiedFor] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const bot = kind === "bot";
+  const ready = connected(st) && !duplicate;
+  const attempt = st.attempt;
+  const device = attempt?.device;
+  const conflict = attempt?.conflictingLogin || (duplicate ? st.login : null);
+  const loginDisabled = busy || changingMode || otherPending;
+  const managementDisabled = busy || changingMode;
 
-  // openBrowser=false — только скопировать ссылку (для другого браузера/профиля)
-  const start = async (openBrowser: boolean) => {
+  const start = async (destination: "browser" | "copy") => {
+    const ticket = ++revision.current;
     setBusy(true);
+    setActionError(null);
+    setCopiedFor(null);
     try {
       const dc = await api.authStart(kind);
-      if (openBrowser) {
-        showNotification(`Введите код ${dc.userCode} на странице Twitch`, NOTIFICATION_TYPES.INFO, 4000);
-        await openUrl(dc.verificationUri).catch(() => {});
-      } else {
+      if (ticket !== revision.current) return;
+      // Сначала показываем код, чтобы ошибка браузера/буфера не спрятала вход.
+      await reloadStatus();
+      if (ticket !== revision.current) return;
+      if (destination === "browser") await openUrl(dc.verificationUri);
+      if (destination === "copy") {
         await copyText(dc.verificationUri);
-        showNotification(`Ссылка с кодом ${dc.userCode} скопирована — откройте её в браузере, где залогинен нужный аккаунт`, NOTIFICATION_TYPES.SUCCESS, 6000);
+        if (ticket === revision.current) setCopiedFor(dc.deviceCode);
       }
-    } catch (e) { showNotification(`${errText(e)}`, NOTIFICATION_TYPES.ERROR, 5000); }
-    finally { setBusy(false); }
+    } catch (e) {
+      if (ticket === revision.current) setActionError(errText(e));
+    } finally { setBusy(false); }
   };
+
+  const copy = async (text: string, link = false) => {
+    setActionError(null);
+    try {
+      await copyText(text);
+      if (link && device) setCopiedFor(device.deviceCode);
+      else showNotification("Код скопирован", NOTIFICATION_TYPES.INFO, 1500);
+    } catch (e) { setActionError(`Не удалось скопировать: ${errText(e)}. Ссылку и код можно выделить вручную.`); }
+  };
+
+  const cancel = async () => {
+    revision.current += 1;
+    setActionError(null);
+    try { await api.authCancel(kind); await reloadStatus(); }
+    catch (e) { setActionError(errText(e)); }
+  };
+
   const refresh = async () => {
     setBusy(true);
-    try { await api.authRefresh(kind); showNotification(`Токен ${label} обновлён`, NOTIFICATION_TYPES.SUCCESS, 2000); }
-    catch (e) { showNotification(`Не удалось обновить токен ${label}: ${errText(e)}`, NOTIFICATION_TYPES.ERROR, 5000); }
+    try { await api.authRefresh(kind); await reloadStatus(); }
+    catch (e) { setActionError(`Не удалось обновить токен: ${errText(e)}`); }
     finally { setBusy(false); }
   };
+
   const logout = () => showConfirm(
-    kind === "broadcaster"
-      ? "Удалить авторизацию стримера?\n\nБот перестанет получать события канала и читать чат до повторной авторизации."
-      : "Удалить авторизацию бота?\n\nБот перестанет писать в чат и удалять сообщения до повторной авторизации.",
-    () => { void api.authLogout(kind).then(() => showNotification(`Авторизация ${label} удалена`, NOTIFICATION_TYPES.SUCCESS, 2000)); },
+    bot ? "Удалить авторизацию бота? Бот перестанет писать в чат до повторного входа."
+      : "Удалить авторизацию стримера? Бот перестанет получать события канала и читать чат до повторного входа.",
+    () => {
+      revision.current += 1;
+      setBusy(true);
+      void api.authLogout(kind).then(reloadStatus).catch((e) => setActionError(errText(e))).finally(() => setBusy(false));
+    },
   );
 
-  const scopesText = st.scopes.map((s) => SCOPE_LABELS[s] ?? s).join(", ");
-  const expires = st.expiresAt ? Math.max(0, Math.round((st.expiresAt * 1000 - Date.now()) / 60000)) : null;
+  const openBrowser = async () => {
+    setActionError(null);
+    try { await openUrl(device!.verificationUri); }
+    catch (e) { setActionError(`Не удалось открыть браузер: ${errText(e)}`); }
+  };
+  const loginButtons = (retry = false) => <>
+    {!bot && <button className="oauth-primary" disabled={loginDisabled} onClick={() => void (device ? openBrowser() : start("browser"))}><Icon name="external-link" /> Открыть в браузере</button>}
+    <button className={bot ? "oauth-primary" : "oauth-secondary"} disabled={loginDisabled} onClick={() => void (device ? copy(device.verificationUri, true) : start("copy"))}><Icon name="copy" /> {retry && bot ? "Повторить вход для бота" : "Скопировать ссылку"}</button>
+  </>;
 
   return (
-    <div className="oauth-card">
-      <div className="oauth-card-header"><h3>{title}</h3><span className={`oauth-badge ${kind}`}>{badge}</span></div>
-      <div className="oauth-card-content">
-        {st.state === "pending" && st.device ? (
-          <div className="oauth-auth-status loading">
-            <Icon name="hourglass" />
-            <div>
-              <strong>Ожидание подтверждения в браузере</strong>
-              <div className="oauth-scopes">Откройте <a href="#" onClick={(e) => { e.preventDefault(); void openUrl(st.device!.verificationUri); }}>{st.device.verificationUri}</a> и введите код:</div>
-              <div style={{ fontSize: 28, fontFamily: "var(--font-mono)", letterSpacing: 4, margin: "8px 0", userSelect: "all" }}>{st.device.userCode}</div>
-              <div className="oauth-actions">
-                <button className="oauth-copy-btn" onClick={() => { void copyText(st.device!.verificationUri); showNotification("Ссылка с кодом скопирована", NOTIFICATION_TYPES.SUCCESS, 1500); }}><Icon name="copy"  /> Скопировать ссылку</button>
-                <button className="oauth-copy-btn" onClick={() => { void copyText(st.device!.userCode); showNotification("Код скопирован", NOTIFICATION_TYPES.SUCCESS, 1500); }}><Icon name="copy"  /> Код</button>
-                <button className="oauth-logout-btn" onClick={() => void api.authCancel(kind)}>Отмена</button>
-              </div>
-            </div>
-          </div>
-        ) : st.state === "authorized" ? (
-          <div className="oauth-auth-status success">
-            <Icon name="circle-check"  />
-            <div>
-              <strong>{st.login}</strong>
-              <div className="oauth-scopes">
-                Прав: {st.scopes.length}{st.scopes.length > 0 && <Tooltip text={scopesText} />}
-                {expires !== null && <> · обновляется автоматически{expires <= 10 ? " (сейчас)" : ""} <Tooltip text={`Токены Twitch живут около 4 часов; бот сам обновляет их за 5 минут до истечения (следующее обновление примерно через ${expires} мин) и при любом ответе 401. Авторизоваться заново не нужно — даже на 9-часовом стриме.`} /></>}
-              </div>
-              {st.missingScopes.length > 0 && <div className="oauth-scopes text-warning"><Icon name="triangle-alert" /> Не хватает прав: {st.missingScopes.map((s) => SCOPE_LABELS[s] ?? s).join(", ")} — авторизуйтесь заново</div>}
-            </div>
-          </div>
-        ) : st.state === "invalid" ? (
-          <div className="oauth-auth-status error"><Icon name="triangle-alert"  /><div><strong>Токен недействителен</strong><div className="oauth-scopes">{st.error ?? "Повторите авторизацию"}</div></div></div>
-        ) : (
-          <div className="oauth-auth-status muted"><Icon name="user-x" /><div>Не авторизован{st.error && <div className="oauth-scopes text-danger">{st.error}</div>}</div></div>
-        )}
-
-        {st.state !== "pending" && (
-          <div className="oauth-actions">
-            {st.state === "authorized" ? (
-              <>
-                {st.missingScopes.length > 0 && <button onClick={() => void start(true)} className="oauth-auth-btn" disabled={busy}><Icon name="lock-key" /> Авторизоваться заново</button>}
-                <button onClick={() => void refresh()} className="oauth-refresh-btn" disabled={busy} title="Обновить токен"><Icon name="refresh" className={busy ? "spinning" : ""} /> Обновить токен</button>
-                <button onClick={logout} className="oauth-logout-btn" title="Удалить авторизацию"><Icon name="log-out"  /> Выйти</button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => void start(true)} className="oauth-auth-btn" disabled={busy}><Icon name="lock-key" /> Авторизоваться</button>
-                <button onClick={() => void start(false)} className="oauth-copy-btn" disabled={busy} title="Не открывать браузер, а скопировать ссылку с кодом — для другого браузера или профиля"><Icon name="copy"  /> Скопировать ссылку</button>
-                {st.state === "invalid" && <button onClick={logout} className="oauth-logout-btn"><Icon name="log-out"  /> Забыть</button>}
-              </>
-            )}
-          </div>
-        )}
-        <div className="oauth-hint"><Icon name="bulb" /> {hint}</div>
+    <section className={`oauth-card${locked ? " oauth-card-locked" : ""}`} aria-labelledby={`oauth-${kind}-title`}>
+      <div className="oauth-card-heading">
+        <span className="oauth-role-icon"><Icon name={bot ? "robot" : "video-camera"} /></span>
+        <div>
+          <h3 id={`oauth-${kind}-title`}>{bot ? "2. Аккаунт бота" : shared ? "Канал стримера" : "1. Канал стримера"}</h3>
+          <p>{bot ? "Ответы в чате от имени бота" : shared ? "События канала, чтение чата и ответы от имени стримера" : "События канала и чтение чата"}</p>
+        </div>
+        {ready && <span className="oauth-connected"><Hint text="Twitch подтвердил аккаунт и необходимые для этой роли разрешения"><span><Icon name="circle-check" /> Подключён</span></Hint></span>}
       </div>
-    </div>
+
+      {st.login && <div className="oauth-account-line">
+        <strong>@{st.login}</strong>
+        <Tooltip text={<>
+          <div><strong>Twitch ID:</strong> {st.userId ?? "ещё не проверен"}</div>
+          <div><strong>Права:</strong> {st.scopes.map((scope) => SCOPE_LABELS[scope] ?? scope).join(", ") || "ещё не проверены"}.</div>
+          <div>Токен обновляется автоматически.</div>
+        </>} />
+      </div>}
+      {locked ? <p className="oauth-muted">Сначала авторизуйте аккаунт стримера.</p> : <>
+        {device ? (
+          <div className="oauth-login-stage" aria-live="polite">
+            <h4><Icon name="hourglass" /> Подтвердите вход на Twitch</h4>
+            {bot && <p>Откройте ссылку в браузере или профиле с аккаунтом бота, отличным от <strong>@{streamer}</strong>.</p>}
+            <div className="oauth-device-code"><code>{device.userCode}</code><button className="oauth-link-btn" disabled={busy} onClick={() => void copy(device.userCode)} aria-label="Скопировать код"><Icon name="copy" /> Код</button></div>
+            <div className="oauth-actions">
+              {loginButtons()}
+              <button className="oauth-secondary" onClick={() => void cancel()}>Отмена</button>
+            </div>
+            <p className="oauth-pending" role="status">{copiedFor === device.deviceCode ? "Ссылка скопирована. Вход ещё не завершён" : "Ожидание подтверждения на Twitch"}</p>
+            {actionError && <p className="oauth-manual-link">{device.verificationUri}</p>}
+          </div>
+        ) : conflict ? (
+          <div className="oauth-problem" role="alert">
+            <h4><Icon name="triangle-alert" /> {bot ? "Этот аккаунт уже подключён как стример" : "Этот аккаунт уже подключён как бот"}</h4>
+            <p>{duplicate ? "Обе роли сохранены с одним Twitch ID." : <>Twitch вернул <strong>@{conflict}</strong>.</>} Для отдельного бота нужен другой аккаунт.</p>
+            <div className="oauth-actions">
+              {loginButtons(true)}
+              <button className="oauth-secondary" disabled={managementDisabled} onClick={() => void onShared()}>Писать от имени @{streamer ?? conflict}</button>
+            </div>
+          </div>
+        ) : attempt?.error ? (
+          <div className="oauth-problem" role="alert">
+            <h4><Icon name="triangle-alert" /> Вход не завершён</h4><p>{attempt.error}</p>
+            <div className="oauth-actions">{loginButtons()}</div>
+          </div>
+        ) : !ready ? (
+          <div className="oauth-connect">
+            {st.state === "invalid" && <p className="oauth-problem-text"><Icon name="user-x" /> {st.error ?? "Вход больше не действует. Авторизуйтесь заново."}</p>}
+            {st.state === "authorized" && st.missingScopes.length > 0 && <p className="oauth-problem-text">Нужно заново подтвердить права Twitch: {st.missingScopes.map((scope) => SCOPE_LABELS[scope] ?? scope).join(", ")}.</p>}
+            <div className="oauth-actions">{loginButtons()}</div>
+          </div>
+        ) : null}
+      </>}
+      {actionError && <p className="oauth-problem-text" role="alert">{actionError}</p>}
+      {st.error && st.state !== "invalid" && <p className="oauth-problem-text">{st.error}</p>}
+      {st.login && <div className="oauth-actions oauth-account-actions">
+        <button className="oauth-secondary" disabled={managementDisabled} onClick={() => void refresh()}><Icon name="refresh" /> Обновить токен</button>
+        <button className="oauth-secondary oauth-danger" disabled={managementDisabled} onClick={logout}><Icon name="log-out" /> Выйти</button>
+      </div>}
+    </section>
   );
 }
 
 export default function AuthTab() {
-  const { status, config } = useAppState();
+  const { status, reloadStatus, reloadConfig } = useAppState();
   const { showNotification } = useNotification();
+  const [changingMode, setChangingMode] = useState(false);
+  const revision = useRef(0);
   if (!status) return null;
-  const same = config.accounts.sameAccount;
-  const toggleSame = async (on: boolean) => {
-    try {
-      await api.authSetSameAccount(on);
-      showNotification(on ? "Бот теперь использует аккаунт стримера. Если не хватает прав — авторизуйте стримера заново" : "Бот снова отдельный аккаунт — авторизуйте его", NOTIFICATION_TYPES.INFO, 5000);
-    } catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 5000); }
+  const setup = status.authSetup;
+  const same = setup.selectedSameAccount;
+  const streamer = setup.broadcaster;
+  const bot = setup.bot;
+  const streamerReady = connected(streamer);
+  const switching = same !== setup.sameAccount;
+  const ready = same ? streamerReady && setup.sameAccount : streamerReady && connected(bot) && !setup.duplicateAccounts && !setup.sameAccount;
+  const sender = setup.sameAccount ? streamer.login : status.bot.login;
+
+  const chooseMode = async (on: boolean) => {
+    revision.current += 1;
+    setChangingMode(true);
+    try { await api.authSetSameAccount(on); await Promise.all([reloadStatus(), reloadConfig()]); }
+    catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 5000); }
+    finally { setChangingMode(false); }
   };
+
   return (
     <div className="oauth-tab">
-      <div className="oauth-header">
-        <h2><Icon name="lock-key" /> Авторизация Twitch</h2>
-        <p className="oauth-description">Нужны две роли: стример (события канала и чтение чата) и бот (сообщения в чат, удаление сообщений). Это могут быть два аккаунта или один. Авторизация — по коду на странице Twitch, без ввода паролей в приложении.</p>
+      <header className="oauth-header"><h2><Icon name="lock-key" /> Авторизация Twitch</h2><p>Подключите канал и выберите, от чьего имени будут приходить ответы в чат.</p></header>
+      <fieldset className="oauth-modes" disabled={changingMode}>
+        <legend>От чьего имени бот должен писать в чат?</legend>
+        <div className="oauth-mode-options">
+          <label className={`oauth-mode${same ? " selected" : ""}`}>
+            <input type="radio" name="oauth-mode" value="shared" checked={same} onChange={() => void chooseMode(true)} />
+            <span className="oauth-mode-icon"><Icon name="user" /></span><span><strong>От имени стримера</strong><span>Если использовать один аккаунт</span></span>
+          </label>
+          <label className={`oauth-mode${!same ? " selected" : ""}`}>
+            <input type="radio" name="oauth-mode" value="separate" checked={!same} onChange={() => void chooseMode(false)} />
+            <span className="oauth-mode-icon"><Icon name="robot" /></span><span><strong>От отдельного имени</strong><span>Если использовать два разных аккаунта</span></span>
+          </label>
+        </div>
+      </fieldset>
+      {switching && <div className="oauth-transition" role="status"><Icon name="circle-info" /><div>
+        {status.running && sender ? <>Сейчас бот пишет как <strong>@{sender}</strong>. </> : null}
+        {same ? "Чтобы писать от имени стримера, подтвердите права канала заново." : "Отправитель сменится после подключения другого аккаунта бота."}
+      </div></div>}
+      <div className="oauth-steps">
+        <AccountCard kind="broadcaster" st={streamer} streamer={streamer.login} shared={same} changingMode={changingMode} otherPending={!!bot.attempt?.device} onShared={() => chooseMode(true)} revision={revision} />
+        {!same && <AccountCard kind="bot" st={bot} streamer={streamer.login} shared={false} locked={!streamerReady} changingMode={changingMode} otherPending={!!streamer.attempt?.device} duplicate={setup.duplicateAccounts} onShared={() => chooseMode(true)} revision={revision} />}
       </div>
-      <label className="toggle-label oauth-same-toggle">
-        <span className="toggle-switch"><input type="checkbox" checked={same} onChange={(e) => void toggleSame(e.target.checked)} /><span className="toggle-slider"></span></span>
-        <span className="toggle-text">Бот — тот же аккаунт, что и стример</span>
-        <Tooltip text="Сообщения бота будут идти в чат от вашего имени, а не от отдельного ника. Права бота у стримера уже есть (они запрашиваются при авторизации), поэтому включается сразу; заново авторизоваться попросит только старый токен, выданный до 1.0.1. Ваши собственные команды в чате при этом работают." />
-      </label>
-      <div className="oauth-two-columns">
-        <AccountCard kind="broadcaster" st={status.broadcaster} title={<><Icon name="video-camera" /> {same ? "Стример и бот" : "Стример"}</>} badge={same ? "Один аккаунт на обе роли" : "Основной аккаунт"} hint={same ? "Права: чтение чата, фолловеры, подписки, награды за баллы, bits, список зрителей, shoutout, отправка и удаление сообщений — бот пишет от вашего имени." : "Права: чтение чата, фолловеры, подписки, награды за баллы, bits, список зрителей, shoutout. Заодно запрашиваются отправка и удаление сообщений — чтобы режим «один аккаунт» включался без повторной авторизации."} />
-        {same ? (
-          <div className="oauth-card oauth-card-shared">
-            <div className="oauth-card-header"><h3><Icon name="robot" /> Бот</h3><span className="oauth-badge bot">Использует аккаунт стримера</span></div>
-            <div className="oauth-card-content">
-              <div className="oauth-auth-status muted"><div>
-                {status.broadcaster.state === "authorized" ? <>Пишет в чат как <strong>{status.broadcaster.login}</strong>.</> : "Появится, как только авторизуется стример."}
-                {status.broadcaster.state === "authorized" && status.broadcaster.missingScopes.length > 0 && <div className="oauth-scopes text-warning" style={{ marginTop: 8 }}><Icon name="triangle-alert" /> Токен стримера выдан до 1.0.1 и без прав бота — нажмите «Авторизоваться заново» слева, один код — и готово.</div>}
-              </div></div>
-              <div className="oauth-hint"><Icon name="bulb" /> Отдельный аккаунт для бота нужен только затем, чтобы ответы в чате шли от другого ника. Выключите переключатель выше — и карточка бота вернётся.</div>
-            </div>
-          </div>
-        ) : (
-          <AccountCard kind="bot" st={status.bot} title={<><Icon name="robot" /> Бот</>} badge="Аккаунт для чата" hint="Права: отправка сообщений и удаление сообщений. Бот должен быть модератором канала, чтобы удалять сообщения." />
-        )}
-      </div>
-      <div className="oauth-info">
-        <h4><Icon name="book-open" /> Как это работает</h4>
-        <ul>
-          <li>Нажмите «Авторизоваться» — откроется страница Twitch с полем для кода. Введите показанный код и подтвердите права.</li>
-          <li>Если бот и стример — разные аккаунты в разных браузерах, нажмите «Скопировать ссылку» и вставьте её в браузер, где залогинен нужный аккаунт (код уже внутри ссылки).</li>
-          <li>Токены хранятся в системном хранилище ({status.secretsBackend === "keyring" ? "keyring" : "файл secrets.json"}) и обновляются автоматически. Перезапуск не нужен: бот запускается сам, как только обе роли готовы.</li>
-          <li>Twitch отзывает refresh-токен после 30 дней без запусков — тогда просто авторизуйтесь заново.</li>
-          <li>Приложение работает в одном экземпляре: повторный запуск (например, новой сборки при живой старой в трее) просто покажет уже открытое окно. Две копии по очереди «протухали» бы токены друг друга.</li>
-        </ul>
-      </div>
+      {ready && <div className="oauth-sender" role="status"><Icon name="circle-check" /><div><strong>Бот пишет как @{same ? streamer.login : bot.login}</strong><p>{same ? "Общий аккаунт · Один вход для двух ролей" : "Отдельный аккаунт · Канал и бот подключены"}</p></div></div>}
+      <details className="oauth-info">
+        <summary><span>Как работает вход</span><Icon name="chevron-right" className="oauth-info-chevron" /></summary>
+        <p>Откройте ссылку, введите код на Twitch и подтвердите права. Перед подтверждением проверьте ник аккаунта.</p>
+        <p>Ссылка открывает тот аккаунт, который выбран в браузере. Для отдельного бота используйте другой профиль или браузер. Копирование ссылки ещё не завершает вход.</p>
+        <p>Токены хранятся в {status.secretsBackend === "keyring" ? "системном хранилище" : "файле secrets.json в каталоге данных"} и обновляются автоматически. Бот запускается после авторизации. Выход стримера отменяет ожидающий вход бота.</p>
+        <p>Для удаления сообщений отдельный бот должен быть модератором канала.</p>
+      </details>
     </div>
   );
 }

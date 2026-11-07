@@ -4,7 +4,7 @@
 
 import type { ReactNode } from "react";
 import type { Overlay, Response, MediaSet } from "../../api";
-import { formatInterval } from "../../api/defaults";
+import { formatInterval, setKindLabel } from "../../api/defaults";
 import Tooltip from "../Tooltip";
 
 export type Subject = { kind: "command" | "reward" | "event" | "periodic"; name: string };
@@ -121,6 +121,17 @@ export function hintSkipGifted(): ReactNode {
 
 export function hintRewardMissing(title: string): ReactNode {
   return <>награды <Em>«{title}»</Em> больше нет на канале — реакция не сработает; выберите другую награду в редакторе</>;
+}
+
+export function hintRewardCost(title: string, cost: number): ReactNode {
+  return <>стоимость награды <Em>«{title}»</Em> в баллах канала: <Em>{cost.toLocaleString("ru-RU")}</Em></>;
+}
+
+export function hintMediaSet(set: MediaSet): ReactNode {
+  const info = setKindLabel(set.files);
+  if (info.empty) return <>в наборе <Em>«{set.name}»</Em> нет файлов — реакция с ним ничего не покажет</>;
+  if (info.mixed) return <>в наборе <Em>«{set.name}»</Em> файлы разных типов: настройки длительности и анимаций подходят не всем, а предпросмотр показывает один файл; лучше держать наборы однотипными</>;
+  return <>в наборе <Em>«{set.name}»</Em> все файлы одного типа; состав набора: <Em>{info.label}</Em></>;
 }
 
 /** Кнопка «Если недоступен» на карточке оверлея: есть ли резерв, включён ли, из чего состоит. */

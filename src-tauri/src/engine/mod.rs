@@ -10,7 +10,7 @@ use crate::config::{Config, QueueMode, Response, SharedConfig};
 use crate::overlay::hub::OverlayHub;
 use crate::secrets::AccountKind;
 use crate::twitch::accounts::AuthManager;
-use crate::twitch::eventsub::{ChatMessage, TwitchEvent};
+use crate::twitch::eventsub::{ChatMessage, Deduper, TwitchEvent};
 use crate::twitch::helix::{Helix, HelixError};
 use message::{render, RenderCtx};
 use parking_lot::Mutex;
@@ -198,6 +198,8 @@ pub struct Engine {
     ids: Mutex<Option<Ids>>,
     banwords: Mutex<Arc<banwords::Matcher>>,
     rewards: Mutex<RewardDedup>,
+    /// Один message_id может прийти и в chat.message, и в chat.notification.
+    chat_ids: Mutex<Deduper>,
     viewers: Mutex<Viewers>,
     cooldowns: Mutex<HashMap<String, Instant>>,
     /// Кулдаун на зрителя: «id команды:логин» → последнее срабатывание.
@@ -236,6 +238,7 @@ impl Engine {
             ids: Mutex::new(None),
             banwords: Mutex::new(Arc::new(matcher)),
             rewards: Mutex::new(RewardDedup::default()),
+            chat_ids: Mutex::new(Deduper::new()),
             viewers: Mutex::new(Viewers::default()),
             cooldowns: Mutex::new(HashMap::new()),
             user_cooldowns: Mutex::new(HashMap::new()),
@@ -705,12 +708,15 @@ impl Engine {
     }
 
     pub async fn on_chat(&self, msg: ChatMessage) {
+        if !msg.message_id.is_empty() && self.chat_ids.lock().is_dup(&msg.message_id) {
+            return;
+        }
         if self.is_own_echo(&msg).await {
             return;
         }
         self.note_chatter(&msg.user_name);
 
-        // Авто-shoutout по первому сообщению.
+        // Сообщение — один из поводов для авто-шатаута.
         {
             let cfg = self.config.read();
             let list = cfg.shoutout.auto_list.clone();
@@ -722,7 +728,6 @@ impl Engine {
 
         if let Some(reward_id) = &msg.reward_id {
             self.handle_reward(reward_id, &msg.user_name, &msg.text, RewardSource::Chat, None).await;
-            return;
         }
 
         if self.check_banword(&msg).await {
@@ -1059,6 +1064,12 @@ impl Engine {
         }
         match ev {
             TwitchEvent::Chat(m) => self.on_chat(m).await,
+            TwitchEvent::Activity { user_login } => {
+                let list = self.config.read().shoutout.auto_list.clone();
+                if self.shoutout.enqueue_activity(&user_login, &list) {
+                    self.changed(Changed::Shoutout);
+                }
+            }
             TwitchEvent::Redemption { redemption_id, reward_id, reward_title, user_name, user_input } => {
                 tracing::debug!(target: "signorebot::rewards", "EventSub: «{reward_title}» от {user_name}");
                 self.handle_reward(&reward_id, &user_name, &user_input, RewardSource::EventSub, Some(&redemption_id)).await;

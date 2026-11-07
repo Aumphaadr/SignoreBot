@@ -19,7 +19,21 @@ error: string | null,
 /**
  * Активная Device-Code-авторизация.
  */
-device: DeviceCode | null, };
+device: DeviceCode | null, 
+/**
+ * Попытка входа хранится отдельно от действующей авторизации.
+ */
+attempt: LoginAttempt | null, };
+
+export type AuthSetupStatus = { sameAccount: boolean, selectedSameAccount: boolean, 
+/**
+ * Неперенаправленный слот бота, включая незавершённый вход.
+ */
+bot: AccountStatus, broadcaster: AccountStatus, 
+/**
+ * Старая конфигурация с двумя входами одним Twitch ID.
+ */
+duplicateAccounts: boolean, };
 
 export type ChannelReward = { id: string, title: string, cost: number, isEnabled: boolean, isPaused: boolean, requiresInput: boolean, backgroundColor: string, image: string | null, prompt: string, 
 /**
@@ -31,7 +45,7 @@ skipQueue: boolean, cooldownSeconds: number | null, maxPerStream: number | null,
  */
 isManaged: boolean, };
 
-export type CoreStatus = { broadcaster: AccountStatus, bot: AccountStatus, 
+export type CoreStatus = { broadcaster: AccountStatus, bot: AccountStatus, authSetup: AuthSetupStatus, 
 /**
  * Рантайм (EventSub, таймеры) запущен.
  */
@@ -72,6 +86,12 @@ level: string,
  * Категория (модуль).
  */
 target: string, message: string, };
+
+export type LoginAttempt = { device: DeviceCode | null, error: string | null, 
+/**
+ * Twitch ID совпал со второй ролью. Токены кандидата не приняты.
+ */
+conflictingLogin: string | null, };
 
 export type ManagedCopyResult = { newRewardId: string, newTitle: string, originalRewardId: string, originalTitle: string, rewardsUrl: string, };
 
@@ -149,7 +169,7 @@ export type QueueItem = { id: number, username: string, source: ShoutoutSource, 
 
 export type ServerStatus = { running: boolean, address: string | null, port: number, allowLan: boolean, lanIp: string, error: string | null, overlayKey: string, };
 
-export type ShoutoutSource = "message" | "raid" | "manual";
+export type ShoutoutSource = "message" | "activity" | "raid" | "manual";
 
 export type ShoutoutStatus = { queue: Array<QueueItem>, done: Array<DoneItem>, 
 /**

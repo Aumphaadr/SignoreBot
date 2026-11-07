@@ -152,7 +152,7 @@ fn engine(cfg: Config) -> (Arc<Engine>, OverlayHub, tempfile::TempDir) {
 
 fn chat(login: &str, text: &str) -> TwitchEvent {
     TwitchEvent::Chat(ChatMessage {
-        message_id: "m".into(),
+        message_id: uuid::Uuid::new_v4().to_string(),
         user_id: "1".into(),
         user_login: login.into(),
         user_name: login.into(),

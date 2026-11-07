@@ -6,6 +6,7 @@ import { api, errText, type MediaFile, type MediaSet } from "../../api";
 import { useAppState } from "../../state/AppState";
 import { newId, setKindLabel } from "../../api/defaults";
 import Tooltip from "../Tooltip";
+import { Em, Hint, hintMediaSet } from "../Common/hints";
 import Modal, { ModalActions } from "../Common/Modal";
 import { formatSize } from "../../api/defaults";
 import { pickAndImport, useMediaFiles } from "../Common/MediaEditor";
@@ -133,8 +134,8 @@ export default function MediaTab() {
                       onKeyDown={(e) => { if (e.key === "Enter") { const n = renaming.name.trim(); if (n) saveSets(sets.map((x) => (x.id === s.id ? { ...x, name: n } : x))); setRenaming(null); } if (e.key === "Escape") setRenaming(null); }}
                       onBlur={() => { const n = renaming.name.trim(); if (n) saveSets(sets.map((x) => (x.id === s.id ? { ...x, name: n } : x))); setRenaming(null); }} />
                   ) : <button className="media-set-name" onClick={() => setSetFilter(setFilter === s.id ? "all" : s.id)} title="Показать файлы набора">{s.name}</button>}
-                  <span className={`badge ${info.empty || info.mixed ? "badge-warning" : "badge-info"}`} title={info.mixed ? `В наборе файлы разных типов (${info.kinds.join(", ")}): настройки длительности и анимаций подходят не всем, а предпросмотр показывает один файл. Работать будет, но лучше держать наборы однотипными.` : info.empty ? "В наборе нет файлов — реакция с ним ничего не покажет" : "Все файлы одного типа"}>{info.label}</span>
-                  {missing.length > 0 && <span className="badge badge-warning" title={`Нет на диске: ${missing.join(", ")}`}>нет на диске: {missing.length}</span>}
+                  <Hint text={hintMediaSet(s)}><span className={`badge ${info.empty || info.mixed ? "badge-warning" : "badge-info"}`}>{info.label}</span></Hint>
+                  {missing.length > 0 && <Hint text={<>файлы набора <Em>«{s.name}»</Em> не найдены в папке медиа: <Em>{missing.join(", ")}</Em></>}><span className="badge badge-warning">нет на диске: {missing.length}</span></Hint>}
                   <span className="media-set-actions">
                     <button className="small" onClick={() => setRenaming({ id: s.id, name: s.name })} title="Переименовать"><Icon name="pencil" /></button>
                     <button className="small danger" onClick={() => deleteSet(s)} title="Удалить набор (файлы остаются)"><Icon name="trash" /></button>
@@ -174,8 +175,8 @@ export default function MediaTab() {
               <div key={f.name} className="file-item" onClick={() => openFile(f)} title="Открыть: предпросмотр, наборы, удаление">
                 <span className="file-icon"><Icon name={icon(f.kind)} /></span>
                 <span className="file-name" title={f.name}>{f.name}</span>
-                {setsOf(f.name).map((s) => <span key={s.id} className="badge badge-info" title={`В наборе «${s.name}»`}>{s.name}</span>)}
-                {!f.used && <span className="badge badge-warning" title="Не используется ни одной реакцией и не входит ни в один набор">сирота</span>}
+                {setsOf(f.name).map((s) => <Hint key={s.id} text={<>файл <Em>«{f.name}»</Em> входит в набор <Em>«{s.name}»</Em></>}><span className="badge badge-info">{s.name}</span></Hint>)}
+                {!f.used && <Hint text={<>файл <Em>«{f.name}»</Em> не используется ни одной реакцией и не входит ни в один набор</>}><span className="badge badge-warning">сирота</span></Hint>}
                 <span className="file-size">{formatSize(f.size)}</span>
                 <button className="delete-file-btn" title="Удалить" onClick={(e) => { e.stopPropagation(); del(f.name); }}><Icon name="trash"  /></button>
               </div>
@@ -210,7 +211,7 @@ export default function MediaTab() {
                   {sets.map((s) => (
                     <label key={s.id} className="toggle-label media-file-set-row">
                       <input type="checkbox" checked={draftSets.includes(s.id)} onChange={(e) => setDraftSets((d) => (e.target.checked ? [...d, s.id] : d.filter((x) => x !== s.id)))} style={{ width: "auto" }} />
-                      <span>{s.name}</span><span className="badge badge-info">{setKindLabel(s.files).label}</span>
+                      <span>{s.name}</span><Hint text={hintMediaSet(s)}><span className="badge badge-info">{setKindLabel(s.files).label}</span></Hint>
                     </label>
                   ))}
                 </div>

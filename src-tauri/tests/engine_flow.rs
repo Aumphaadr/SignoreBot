@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 fn chat(login: &str, text: &str) -> TwitchEvent {
     TwitchEvent::Chat(ChatMessage {
-        message_id: "m".into(),
+        message_id: uuid::Uuid::new_v4().to_string(),
         user_id: "1".into(),
         user_login: login.into(),
         user_name: login.into(),
@@ -150,7 +150,7 @@ async fn commands_in_replies_skip_only_the_parent_mention() {
     ];
     for (text, reply, args) in cases {
         let payload = serde_json::json!({
-            "message_id": "reply", "chatter_user_id": "2", "chatter_user_login": "alice",
+            "message_id": uuid::Uuid::new_v4().to_string(), "chatter_user_id": "2", "chatter_user_login": "alice",
             "chatter_user_name": "Alice", "message": { "text": text }, "reply": reply,
             "channel_points_custom_reward_id": null
         });

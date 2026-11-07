@@ -1,14 +1,14 @@
 {
-  "version": "1.0.6",
-  "date": "2026-10-04",
+  "version": "1.0.7-dev",
+  "date": "2026-11-07",
   "page": "https://aumphaadr.github.io/SignoreBot/#download",
-  "release": "https://github.com/Aumphaadr/SignoreBot/releases/tag/v1.0.6",
+  "release": "https://github.com/Aumphaadr/SignoreBot/releases/tag/v1.0.7-dev",
   "files": {
-    "setup": "https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.6/SignoreBot_1.0.6-windows-x64-setup.exe",
-    "portable": "https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.6/SignoreBot_1.0.6-windows-x64-portable.exe",
-    "zip": "https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.6/SignoreBot_1.0.6-windows-x64-portable.zip",
-    "deb": "https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.6/SignoreBot_1.0.6-linux-amd64.deb",
-    "appimage": "https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.6/SignoreBot_1.0.6-linux-amd64.AppImage"
+    "setup": "https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.7-dev/SignoreBot_1.0.7-dev-windows-x64-setup.exe",
+    "portable": "https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.7-dev/SignoreBot_1.0.7-dev-windows-x64-portable.exe",
+    "zip": "https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.7-dev/SignoreBot_1.0.7-dev-windows-x64-portable.zip",
+    "deb": "https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.7-dev/SignoreBot_1.0.7-dev-linux-amd64.deb",
+    "appimage": "https://github.com/Aumphaadr/SignoreBot/releases/download/v1.0.7-dev/SignoreBot_1.0.7-dev-linux-amd64.AppImage"
   },
   "sizes": {
     "setup": 0,
@@ -17,5 +17,5 @@
     "deb": 0,
     "appimage": 0
   },
-  "notes": "- Команды `!…` теперь выполняются и в ответах на сообщения: начальное\n  упоминание адресата реплая больше не мешает распознать команду.\n- Исправлено двойное воспроизведение алёртов, когда одна страница оверлея\n  создавала несколько WebSocket при получении фокуса или восстановлении\n  сети во время подключения. Переподключение ждёт закрытия текущего сокета,\n  а запоздавшие события старого соединения больше не влияют на новое."
+  "notes": "- Авторизация начинается с выбора: писать от имени стримера или отдельного\n  бота. На новой установке достаточно одного входа. Отдельный бот подключается\n  после канала, через ссылку для другого браузера или профиля. Кнопки входа,\n  обновления токена и выхода видны сразу; права и Twitch ID — в подсказке.\n  Выход стримера доступен и во время входа бота и отменяет ожидающую попытку.\n- Два одинаковых Twitch-аккаунта больше нельзя принять за отдельного бота.\n  Неудачный или отменённый вход сохраняет прежнюю авторизацию; смена\n  отправителя происходит после проверки нового аккаунта. Старые настройки\n  с одинаковыми ID предлагают явно исправить режим.\n\n- Информационные бейджи с подсказками теперь показывают курсор помощи\n  при наведении. Добавлены пояснения стоимости наград, очередей оверлеев,\n  статусов шатаутов, медиа-наборов, банвордов и ролей авторизации.\n- Переключение разделов боковой панели больше не сдвигает соседние кнопки;\n  лёгкая анимация нажатия самой кнопки сохранена.\n- Команды `!…` работают в сообщениях пользовательских наград за баллы,\n  серий просмотров, переподписок и других чатных уведомлений. Сохраняются\n  права автора и кулдауны; повторная доставка сообщения не дублирует команду.\n- Пользователь из auto-shoutout попадает в очередь при первом сообщении,\n  фоллове, подписке, подарке, награде за баллы, Bits или серии просмотров —\n  даже без текста. Все эти действия дают один авто-шатаут за сессию;\n  режим шатаутов за рейды настраивается отдельно."
 }

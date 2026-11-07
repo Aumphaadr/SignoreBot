@@ -17,7 +17,7 @@
   transform: scale(1.05);
 }
 
-.tooltip-inline { display: inline-flex; align-items: center; }
+.tooltip-inline { display: inline-flex; align-items: center; cursor: help; }
 
 /* выделенные имена внутри подсказки (команда, алиас, оверлей, ник) */
 .tooltip-text-portal .hint-em {

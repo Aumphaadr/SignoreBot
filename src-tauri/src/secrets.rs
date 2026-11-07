@@ -178,8 +178,11 @@ impl Secrets {
                 }
             }
             Backend::File { path, cache } => {
-                cache.insert(kind.key().to_string(), pair.clone());
-                write_secret_file(path, cache)
+                let mut next = cache.clone();
+                next.insert(kind.key().to_string(), pair.clone());
+                write_secret_file(path, &next)?;
+                *cache = next;
+                Ok(())
             }
         }
     }

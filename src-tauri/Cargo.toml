@@ -1,6 +1,6 @@
 [package]
 name = "signorebot"
-version = "1.0.6"
+version = "1.0.7-dev"
 description = "SignoreBot — локальный Twitch-бот с оверлеями для OBS"
 authors = ["Aumphaadr"]
 license = "MIT"
