@@ -32,6 +32,7 @@ export type ConfigSection = keyof Config;
 
 /** События ядра → окно. */
 export type ChangedWhat =
+  | "reader"
   | "auth"
   | "shoutout"
   | "eventsub"
@@ -45,6 +46,13 @@ export type ChangedWhat =
   | "rewards";
 
 export const api = {
+  rewardImagesSave: (id: string, directory: string) => invoke<string>("reward_images_save", { id, directory }),
+  chatReaderSend: (text: string) => invoke<void>("chat_reader_send", { text }),
+  chatHistory: () => invoke<import("./generated/api").ChatHistory>("chat_history"),
+  chatMark: (generation: number, ids: string[], read: boolean) => invoke<void>("chat_mark", { generation, ids, read }),
+  chatBadges: () => invoke<import("./generated/api").BadgeSet[]>("chat_badges"),
+  chatModerate: (generation: number, id: string, action: string, seconds: number | null, reason: string) => invoke<void>("chat_moderate", { generation, id, action, seconds, reason }),
+  twitchView: (bounds: { x: number; y: number; width: number; height: number } | null, reload = false) => invoke<void>("twitch_view", { bounds, reload }),
   // статус
   status: () => invoke<CoreStatus>("status_get"),
   migrationDismiss: () => invoke<void>("migration_dismiss"),

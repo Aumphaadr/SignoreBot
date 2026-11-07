@@ -182,6 +182,16 @@ impl Core {
     fn spawn_forwarders(self: &Arc<Self>) {
         let c = Arc::clone(self);
         tauri::async_runtime::spawn(async move {
+            let mut rx = c.engine.reader.subscribe();
+            loop {
+                match rx.recv().await {
+                    Ok(_) | Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => c.emit_changed("reader"),
+                    Err(_) => break,
+                }
+            }
+        });
+        let c = Arc::clone(self);
+        tauri::async_runtime::spawn(async move {
             let mut rx = c.logs.subscribe();
             loop {
                 match rx.recv().await {
@@ -225,6 +235,9 @@ impl Core {
             while let Ok(AuthEvent::Changed(kind)) = rx.recv().await {
                 // Режим может примениться после проверки кандидата. Сохраняем
                 // реальные слоты: в общем режиме не подменяем запасного бота стримером.
+                if kind == AccountKind::Broadcaster {
+                    c.engine.reader.set_channel(&c.auth.info(kind).map(|a| a.user_id).unwrap_or_default());
+                }
                 let setup = c.auth.setup_status();
                 let info = c.auth.stored_info(kind);
                 let changed = {
@@ -469,9 +482,11 @@ impl Core {
             tracing::info!(target: "signorebot::core", "Запуск: канал {b}, бот {o}");
         }
 
+        self.engine.reader.set_channel(&ids.broadcaster_id);
         // EventSub → движок
         let (tx, mut rx) = tokio::sync::mpsc::channel::<TwitchEvent>(256);
         tauri::async_runtime::spawn(run_session(SessionParams {
+            reader: Arc::clone(&self.engine.reader),
             helix: Arc::clone(&self.helix),
             auth: Arc::clone(&self.auth),
             broadcaster_id: ids.broadcaster_id.clone(),

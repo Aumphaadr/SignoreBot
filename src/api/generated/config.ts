@@ -46,6 +46,11 @@ export type BanwordSettings = { words: Array<BanWord>,
  */
 skipPrivileged: boolean, };
 
+/**
+ * Chat-reader preferences; message content and read marks remain session-local.
+ */
+export type ChatReaderSettings = { mode: string, autoScroll: boolean, tracking: boolean, badges: boolean, timestamps: boolean, fontSize: number, highlightOwn: boolean, showEvents: boolean, ignoreOwnBot: boolean, ignoredLogins: Array<string>, };
+
 export type ChatResponse = { enabled: boolean, components: Array<Component>, };
 
 export type Command = { id: string, enabled: boolean, 
@@ -84,7 +89,7 @@ export type Config = { version: number, twitch: TwitchSettings, network: Network
 /**
  * Наборы медиа: реакция может показывать случайный файл из набора.
  */
-mediaSets: Array<MediaSet>, obs: ObsSettings, notes: Array<Note>, updates: UpdateSettings, app: AppSettings, };
+mediaSets: Array<MediaSet>, obs: ObsSettings, notes: Array<Note>, chatReader: ChatReaderSettings, updates: UpdateSettings, app: AppSettings, };
 
 export type EventReaction = { enabled: boolean, 
 /**
@@ -257,7 +262,7 @@ refundIfUnavailable: boolean,
 /**
  * Id награды, с которой сделана управляемая копия (для подсказок).
  */
-originalRewardId: string | null, };
+originalRewardId: string | null, copiedImage?: string, };
 
 export type ShoutoutSettings = { 
 /**

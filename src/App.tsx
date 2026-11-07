@@ -12,6 +12,7 @@ import PeriodicTab from "./components/Periodic/PeriodicTab";
 import ShoutoutsTab from "./components/Shoutouts/ShoutoutsTab";
 import BanWordsTab from "./components/BanWords/BanWordsTab";
 import MediaTab from "./components/Media/MediaTab";
+import ReaderTab from "./components/Reader/ReaderTab";
 import NotesTab from "./components/Notes/NotesTab";
 import LogsTab from "./components/Logs/LogsTab";
 import SettingsTab from "./components/Settings/SettingsTab";
@@ -47,7 +48,7 @@ function Shell() {
   return (
     <div className="app-layout">
       <Sidebar active={tab} onChange={goTo} />
-      <main className="main-content"><div className="main-content-container"><OverlayAlert goTo={goTo} /><UpdateBanner /><Content tab={tab} goTo={goTo} /></div></main>
+      <main className={`main-content ${tab === "reader" ? "reader-page" : ""}`}><div className="main-content-container"><OverlayAlert goTo={goTo} /><UpdateBanner /><Content tab={tab} goTo={goTo} /><div hidden={tab !== "reader"}><ReaderTab active={tab === "reader"} goTo={goTo} /></div></div></main>
     </div>
   );
 }

@@ -5,7 +5,7 @@
 и Windows (x86_64-pc-windows-msvc); то, что нужно только при сборке (процедурные макросы и
 build-зависимости), сюда не входит. Лицензии — как их объявили авторы крейтов (SPDX).
 
-Всего: 362.
+Всего: 369.
 
 | Крейт | Версия | Лицензия | Где |
 |---|---|---|---|
@@ -49,6 +49,7 @@ build-зависимости), сюда не входит. Лицензии — 
 | chrono | 0.4.45 | Apache-2.0 OR MIT | везде |
 | cipher | 0.4.4 | Apache-2.0 OR MIT | Linux |
 | clipboard-win | 5.4.1 | BSL-1.0 | Windows |
+| color_quant | 1.1.0 | MIT | везде |
 | concurrent-queue | 2.5.0 | Apache-2.0 OR MIT | Linux |
 | cookie | 0.18.2 | Apache-2.0 OR MIT | везде |
 | cpufeatures | 0.2.17 | Apache-2.0 OR MIT | везде |
@@ -105,6 +106,7 @@ build-зависимости), сюда не входит. Лицензии — 
 | getrandom | 0.2.17 | Apache-2.0 OR MIT | везде |
 | getrandom | 0.3.4 | Apache-2.0 OR MIT | везде |
 | getrandom | 0.4.3 | Apache-2.0 OR MIT | везде |
+| gif | 0.14.2 | Apache-2.0 OR MIT | везде |
 | gio | 0.18.4 | MIT | Linux |
 | gio-sys | 0.18.1 | MIT | Linux |
 | glib | 0.18.5 | MIT | Linux |
@@ -139,6 +141,7 @@ build-зависимости), сюда не входит. Лицензии — 
 | idna | 1.1.0 | Apache-2.0 OR MIT | везде |
 | idna_adapter | 1.2.2 | Apache-2.0 OR MIT | везде |
 | image | 0.25.10 | Apache-2.0 OR MIT | везде |
+| image-webp | 0.2.4 | Apache-2.0 OR MIT | везде |
 | indexmap | 2.14.1 | Apache-2.0 OR MIT | везде |
 | infer | 0.16.0 | MIT | везде |
 | infer | 0.19.0 | MIT | везде |
@@ -212,6 +215,7 @@ build-зависимости), сюда не входит. Лицензии — 
 | ppv-lite86 | 0.2.21 | Apache-2.0 OR MIT | везде |
 | proc-macro2 | 1.0.107 | Apache-2.0 OR MIT | Linux |
 | pxfm | 0.1.30 | Apache-2.0 OR BSD-3-Clause | везде |
+| quick-error | 2.0.1 | Apache-2.0 OR MIT | везде |
 | quick-xml | 0.41.0 | MIT | везде |
 | quote | 1.0.47 | Apache-2.0 OR MIT | Linux |
 | rand | 0.8.8 | Apache-2.0 OR MIT | везде |
@@ -331,6 +335,7 @@ build-зависимости), сюда не входит. Лицензии — 
 | webpki-roots | 1.0.9 | CDLA-Permissive-2.0 | везде |
 | webview2-com | 0.38.2 | MIT | Windows |
 | webview2-com-sys | 0.38.2 | MIT | Windows |
+| weezl | 0.1.12 | Apache-2.0 OR MIT | везде |
 | winapi-util | 0.1.11 | MIT OR Unlicense | Windows |
 | window-vibrancy | 0.6.0 | Apache-2.0 OR MIT | Windows |
 | windows | 0.61.3 | Apache-2.0 OR MIT | Windows |
@@ -369,5 +374,7 @@ build-зависимости), сюда не входит. Лицензии — 
 | zerotrie | 0.2.5 | Unicode-3.0 | везде |
 | zerovec | 0.11.8 | Unicode-3.0 | везде |
 | zmij | 1.0.23 | MIT | везде |
+| zune-core | 0.5.3 | Apache-2.0 OR MIT OR Zlib | везде |
+| zune-jpeg | 0.5.15 | Apache-2.0 OR MIT OR Zlib | везде |
 | zvariant | 5.15.0 | MIT | Linux |
 | zvariant_utils | 4.2.0 | MIT | Linux |

@@ -1,3 +1,4 @@
+pub mod chat;
 pub mod commands;
 pub mod config;
 pub mod core;
@@ -7,7 +8,9 @@ pub mod media;
 pub mod overlay;
 pub mod paths;
 pub mod secrets;
+pub mod reward_images;
 pub mod twitch;
+pub mod twitch_view;
 pub mod updates;
 
 use tauri::menu::{Menu, MenuItem};
@@ -194,6 +197,7 @@ pub fn run() {
                 }
             }
         })
+        .manage(twitch_view::NativeChat::default())
         .invoke_handler(tauri::generate_handler![
             commands::panel_ready,
             commands::status_get,
@@ -226,6 +230,7 @@ pub fn run() {
             commands::shoutout_reset,
             commands::rewards_channel,
             commands::reward_create_managed_copy,
+            commands::reward_images_save,
             commands::reward_finish_managed_copy,
             commands::reward_create_twitch,
             commands::reward_update_twitch,
@@ -235,6 +240,12 @@ pub fn run() {
             commands::redemption_refund,
             commands::rewards_queue_url,
             commands::chat_send,
+            commands::chat_reader_send,
+            commands::chat_history,
+            commands::chat_mark,
+            commands::chat_moderate,
+            commands::chat_badges,
+            commands::twitch_view,
             commands::viewers_get,
             commands::overlay_clear,
             commands::response_test,

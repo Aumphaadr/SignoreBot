@@ -39,6 +39,7 @@ pub struct Config {
     pub media_sets: Vec<MediaSet>,
     pub obs: ObsSettings,
     pub notes: Vec<Note>,
+    pub chat_reader: ChatReaderSettings,
     pub updates: UpdateSettings,
     pub app: AppSettings,
 }
@@ -61,6 +62,7 @@ impl Default for Config {
             media_sets: vec![],
             obs: ObsSettings::default(),
             notes: vec![],
+            chat_reader: ChatReaderSettings::default(),
             updates: UpdateSettings::default(),
             app: AppSettings::default(),
         }
@@ -458,6 +460,10 @@ pub struct Reward {
     /// Id награды, с которой сделана управляемая копия (для подсказок).
     #[serde(default)]
     pub original_reward_id: Option<String>,
+    // Preserved original artwork; Twitch does not accept image uploads through Helix.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub copied_image: Option<String>,
 }
 
 impl Default for Reward {
@@ -471,6 +477,7 @@ impl Default for Reward {
             managed: false,
             refund_if_unavailable: false,
             original_reward_id: None,
+            copied_image: None,
         }
     }
 }
@@ -748,6 +755,9 @@ impl Config {
     /// Нормализация после загрузки/правки: дефолты, порядок, ограничения.
     pub fn normalize(&mut self) {
         self.version = CONFIG_VERSION;
+        self.chat_reader.font_size = self.chat_reader.font_size.clamp(14, 32);
+        if !["read", "moderation", "twitch"].contains(&self.chat_reader.mode.as_str()) { self.chat_reader.mode = "read".into(); }
+        self.chat_reader.ignored_logins = self.chat_reader.ignored_logins.iter().map(|s| s.trim().trim_start_matches('@').to_ascii_lowercase()).filter(|s| !s.is_empty()).take(200).collect();
         // До перевыпуска 1.0.5 обновления проверялись по репозиторию GitHub; теперь — по
         // version.json сайта. Прежний адрес по умолчанию и пустое поле — на новый адрес,
         // чужой адрес (форк) остаётся.
@@ -932,5 +942,42 @@ mod tests {
         assert_eq!(to_base36(0), "0");
         assert_eq!(to_base36(35), "z");
         assert_eq!(to_base36(36), "10");
+    }
+}
+
+/// Chat-reader preferences; message content and read marks remain session-local.
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export, export_to = "config.ts")]
+pub struct ChatReaderSettings {
+    pub mode: String,
+    pub auto_scroll: bool,
+    pub tracking: bool,
+    pub badges: bool,
+    pub timestamps: bool,
+    pub font_size: u32,
+    pub highlight_own: bool,
+    pub show_events: bool,
+    pub ignore_own_bot: bool,
+    pub ignored_logins: Vec<String>,
+}
+impl Default for ChatReaderSettings {
+    fn default() -> Self {
+        Self { mode: "read".into(), auto_scroll: true, tracking: true, badges: true, timestamps: false, font_size: 19,
+            highlight_own: true, show_events: true, ignore_own_bot: true,
+            ignored_logins: vec![] }
+    }
+}
+
+#[cfg(test)]
+mod chat_reader_defaults_tests {
+    use super::*;
+    #[test] fn unread_exclusions_start_empty_and_explicit_entries_are_preserved() {
+        assert!(ChatReaderSettings::default().ignored_logins.is_empty());
+        let fresh: Config=serde_json::from_str("{}").unwrap();
+        assert!(fresh.chat_reader.ignored_logins.is_empty());
+        let mut configured: Config=serde_json::from_value(serde_json::json!({"chatReader":{"ignoredLogins":["@MyBot","OtherBot"]}})).unwrap();
+        configured.normalize();
+        assert_eq!(configured.chat_reader.ignored_logins,vec!["mybot","otherbot"]);
     }
 }

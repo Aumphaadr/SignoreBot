@@ -16,6 +16,7 @@ export const MENU: { id: string; label: string; icon: IconName }[] = [
   { id: "shoutouts", label: "Шатауты", icon: "megaphone" },
   { id: "banwords", label: "Банворды", icon: "ban" },
   { id: "media", label: "Медиа", icon: "media" },
+  { id: "reader", label: "Читать чат", icon: "message-dots" },
   { id: "notes", label: "Заметки", icon: "sticky-note" },
   { id: "logs", label: "Логи", icon: "file-text" },
   { id: "settings", label: "Настройки", icon: "gear-8" },

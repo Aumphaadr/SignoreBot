@@ -18,9 +18,12 @@ pub const BROADCASTER_SCOPES: &[&str] = &[
 ];
 
 /// Дополнительные права, которые запрашиваем у стримера, но не требуем:
-/// нужны только для наград, созданных через бота (возврат баллов).
+/// отдельные возможности: возврат баллов, ручная модерация, хайповоз.
 pub const BROADCASTER_OPTIONAL_SCOPES: &[&str] = &[
     "channel:manage:redemptions", // возврат баллов за награды, созданные ботом
+    "moderator:manage:warnings", // предупреждения в читалке
+    "moderator:manage:banned_users", // ручной мут/бан в читалке
+    "moderator:manage:chat_messages", // удаление в читалке от имени стримера
     "channel:read:hype_train",    // хайповоз: начало, уровни, финиш
 ];
 

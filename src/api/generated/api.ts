@@ -35,15 +35,24 @@ bot: AccountStatus, broadcaster: AccountStatus,
  */
 duplicateAccounts: boolean, };
 
-export type ChannelReward = { id: string, title: string, cost: number, isEnabled: boolean, isPaused: boolean, requiresInput: boolean, backgroundColor: string, image: string | null, prompt: string, 
 /**
- * Погашения проходят мимо очереди запросов (сразу FULFILLED) — вернуть баллы нельзя.
+ * Image URLs are Twitch-provided runtime content, never panel assets.
  */
-skipQueue: boolean, cooldownSeconds: number | null, maxPerStream: number | null, maxPerUserPerStream: number | null, 
-/**
- * Создана нашим приложением — можно менять и возвращать баллы.
- */
-isManaged: boolean, };
+export type BadgeImage = { id: string, imageUrl2x: string, title: string, };
+
+export type BadgeSet = { setId: string, versions: Array<BadgeImage>, };
+
+export type ChannelReward = { id: string, title: string, cost: number, isEnabled: boolean, isPaused: boolean, requiresInput: boolean, backgroundColor: string, image: string | null, hasCustomImage: boolean, prompt: string, skipQueue: boolean, cooldownSeconds: number | null, maxPerStream: number | null, maxPerUserPerStream: number | null, isManaged: boolean, };
+
+export type ChatBadge = { setId: string, id: string, };
+
+export type ChatEntry = { id: string, messageId: string, timestamp: number, userId: string, login: string, name: string, color: string, text: string, fragments: Array<ChatFragment>, badges: Array<ChatBadge>, reply: ChatReply | null, event: string, rewardId: string, isReward: boolean, deleted: boolean, read: boolean, sentByBot: boolean, };
+
+export type ChatFragment = { text: string, userId: string | null, imageUrl: string | null, };
+
+export type ChatHistory = { channelId: string, generation: number, revision: number, entries: Array<ChatEntry>, };
+
+export type ChatReply = { messageId: string, userId: string, name: string, text: string, deleted: boolean, };
 
 export type CoreStatus = { broadcaster: AccountStatus, bot: AccountStatus, authSetup: AuthSetupStatus, 
 /**
@@ -93,7 +102,7 @@ export type LoginAttempt = { device: DeviceCode | null, error: string | null,
  */
 conflictingLogin: string | null, };
 
-export type ManagedCopyResult = { newRewardId: string, newTitle: string, originalRewardId: string, originalTitle: string, rewardsUrl: string, };
+export type ManagedCopyResult = { newRewardId: string, newTitle: string, originalRewardId: string, originalTitle: string, rewardsUrl: string, imageSaved: boolean, imageWarning: string | null, };
 
 export type MediaFile = { name: string, size: number, 
 /**

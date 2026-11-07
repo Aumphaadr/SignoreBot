@@ -101,7 +101,7 @@ svgo и другие из `devDependencies`) к пользователю не у
 
 ### Ядро (Rust)
 
-В бинарник SignoreBot под Linux и Windows линкуются 362 крейта. Прямые зависимости
+В бинарник SignoreBot под Linux и Windows линкуются 369 крейтов. Прямые зависимости
 проекта (остальные приходят с ними):
 
 | Крейт | Версия | Лицензия |
@@ -109,8 +109,11 @@ svgo и другие из `devDependencies`) к пользователю не у
 | aho-corasick | 1.1.5 | MIT OR Unlicense |
 | anyhow | 1.0.104 | Apache-2.0 OR MIT |
 | axum | 0.8.9 | MIT |
+| base64 | 0.22.1 | Apache-2.0 OR MIT |
 | chrono | 0.4.45 | Apache-2.0 OR MIT |
 | futures-util | 0.3.34 | Apache-2.0 OR MIT |
+| gtk | 0.18.2 | MIT |
+| image | 0.25.10 | Apache-2.0 OR MIT |
 | infer | 0.16.0 | MIT |
 | keyring | 3.6.3 | Apache-2.0 OR MIT |
 | local-ip-address | 0.6.13 | Apache-2.0 OR MIT |
@@ -146,11 +149,11 @@ svgo и другие из `devDependencies`) к пользователю не у
 
 | Лицензия | Крейтов |
 |---|---|
-| Apache-2.0 OR MIT | 210 |
-| MIT | 94 |
+| Apache-2.0 OR MIT | 214 |
+| MIT | 95 |
 | Unicode-3.0 | 15 |
 | MIT OR Unlicense | 7 |
-| Apache-2.0 OR MIT OR Zlib | 4 |
+| Apache-2.0 OR MIT OR Zlib | 6 |
 | BSD-3-Clause | 4 |
 | Apache-2.0 | 3 |
 | ISC | 3 |

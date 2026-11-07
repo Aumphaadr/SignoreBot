@@ -68,8 +68,9 @@ pub struct ChannelReward {
     pub requires_input: bool,
     pub background_color: String,
     pub image: Option<String>,
+    pub has_custom_image: bool,
     pub prompt: String,
-    /// Погашения проходят мимо очереди запросов (сразу FULFILLED) — вернуть баллы нельзя.
+    // Погашения проходят мимо очереди запросов (сразу FULFILLED) — вернуть баллы нельзя.
     pub skip_queue: bool,
     #[ts(type = "number | null")]
     pub cooldown_seconds: Option<u64>,
@@ -77,7 +78,7 @@ pub struct ChannelReward {
     pub max_per_stream: Option<u64>,
     #[ts(type = "number | null")]
     pub max_per_user_per_stream: Option<u64>,
-    /// Создана нашим приложением — можно менять и возвращать баллы.
+    // Создана нашим приложением — можно менять и возвращать баллы.
     pub is_managed: bool,
 }
 
@@ -110,7 +111,7 @@ impl NewReward {
         serde_json::json!({
             "title": self.title, "cost": self.cost, "prompt": self.prompt,
             "is_user_input_required": self.is_user_input_required, "is_enabled": self.is_enabled,
-            "background_color": if self.background_color.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(self.background_color.clone()) },
+            "background_color": if self.background_color.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(self.background_color.to_ascii_uppercase()) },
             "is_global_cooldown_enabled": self.cooldown_seconds.is_some(), "global_cooldown_seconds": self.cooldown_seconds.unwrap_or(0),
             "is_max_per_stream_enabled": self.max_per_stream.is_some(), "max_per_stream": self.max_per_stream.unwrap_or(0),
             "is_max_per_user_per_stream_enabled": self.max_per_user_per_stream.is_some(), "max_per_user_per_stream": self.max_per_user_per_stream.unwrap_or(0),
@@ -161,7 +162,8 @@ fn raw_to_reward(r: RawReward, managed: &std::collections::HashSet<String>) -> C
         is_paused: r.is_paused,
         requires_input: r.is_user_input_required,
         background_color: r.background_color,
-        image: r.image.or(r.default_image).map(|i| i.url_1x),
+        has_custom_image: r.image.is_some(),
+        image: reward_image(r.image, r.default_image),
         prompt: r.prompt,
         skip_queue: r.should_redemptions_skip_request_queue,
         cooldown_seconds: if cd.is_enabled { Some(cd.global_cooldown_seconds) } else { None },
@@ -172,7 +174,12 @@ fn raw_to_reward(r: RawReward, managed: &std::collections::HashSet<String>) -> C
 
 #[derive(Debug, Deserialize)]
 struct RewardImage {
-    url_1x: String,
+    #[serde(default)] url_1x: String,
+    #[serde(default)] url_2x: String,
+    #[serde(default)] url_4x: String,
+}
+fn reward_image(image: Option<RewardImage>, default: Option<RewardImage>) -> Option<String> {
+    image.into_iter().chain(default).flat_map(|i| [i.url_4x, i.url_2x, i.url_1x]).find(|url| !url.is_empty())
 }
 
 #[derive(Debug, Deserialize)]
@@ -404,5 +411,85 @@ impl Helix {
         let resp = self.request(kind, reqwest::Method::POST, &format!("{HELIX}/eventsub/subscriptions"), &[], Body::Json(&body)).await?;
         let env: Envelope<EventSubCreated> = resp.json().await?;
         env.data.into_iter().next().ok_or(HelixError::Http { status: 0, message: "пустой ответ".into(), retry_after: None })
+    }
+}
+
+/// Image URLs are Twitch-provided runtime content, never panel assets.
+#[derive(Debug, Clone, Deserialize, Serialize, ts_rs::TS)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
+#[ts(export, export_to = "api.ts", rename_all = "camelCase")]
+pub struct BadgeImage { pub id: String, pub image_url_2x: String, pub title: String }
+#[derive(Debug, Clone, Deserialize, Serialize, ts_rs::TS)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
+#[ts(export, export_to = "api.ts", rename_all = "camelCase")]
+pub struct BadgeSet { pub set_id: String, pub versions: Vec<BadgeImage> }
+impl Helix {
+    pub async fn chat_badges(&self, broadcaster_id: &str) -> Result<Vec<BadgeSet>, HelixError> {
+        let mut global: Envelope<BadgeSet> = self.get_json(AccountKind::Broadcaster, "chat/badges/global", &[]).await?;
+        let channel: Envelope<BadgeSet> = self.get_json(AccountKind::Broadcaster, "chat/badges", &[("broadcaster_id", broadcaster_id)]).await?;
+        global.data.extend(channel.data); Ok(global.data)
+    }
+    pub async fn ban_user(&self, broadcaster_id: &str, user_id: &str, seconds: Option<u32>, reason: &str) -> Result<(), HelixError> {
+        let mut data = serde_json::json!({"user_id": user_id, "reason": reason});
+        if let Some(duration) = seconds { data["duration"] = duration.into(); }
+        self.request(AccountKind::Broadcaster, reqwest::Method::POST, &format!("{HELIX}/moderation/bans"),
+            &[("broadcaster_id", broadcaster_id), ("moderator_id", broadcaster_id)], Body::Json(&serde_json::json!({"data": data}))).await?;
+        Ok(())
+    }
+}
+
+impl Helix {
+    pub async fn warn_user(&self, broadcaster_id: &str, user_id: &str, reason: &str) -> Result<(), HelixError> {
+        self.request(AccountKind::Broadcaster, reqwest::Method::POST, &format!("{HELIX}/moderation/warnings"),
+            &[("broadcaster_id", broadcaster_id), ("moderator_id", broadcaster_id)],
+            Body::Json(&serde_json::json!({"data":{"user_id":user_id,"reason":reason}}))).await?;
+        Ok(())
+    }
+}
+#[cfg(test)]
+mod reward_image_tests {
+    use super::*;
+    #[test] fn reward_images_use_large_custom_image_then_default() {
+        let custom = serde_json::json!({"url_1x":"custom-1","url_2x":"custom-2","url_4x":"custom-4"});
+        let default = serde_json::json!({"url_1x":"default-1","url_4x":"default-4"});
+        assert_eq!(reward_image(Some(serde_json::from_value(custom).unwrap()), Some(serde_json::from_value(default.clone()).unwrap())).as_deref(), Some("custom-4"));
+        assert_eq!(reward_image(None, Some(serde_json::from_value(default).unwrap())).as_deref(), Some("default-4"));
+        assert_eq!(reward_image(Some(serde_json::from_value(serde_json::json!({"url_1x":"old"})).unwrap()), None).as_deref(), Some("old"));
+        assert_eq!(reward_image(None, None), None);
+    }
+}
+
+impl NewReward {
+    pub fn managed_copy(original: &ChannelReward) -> Self {
+        Self { title: format!("{} (бот)", original.title), cost: original.cost, prompt: original.prompt.clone(),
+            is_user_input_required: original.requires_input, is_enabled: original.is_enabled,
+            background_color: original.background_color.clone(), cooldown_seconds: original.cooldown_seconds,
+            max_per_stream: original.max_per_stream, max_per_user_per_stream: original.max_per_user_per_stream,
+            skip_queue: false }
+    }
+}
+impl Helix {
+    pub async fn preserve_reward_image(&self, url: &str) -> Result<String, String> {
+        use base64::Engine as _;
+        let mut response = self.http.get(url).send().await.map_err(|e| e.to_string())?.error_for_status().map_err(|e|e.to_string())?;
+        let mut data = Vec::new();
+        while let Some(chunk) = response.chunk().await.map_err(|e|e.to_string())? {
+            if data.len() + chunk.len() > 1024 * 1024 { return Err("Картинка награды больше 1 МБ".into()); }
+            data.extend_from_slice(&chunk);
+        }
+        let kind = infer::get(&data).ok_or("Неизвестный формат картинки награды")?;
+        if !["image/png", "image/jpeg", "image/webp", "image/gif"].contains(&kind.mime_type()) { return Err("Неподдерживаемый формат картинки награды".into()); }
+        Ok(format!("data:{};base64,{}", kind.mime_type(), base64::engine::general_purpose::STANDARD.encode(&data)))
+    }
+}
+#[cfg(test)]
+mod managed_copy_tests {
+    use super::*;
+    #[test] fn copy_preserves_color_text_and_limits_in_the_actual_request_body() {
+        let raw: RawReward = serde_json::from_value(serde_json::json!({"id":"r","title":"Question","cost":200,"is_enabled":true,"is_paused":false,"is_user_input_required":true,"background_color":"#3ad7bd","prompt":"Your question","image":null,"default_image":null,"global_cooldown_setting":{"is_enabled":true,"global_cooldown_seconds":60},"max_per_stream_setting":{"is_enabled":true,"max_per_stream":10},"max_per_user_per_stream_setting":{"is_enabled":true,"max_per_user_per_stream":2}})).unwrap();
+        let original=raw_to_reward(raw,&Default::default()); let body=NewReward::managed_copy(&original).body();
+        assert_eq!(body["background_color"],"#3AD7BD"); assert_eq!(body["cost"],200); assert_eq!(body["prompt"],"Your question");
+        assert_eq!(body["is_user_input_required"],true); assert_eq!(body["global_cooldown_seconds"],60);
+        assert_eq!(body["max_per_stream"],10); assert_eq!(body["max_per_user_per_stream"],2); assert_eq!(body["should_redemptions_skip_request_queue"],false);
     }
 }

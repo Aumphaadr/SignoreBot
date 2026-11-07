@@ -371,8 +371,15 @@ pub fn shoutout_reset(s: State<'_, CoreState>) {
 #[tauri::command]
 pub async fn rewards_channel(s: State<'_, CoreState>) -> Res<Vec<ChannelReward>> {
     let c = core(&s);
-    let ids = c.engine.ids().ok_or("Стример не авторизован")?;
-    c.helix.custom_rewards(AccountKind::Broadcaster, &ids.broadcaster_id).await.map_err(|e| e.to_string())
+    let account = c.auth.info(AccountKind::Broadcaster).ok_or("Стример не авторизован")?;
+    let mut rewards = c.helix.custom_rewards(AccountKind::Broadcaster, &account.user_id).await.map_err(|e| e.to_string())?;
+    let config = c.config.read();
+    for reward in &mut rewards {
+        if !reward.has_custom_image {
+            if let Some(image) = config.rewards.iter().find(|r| r.reward_id == reward.id).and_then(|r| r.copied_image.as_ref()) { reward.image = Some(image.clone()); }
+        }
+    }
+    Ok(rewards)
 }
 
 #[derive(Serialize, ts_rs::TS)]
@@ -384,6 +391,8 @@ pub struct ManagedCopyResult {
     pub original_reward_id: String,
     pub original_title: String,
     pub rewards_url: String,
+    pub image_saved: bool,
+    pub image_warning: Option<String>,
 }
 
 /// Создать управляемую копию награды (созданную нашим приложением) с теми же
@@ -404,18 +413,20 @@ pub async fn reward_create_managed_copy(s: State<'_, CoreState>, id: String) -> 
         return Err("эта награда уже создана через бота".into());
     }
     let login = c.auth.info(AccountKind::Broadcaster).map(|i| i.login).unwrap_or_default();
-    let new_title = format!("{} (бот)", orig.title);
-    let spec = crate::twitch::helix::NewReward {
-        title: new_title.clone(), cost: orig.cost, prompt: orig.prompt.clone(), is_user_input_required: orig.requires_input,
-        is_enabled: orig.is_enabled, background_color: orig.background_color.clone(),
-        cooldown_seconds: orig.cooldown_seconds, max_per_stream: orig.max_per_stream, max_per_user_per_stream: orig.max_per_user_per_stream,
-        skip_queue: false,
-    };
+    let (copied_image, image_warning) = if orig.has_custom_image {
+        match orig.image.as_deref() {
+            Some(url) => match c.helix.preserve_reward_image(url).await { Ok(image) => (Some(image), None), Err(e) => (None, Some(e)) },
+            None => (None, None),
+        }
+    } else { (None, None) };
+    let image_saved = copied_image.is_some();
+    let spec = crate::twitch::helix::NewReward::managed_copy(orig);
     let created = c.helix.create_custom_reward(AccountKind::Broadcaster, &ids.broadcaster_id, &spec).await.map_err(|e| format!("Twitch не создал награду: {e}"))?;
     let (orig_id, orig_title) = (orig.id.clone(), orig.title.clone());
     c.update_config(|cfg| {
         if let Some(r) = cfg.rewards.iter_mut().find(|r| r.id == id) {
             r.original_reward_id = Some(orig_id.clone());
+            r.copied_image = copied_image.clone();
             r.reward_id = created.id.clone();
             r.reward_title = created.title.clone();
             r.managed = true;
@@ -423,7 +434,16 @@ pub async fn reward_create_managed_copy(s: State<'_, CoreState>, id: String) -> 
     })?;
     tracing::info!(target: "signorebot::rewards", "Создана управляемая копия награды «{}» → «{}»; реакция переведена на копию", orig_title, created.title);
     c.emit_changed("rewards");
-    Ok(ManagedCopyResult { new_reward_id: created.id, new_title: created.title, original_reward_id: orig_id, original_title: orig_title, rewards_url: format!("https://dashboard.twitch.tv/u/{login}/viewer-rewards/channel-points/rewards") })
+    Ok(ManagedCopyResult { new_reward_id: created.id, new_title: created.title, original_reward_id: orig_id, original_title: orig_title, rewards_url: format!("https://dashboard.twitch.tv/u/{login}/viewer-rewards/channel-points/rewards"), image_saved, image_warning })
+}
+
+/// Export all three Twitch icon sizes into a new folder inside the selected directory.
+#[tauri::command]
+pub async fn reward_images_save(s: State<'_, CoreState>, id: String, directory: String) -> Res<String> {
+    let c = core(&s);
+    let data_url = c.config.read().rewards.iter().find(|r| r.id == id).and_then(|r| r.copied_image.clone()).ok_or("Оригинальная картинка не сохранена")?;
+    tauri::async_runtime::spawn_blocking(move || crate::reward_images::export(&data_url, std::path::Path::new(&directory)).map(|folder|folder.to_string_lossy().into_owned()))
+        .await.map_err(|e|e.to_string())?
 }
 
 fn check_reward_spec(spec: &crate::twitch::helix::NewReward) -> Result<(), String> {
@@ -803,5 +823,108 @@ mod url_tests {
         assert_eq!(super::urlencoding("Мой клип (финал).mp4"), "%D0%9C%D0%BE%D0%B9%20%D0%BA%D0%BB%D0%B8%D0%BF%20%28%D1%84%D0%B8%D0%BD%D0%B0%D0%BB%29.mp4");
         assert_eq!(super::urlencoding("a-b_c.d~e"), "a-b_c.d~e");
         assert_eq!(super::urlencoding("a+b"), "a%2Bb");
+    }
+}
+
+// ---------------------------------------------------------------- chat reader
+/// Reader composer is a manual streamer message, so it must not be marked as a bot echo.
+#[tauri::command]
+pub async fn chat_reader_send(s: State<'_, CoreState>, text: String) -> Res<()> {
+    let c = core(&s);
+    let account = c.auth.info(AccountKind::Broadcaster).ok_or("Сначала авторизуйте стримера")?;
+    if !c.auth.is_ready(AccountKind::Broadcaster) { return Err("Аккаунт стримера не готов: проверьте авторизацию".into()); }
+    if !c.auth.has_scope(AccountKind::Broadcaster, "user:write:chat") { return Err("Чтобы писать от своего имени, заново авторизуйте стримера".into()); }
+    let text = validate_reader_message(&text)?;
+    let sent = c.helix.send_chat_message(AccountKind::Broadcaster, &account.user_id, &account.user_id, text, None).await.map_err(|e| e.to_string())?;
+    if !sent.is_sent { return Err(sent.drop_reason.map(|r| format!("Twitch не отправил сообщение: {} ({})", r.message, r.code)).unwrap_or_else(|| "Twitch не отправил сообщение".into())); }
+    Ok(())
+}
+fn validate_reader_message(text: &str) -> Res<&str> {
+    let text = text.trim();
+    if text.is_empty() { return Err("Пустое сообщение".into()); }
+    if text.chars().count() > 500 { return Err("Сообщение длиннее 500 символов".into()); }
+    Ok(text)
+}
+#[tauri::command]
+pub fn chat_history(s: State<'_, CoreState>) -> crate::chat::ChatHistory { core(&s).engine.reader.snapshot() }
+#[tauri::command]
+pub fn chat_mark(s: State<'_, CoreState>, generation: u32, ids: Vec<String>, read: bool) {
+    core(&s).engine.reader.mark(generation, &ids, read);
+}
+#[tauri::command]
+pub async fn chat_badges(s: State<'_, CoreState>) -> Res<Vec<crate::twitch::helix::BadgeSet>> {
+    let c = core(&s); let info = c.auth.info(AccountKind::Broadcaster).ok_or("Сначала авторизуйте стримера")?;
+    c.helix.chat_badges(&info.user_id).await.map_err(|e| e.to_string())
+}
+#[tauri::command]
+pub async fn chat_moderate(s: State<'_, CoreState>, generation: u32, id: String, action: String, seconds: Option<u32>, reason: String) -> Res<()> {
+    let c = core(&s); let channel = c.auth.info(AccountKind::Broadcaster).ok_or("Сначала авторизуйте стримера")?;
+    let history = c.engine.reader.snapshot();
+    if history.channel_id != channel.user_id || history.generation != generation { return Err("Канал изменился. Действие отменено".into()); }
+    let e = history.entries.iter().find(|e| e.id == id).ok_or("Сообщение уже вышло из истории")?;
+    validate_chat_action(e, &channel.user_id, &action, seconds, &reason)?;
+    match action.as_str() {
+        "delete" => {
+            if !c.auth.has_scope(AccountKind::Broadcaster, "moderator:manage:chat_messages") { return Err("Для удаления сообщения заново авторизуйте стримера".into()); }
+            c.helix.delete_chat_message(AccountKind::Broadcaster, &channel.user_id, &channel.user_id, &e.message_id).await.map_err(|e| e.to_string())?;
+            c.engine.reader.delete(&e.message_id);
+        }
+        "warn" => {
+            if !c.auth.has_scope(AccountKind::Broadcaster, "moderator:manage:warnings") { return Err("Для предупреждений заново авторизуйте стримера: нужно право moderator:manage:warnings".into()); }
+            c.helix.warn_user(&channel.user_id, &e.user_id, reason.trim()).await.map_err(|e| e.to_string())?;
+        }
+        "timeout" | "ban" => {
+            if !c.auth.has_scope(AccountKind::Broadcaster, "moderator:manage:banned_users") { return Err("Для мута и бана заново авторизуйте стримера: нужно право moderator:manage:banned_users".into()); }
+            c.helix.ban_user(&channel.user_id, &e.user_id, if action == "timeout" { seconds } else { None }, &reason).await.map_err(|e| e.to_string())?;
+        }
+        _ => unreachable!(),
+    }
+    Ok(())
+}
+fn validate_chat_action(e: &crate::chat::ChatEntry, broadcaster: &str, action: &str, seconds: Option<u32>, reason: &str) -> Res<()> {
+    if !["delete", "warn", "timeout", "ban"].contains(&action) { return Err("Неизвестное действие".into()); }
+    if e.is_reward || !e.reward_id.is_empty() { return Err("Для наград действия модерации недоступны".into()); }
+    if e.user_id.is_empty() || e.user_id == broadcaster || e.badges.iter().any(|b| b.set_id == "moderator" || b.set_id == "broadcaster") { return Err("Действие недоступно для этого пользователя".into()); }
+    if e.message_id.is_empty() || e.deleted { return Err("У этой записи нет доступного сообщения Twitch".into()); }
+    if action == "timeout" && !seconds.is_some_and(|n| (1..=1_209_600).contains(&n)) { return Err("Мут: от 1 секунды до 14 дней".into()); }
+    if action == "warn" && reason.trim().is_empty() { return Err("Укажите причину предупреждения".into()); }
+    if reason.chars().count() > 500 { return Err("Причина длиннее 500 символов".into()); }
+    Ok(())
+}
+#[tauri::command]
+pub async fn twitch_view(app: tauri::AppHandle, s: State<'_, CoreState>, native: State<'_, crate::twitch_view::NativeChat>, bounds: Option<crate::twitch_view::ViewBounds>, reload: bool) -> Res<()> {
+    let c = core(&s);
+    crate::twitch_view::update(&app, &native, &c.paths.root, c.auth.info(AccountKind::Broadcaster).map(|a| a.login), bounds, reload)
+}
+
+#[cfg(test)]
+mod reader_action_tests {
+    use super::*;
+    #[test] fn reward_entries_have_no_moderation_actions() {
+        let e = crate::chat::ChatEntry { user_id:"viewer".into(), message_id:"message".into(), is_reward:true, ..Default::default() };
+        for action in ["delete","warn","timeout","ban"] { assert!(validate_chat_action(&e,"streamer",action,Some(60),"Reason").is_err()); }
+    }
+    #[test] fn streamer_messages_validate_without_truncating() {
+        assert_eq!(validate_reader_message(" !hello ").unwrap(), "!hello");
+        assert!(validate_reader_message(" ").is_err());
+        assert!(validate_reader_message(&"я".repeat(500)).is_ok());
+        assert!(validate_reader_message(&"я".repeat(501)).is_err());
+    }
+    #[test] fn warnings_require_a_reason_and_a_fixed_valid_target() {
+        let e = crate::chat::ChatEntry { user_id: "viewer".into(), message_id: "m".into(), ..Default::default() };
+        assert!(validate_chat_action(&e,"streamer","warn",None,"").is_err());
+        assert!(validate_chat_action(&e,"streamer","warn",None," ").is_err());
+        assert!(validate_chat_action(&e,"streamer","warn",None,"Не спойлерить").is_ok());
+        assert!(validate_chat_action(&e,"streamer","warn",None,&"я".repeat(501)).is_err());
+        assert!(validate_chat_action(&e,"viewer","warn",None,"Не спойлерить").is_err());
+    }
+    #[test] fn actions_validate_fixed_message_and_limits() {
+        let mut e = crate::chat::ChatEntry { user_id: "viewer".into(), message_id: "m".into(), ..Default::default() };
+        assert!(validate_chat_action(&e,"streamer","timeout",Some(600),"").is_ok());
+        for seconds in [None,Some(0),Some(1_209_601)] { assert!(validate_chat_action(&e,"streamer","timeout",seconds,"").is_err()); }
+        assert!(validate_chat_action(&e,"streamer","ban",None,&"я".repeat(500)).is_ok());
+        assert!(validate_chat_action(&e,"streamer","ban",None,&"я".repeat(501)).is_err());
+        assert!(validate_chat_action(&e,"viewer","delete",None,"").is_err());
+        e.deleted=true; assert!(validate_chat_action(&e,"streamer","delete",None,"").is_err());
     }
 }

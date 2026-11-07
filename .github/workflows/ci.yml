@@ -17,6 +17,8 @@ jobs:
       - run: npm ci
       - name: Соединение оверлея — гонки подключения и реконнект
         run: npm run test:overlay
+      - name: Читалка — непрочитанное и упоминания
+        run: npm run test:reader
       - name: Типы и сборка панели
         run: npm run build
       - name: Стражи — внешние адреса, значки, шрифты, лицензии библиотек

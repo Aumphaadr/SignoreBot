@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, errText, type ChannelReward, type ManagedCopyResult, type NewReward, type PendingRedemption, type Reward } from "../../api";
 import RewardParamsForm, { defaultParams, paramsFromChannel, paramsProblem } from "./RewardParamsForm";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { open as chooseFolder } from "@tauri-apps/plugin-dialog";
 import { defaultReward } from "../../api/defaults";
 import { useAppState } from "../../state/AppState";
 import { reactionBadge } from "../Commands/CommandsTab";
@@ -98,8 +99,16 @@ export default function RewardsTab() {
   useEffect(() => onChanged("runtime", () => void load()), [onChanged, load]);
   useEffect(() => onChanged("rewards", () => { void load(); loadRedemptions(); }), [onChanged, load, loadRedemptions]);
   const openQueue = async () => { try { await openUrl(await api.rewardsQueueUrl()); } catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 4000); } };
+  const saveOriginalImage = async (r: Reward) => {
+    try {
+      const directory = await chooseFolder({ directory: true, multiple: false, title: "Папка для иконок награды: 28×28, 56×56 и 112×112" });
+      if (typeof directory !== "string") return;
+      const saved = await api.rewardImagesSave(r.id, directory);
+      showNotification(`Сохранены PNG 28×28, 56×56 и 112×112: ${saved}`, NOTIFICATION_TYPES.SUCCESS, 6000);
+    } catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 6000); }
+  };
   const makeCopy = (r: Reward) => showConfirm(
-    `Создать через бота копию награды «${r.rewardTitle}»?\n\nКопия получит те же цену, подсказку и лимиты и название «${r.rewardTitle} (бот)». Реакция SignoreBot перейдёт на копию. Оригинал останется на канале — его нужно будет удалить в панели Twitch, после чего пометку «(бот)» можно убрать одной кнопкой.`,
+    `Создать через бота копию награды «${r.rewardTitle}»?\n\nКопия получит те же цену, цвет, подсказку и лимиты и название «${r.rewardTitle} (бот)». Реакция SignoreBot перейдёт на копию. Оригинал останется на канале — его нужно будет удалить в панели Twitch, после чего пометку «(бот)» можно убрать одной кнопкой.`,
     async () => {
       try { const result = await api.rewardCreateManagedCopy(r.id); setCopyInfo({ reward: r, result }); void load(); }
       catch (e) { showNotification(errText(e), NOTIFICATION_TYPES.ERROR, 8000); }
@@ -221,8 +230,9 @@ export default function RewardsTab() {
             <p>На канале теперь две награды: <strong>«{copyInfo.result.originalTitle}»</strong> — оригинал, и <strong>«{copyInfo.result.newTitle}»</strong> — копия, созданная ботом. Реакция SignoreBot уже переведена на копию.</p>
             <ol>
               <li>Откройте <a href="#" onClick={(e) => { e.preventDefault(); void openUrl(copyInfo.result.rewardsUrl); }}>страницу наград в панели Twitch</a>.</li>
+              {copyInfo.result.imageSaved && <li>Оригинальная иконка сохранена в SignoreBot. <button className="small" onClick={() => void saveOriginalImage(config.rewards.find((r) => r.id === copyInfo.reward.id) ?? copyInfo.reward)}><Icon name="save" /> Сохранить иконки (3 размера)</button> Загрузите три PNG копии в панели Twitch — API не принимает картинки. Цвет скопирован автоматически.</li>}
+              {copyInfo.result.imageWarning && <li className="text-warning">Не удалось сохранить иконку: {copyInfo.result.imageWarning}. Сохраните её из оригинала до удаления и загрузите копии в панели Twitch.</li>}
               <li>Найдите награду <strong>без</strong> пометки «(бот)» — это оригинал — и удалите её. Копию с пометкой «(бот)» не трогайте.</li>
-              <li>Загрузите копии картинку награды: Twitch не принимает картинки от приложений, только через панель. Без неё у награды будет стандартный значок.</li>
               <li>Вернитесь сюда и нажмите «Убрать пометку»: копия получит прежнее название, зрители не заметят разницы. Если оригинал удалён при работающем боте, пометку он снимает сам.</li>
             </ol>
             <div className="flex gap-2">
@@ -238,13 +248,13 @@ export default function RewardsTab() {
         {editing && !editing.reward && (
           <RewardSelector channel={channel} existing={rewards} loading={loading} onRefresh={() => void load()} onPick={(c) => setEditing({ reward: defaultReward(c.id, c.title), isNew: true })} onCancel={() => setEditing(null)} />
         )}
-        {editing?.reward && <RewardEditor key={editing.reward.id} initial={editing.reward} isNew={editing.isNew} onSave={save} info={channel.find((c) => c.id === editing.reward!.rewardId)} onMakeCopy={(rw) => { save(rw); makeCopy(rw); }} onFinishCopy={(rw) => { save(rw); void finishCopy(rw); }} onChannelReload={() => void load()} onDeleteTwitch={(rw) => deleteOnTwitch(rw)} />}
+        {editing?.reward && <RewardEditor key={editing.reward.id} initial={editing.reward} isNew={editing.isNew} onSave={save} info={channel.find((c) => c.id === editing.reward!.rewardId)} onMakeCopy={(rw) => { save(rw); makeCopy(rw); }} onFinishCopy={(rw) => { save(rw); void finishCopy(rw); }} onSaveImage={(rw) => void saveOriginalImage(rw)} onChannelReload={() => void load()} onDeleteTwitch={(rw) => deleteOnTwitch(rw)} />}
       </Modal>
     </div>
   );
 }
 
-function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy, onChannelReload, onDeleteTwitch }: { initial: Reward; isNew: boolean; onSave: (r: Reward) => void; info?: ChannelReward; onMakeCopy: (r: Reward) => void; onFinishCopy: (r: Reward) => void; onChannelReload: () => void; onDeleteTwitch: (r: Reward) => void }) {
+function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy, onSaveImage, onChannelReload, onDeleteTwitch }: { initial: Reward; isNew: boolean; onSave: (r: Reward) => void; info?: ChannelReward; onMakeCopy: (r: Reward) => void; onFinishCopy: (r: Reward) => void; onSaveImage: (r: Reward) => void; onChannelReload: () => void; onDeleteTwitch: (r: Reward) => void }) {
   const { config } = useAppState();
   const { showNotification } = useNotification();
   const [r, setR] = useState(initial);
@@ -289,11 +299,12 @@ function RewardEditor({ initial, isNew, onSave, info, onMakeCopy, onFinishCopy, 
         </label>
         {!managed && info && (
           <div className="form-hint">
-            Награда создана в панели Twitch, а не через бота — Twitch не позволяет приложению отменять её погашения. Можно создать через бота копию с теми же параметрами и перевести реакцию на неё; бот подскажет, что удалить. Картинку награды придётся загрузить копии заново — её Twitch через приложение не принимает.
+            Награда создана в панели Twitch, а не через бота — Twitch не позволяет приложению отменять её погашения. Можно создать через бота копию с теми же параметрами и перевести реакцию на неё; бот подскажет, что удалить. Оригинальная картинка сохранится в SignoreBot. Для Twitch её можно будет сохранить в трёх размерах и загрузить копии через панель.
             <div style={{ marginTop: 8 }}><button className="small" onClick={() => onMakeCopy(r)}><Icon name="files" /> Создать управляемую копию</button></div>
           </div>
         )}
         {managed && info?.skipQueue && <div className="form-hint text-warning"><Icon name="triangle-alert" /> У награды включено «пропускать очередь запросов»: такие погашения закрываются сразу, и вернуть баллы нельзя. Выключите этот пункт в настройках награды на Twitch.</div>}
+        {r.copiedImage && <div className="form-hint">Иконка оригинала сохранена в SignoreBot. <button className="small" onClick={() => onSaveImage(r)}><Icon name="save" /> Сохранить иконки (3 размера)</button> Для отображения на Twitch загрузите три PNG в панели Twitch.</div>}
         {r.managed && r.originalRewardId && <div className="form-hint"><Icon name="triangle-alert" /> Копия ещё с пометкой «(бот)». Удалите оригинал в панели Twitch и нажмите: <button className="small" onClick={() => onFinishCopy(r)}>Убрать пометку</button></div>}
         {!info && <div className="form-hint">Список наград канала недоступен (бот не запущен) — управление возвратом появится, когда бот подключится.</div>}
       </div>

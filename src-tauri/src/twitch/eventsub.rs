@@ -85,6 +85,7 @@ pub enum TwitchEvent {
 }
 
 pub struct SessionParams {
+    pub reader: Arc<crate::chat::ChatHub>,
     pub helix: Arc<Helix>,
     pub auth: Arc<AuthManager>,
     pub broadcaster_id: String,
@@ -363,6 +364,9 @@ fn subscriptions(bid: &str) -> Vec<SubSpec> {
     let bc = serde_json::json!({ "broadcaster_user_id": bid });
     vec![
         SubSpec { scope: None, fallback_version: None, kind: "channel.chat.message", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.chat.message_delete", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.chat.clear_user_messages", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
+        SubSpec { scope: None, fallback_version: None, kind: "channel.chat.clear", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
         SubSpec { scope: None, fallback_version: None, kind: "channel.chat.notification", version: "1", condition: serde_json::json!({ "broadcaster_user_id": bid, "user_id": bid }) },
         SubSpec { scope: None, fallback_version: Some("1"), kind: "channel.channel_points_automatic_reward_redemption.add", version: "2", condition: bc.clone() },
         SubSpec { scope: None, fallback_version: None, kind: "channel.channel_points_custom_reward_redemption.add", version: "1", condition: bc.clone() },
@@ -441,6 +445,8 @@ async fn handle_text(p: &SessionParams, dedup: &mut Deduper, v: &Value) {
     }
     let sub_type = v.pointer("/metadata/subscription_type").and_then(|x| x.as_str()).unwrap_or("");
     let ev = v.pointer("/payload/event").cloned().unwrap_or(Value::Null);
+    let timestamp = v.pointer("/metadata/message_timestamp").and_then(Value::as_str).unwrap_or("");
+    p.reader.ingest(&p.broadcaster_id, sub_type, msg_id, timestamp, &ev);
     for e in parse_notifications(sub_type, &ev) {
         let _ = p.tx.send(e).await;
     }

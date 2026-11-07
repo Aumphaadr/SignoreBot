@@ -189,6 +189,7 @@ pub struct ActionCtx {
 }
 
 pub struct Engine {
+    pub reader: Arc<crate::chat::ChatHub>,
     pub config: SharedConfig,
     pub auth: Arc<AuthManager>,
     pub helix: Arc<Helix>,
@@ -229,6 +230,7 @@ impl Engine {
         let redemptions_file = deleted_log.parent().and_then(|p| p.parent()).map(|p| p.join("redemptions.json")).unwrap_or_else(|| std::path::PathBuf::from("redemptions.json"));
         let matcher = banwords::Matcher::compile(&config.read().banwords);
         Arc::new(Self {
+            reader: Arc::new(crate::chat::ChatHub::default()),
             config,
             auth,
             helix,
@@ -660,6 +662,7 @@ impl Engine {
 
     /// Запомнить id отправленного сообщения (для отсева эха).
     pub fn remember_sent(&self, message_id: &str) {
+        self.reader.note_sent(message_id);
         if message_id.is_empty() {
             return;
         }
